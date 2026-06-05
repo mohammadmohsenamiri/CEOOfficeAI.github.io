@@ -177,6 +177,40 @@ function parsePersianIntent(data, text) {
   return { intent: "unknown", confidence: 0.3, needsConfirmation: false, question: "لطفاً مشخص کنید تسک، جلسه یا درخواست از مدیرعامل می‌خواهید." };
 }
 
+async function sendBaleText(data, chatId, text) {
+  const token = data.settings.bale.botToken;
+  if (!data.settings.bale.enabled) return { ok: false, skipped: true, reason: "Bale bot is disabled." };
+  if (!token) return { ok: false, skipped: true, reason: "Bale bot token is not configured." };
+  if (!chatId) return { ok: false, skipped: true, reason: "Bale chat id is missing." };
+
+  const response = await fetch(`https://tapi.bale.ai/bot${token}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, text })
+  });
+  const body = await response.text();
+  return { ok: response.ok, status: response.status, body };
+}
+
+async function registerBaleWebhook(data) {
+  const token = data.settings.bale.botToken;
+  const url = data.settings.bale.webhookUrl;
+  if (!token) return { ok: false, error: "Bale bot token is not configured." };
+  if (!url) return { ok: false, error: "Bale webhook URL is not configured." };
+
+  const postResponse = await fetch(`https://tapi.bale.ai/bot${token}/setWebhook`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url })
+  });
+  const postBody = await postResponse.text();
+  if (postResponse.ok) return { ok: true, method: "POST", status: postResponse.status, body: postBody };
+
+  const getResponse = await fetch(`https://tapi.bale.ai/bot${token}/setWebhook?url=${encodeURIComponent(url)}`);
+  const getBody = await getResponse.text();
+  return { ok: getResponse.ok, method: "GET", status: getResponse.status, body: getBody, postAttempt: { status: postResponse.status, body: postBody } };
+}
+
 function createNotification(data, userId, title, body, relatedEntity) {
   data.notifications.unshift({ id: id("N"), userId, channel: "web", title, body, scheduledAt: nowIso(), sentAt: "", status: "pending", relatedEntity });
 }
@@ -261,6 +295,21 @@ const routes = {
     };
     log(data, currentUser.id, "update_bale_settings", "settings", "bale", before, data.settings.bale);
     return { saved: true, bale: { ...data.settings.bale, botToken: data.settings.bale.botToken ? "********" : "" } };
+  },
+
+  "POST /api/settings/bale/register-webhook": async ({ data, currentUser }) => {
+    if (!isPrivileged(currentUser)) return { status: 403, body: { error: "فقط مدیر سیستم می‌تواند webhook بله را ثبت کند." } };
+    const result = await registerBaleWebhook(data);
+    log(data, currentUser.id, "register_bale_webhook", "settings", "bale", null, result);
+    return result.ok ? result : { status: 502, body: result };
+  },
+
+  "POST /api/settings/bale/test-send": async ({ data, body, currentUser }) => {
+    if (!isPrivileged(currentUser)) return { status: 403, body: { error: "فقط مدیر سیستم می‌تواند ارسال پیام تست بله را انجام دهد." } };
+    const chatId = String(body.chatId || currentUser.baleChatId || "");
+    const result = await sendBaleText(data, chatId, String(body.text || "پیام تست از سیستم دفتر مدیرعامل"));
+    log(data, currentUser.id, "test_bale_send", "settings", "bale", null, result);
+    return result.ok ? result : { status: 502, body: result };
   },
 
   "GET /api/users": async ({ data }) => data.users,
@@ -355,11 +404,14 @@ const routes = {
     const record = { id: id("MSG"), ...normalized, userId: linkedUser ? linkedUser.id : "", parsedIntent, status: linkedUser ? "parsed" : "unknown_sender" };
     data.incomingMessages.unshift(record);
     log(data, linkedUser ? linkedUser.id : "anonymous", "incoming_bale_message", "message", record.id, null, record);
+    const reply = linkedUser ? "پیام شما دریافت شد. لطفاً خلاصه برداشت سیستم را تایید یا لغو کنید." : "شناسه بله شما در سیستم ثبت نشده است. لطفاً با مدیر سیستم تماس بگیرید.";
+    const sendResult = await sendBaleText(data, normalized.senderMessengerId, reply);
     return {
       ok: true,
       messageId: record.id,
-      reply: linkedUser ? "پیام شما دریافت شد. لطفاً خلاصه برداشت سیستم را تایید یا لغو کنید." : "شناسه بله شما در سیستم ثبت نشده است. لطفاً با مدیر سیستم تماس بگیرید.",
-      parsedIntent
+      reply,
+      parsedIntent,
+      baleSend: sendResult
     };
   },
 
