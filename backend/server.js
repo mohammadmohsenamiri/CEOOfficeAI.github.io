@@ -551,6 +551,25 @@ const routes = {
     return { status: 201, body: meeting };
   },
 
+  "PATCH /api/meetings/reschedule": async ({ data, body, currentUser }) => {
+    const meeting = data.meetings.find((item) => item.id === body.meetingId);
+    if (!meeting) return { status: 404, body: { error: "جلسه پیدا نشد." } };
+    if (currentUser.role !== "Admin" && meeting.creatorId !== currentUser.id && !meeting.members.includes(currentUser.id)) {
+      return { status: 403, body: { error: "دسترسی تغییر زمان این جلسه را ندارید." } };
+    }
+    const startAt = new Date(body.startAt);
+    const endAt = new Date(body.endAt);
+    if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime()) || endAt <= startAt) {
+      return { status: 400, body: { error: "زمان شروع یا پایان جلسه معتبر نیست." } };
+    }
+    const before = { ...meeting };
+    meeting.startAt = startAt.toISOString();
+    meeting.endAt = endAt.toISOString();
+    meeting.members.forEach((userId) => createNotification(data, userId, "زمان جلسه تغییر کرد", meeting.title, { type: "meeting", id: meeting.id }));
+    log(data, currentUser.id, "reschedule", "meeting", meeting.id, before, meeting);
+    return { saved: true, meeting };
+  },
+
   "POST /api/messages/parse": async ({ data, body }) => parsePersianIntent(data, String(body.text || "")),
 
   "POST /api/webhooks/bale": async ({ data, req, body }) => {

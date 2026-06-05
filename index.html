@@ -731,7 +731,7 @@
 
     .calendar-shell {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+      grid-template-columns: 1fr;
       gap: 14px;
       align-items: start;
     }
@@ -753,6 +753,36 @@
       color: #fff;
       font-size: 22px;
       font-weight: 900;
+    }
+
+    .calendar-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      margin: 14px 0;
+    }
+
+    .calendar-picker {
+      display: flex;
+      gap: 8px;
+      align-items: end;
+      flex-wrap: wrap;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .035);
+    }
+
+    .calendar-picker label {
+      min-width: 86px;
+      margin: 0;
+    }
+
+    .calendar-picker input {
+      height: 38px;
+      padding: 0 10px;
     }
 
     .calendar-grid {
@@ -825,6 +855,12 @@
       line-height: 1.55;
       overflow: hidden;
       min-width: 0;
+      cursor: grab;
+      user-select: none;
+    }
+
+    .event-pill:active {
+      cursor: grabbing;
     }
 
     .event-pill strong {
@@ -863,28 +899,61 @@
 
     .calendar-week-view {
       display: grid;
-      grid-template-columns: repeat(7, minmax(110px, 1fr));
-      gap: 10px;
+      grid-template-columns: 76px repeat(7, minmax(128px, 1fr));
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: auto;
+      background: rgba(2, 6, 23, .32);
     }
 
     .week-column {
-      min-height: 360px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: rgba(2, 6, 23, .32);
-      padding: 10px;
       display: grid;
-      align-content: start;
-      gap: 10px;
+      grid-template-rows: 54px repeat(14, minmax(54px, auto));
+      min-width: 128px;
+      border-left: 1px solid var(--line);
     }
 
     .week-column header {
       display: grid;
       gap: 4px;
-      padding-bottom: 8px;
+      padding: 8px;
       border-bottom: 1px solid var(--line);
       color: #fff;
       font-weight: 800;
+      background: rgba(255, 255, 255, .045);
+    }
+
+    .week-hour-rail {
+      display: grid;
+      grid-template-rows: 54px repeat(14, minmax(54px, auto));
+      min-width: 76px;
+      background: rgba(255, 255, 255, .035);
+    }
+
+    .week-hour-rail span,
+    .week-hour-cell {
+      min-height: 54px;
+      border-bottom: 1px solid var(--line);
+      padding: 8px;
+    }
+
+    .week-hour-rail span {
+      color: #67e8f9;
+      font-weight: 800;
+      direction: ltr;
+      text-align: center;
+      font-size: 12px;
+    }
+
+    .week-hour-cell,
+    .hour-cell {
+      min-height: 54px;
+      transition: background .15s ease, box-shadow .15s ease;
+    }
+
+    .drop-hover {
+      background: rgba(20, 184, 166, .16) !important;
+      box-shadow: inset 0 0 0 1px rgba(45, 212, 191, .45);
     }
 
     .calendar-day-view {
@@ -918,6 +987,32 @@
       display: grid;
       gap: 6px;
       align-content: start;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: rgba(2, 6, 23, .72);
+      backdrop-filter: blur(16px);
+    }
+
+    .modal-card {
+      width: min(720px, 100%);
+      max-height: min(86vh, 780px);
+      overflow: auto;
+      border: 1px solid rgba(139, 92, 246, .32);
+      border-radius: 8px;
+      background: rgba(15, 23, 42, .98);
+      box-shadow: 0 28px 90px rgba(0, 0, 0, .45);
+      padding: 18px;
+    }
+
+    .modal-card .panel-head {
+      margin-bottom: 12px;
     }
 
     .backend-warning {
@@ -1181,6 +1276,7 @@
     let state = loadState();
     let activePage = "dashboard";
     let calendarView = "month";
+    let calendarFocusDate = new Date();
     let backendOnline = false;
     let backendChecked = false;
     let backendBaseUrl = localStorage.getItem("ceo-office-backend-url") || "";
@@ -1607,84 +1703,68 @@
         bindBackendGate();
         return;
       }
-      const monthDate = new Date();
-      const monthTitle = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { month: "long", year: "numeric" }).format(monthDate);
+      const title = calendarViewTitle();
       $("view-meetings").innerHTML = `
         <div class="calendar-shell">
           <div class="panel">
             <div class="calendar-toolbar">
               <div class="calendar-title">
-                <strong>${monthTitle}</strong>
-                <span class="muted small">تقویم کاری فارسی، راست‌چین و نزدیک به تجربه Google Calendar</span>
+                <strong>${title}</strong>
+                <span class="muted small">تقویم کاری شمسی با نمای روز، هفته، ماه و جابه‌جایی جلسه با کشیدن</span>
               </div>
-              <div class="segmented">
-                <button data-calendar-view="month" class="${calendarView === "month" ? "active" : ""}">ماه</button>
-                <button data-calendar-view="week" class="${calendarView === "week" ? "active" : ""}">هفته</button>
-                <button data-calendar-view="day" class="${calendarView === "day" ? "active" : ""}">روز</button>
+              <div class="page-actions">
+                <button class="primary" id="openMeetingModal">جلسه جدید</button>
+                <div class="segmented">
+                  <button data-calendar-view="month" class="${calendarView === "month" ? "active" : ""}">ماه</button>
+                  <button data-calendar-view="week" class="${calendarView === "week" ? "active" : ""}">هفته</button>
+                  <button data-calendar-view="day" class="${calendarView === "day" ? "active" : ""}">روز</button>
+                </div>
               </div>
             </div>
+            ${calendarNavigation("top")}
             <div id="calendarCanvas">${renderCalendarView()}</div>
+            ${calendarView === "day" ? calendarNavigation("bottom") : ""}
             <div class="panel-head">
               <h2>برنامه پیش رو</h2>
               <span class="chip">${fa(state.meetings.length)} جلسه</span>
             </div>
             <div class="calendar-agenda">${state.meetings.map(agendaRow).join("") || empty("جلسه‌ای برای نمایش وجود ندارد.")}</div>
           </div>
-          <form class="panel" id="meetingForm">
-            <h2>جلسه جدید</h2>
-            <div class="form-grid">
-              <label class="full">عنوان<input name="title" required></label>
-              <label class="full">توضیح<textarea name="description"></textarea></label>
-              <label class="full">تاریخ جلسه<input id="meetingDateLabel" readonly value="${quickDateLabel(1)}"><input name="meetingDateIso" id="meetingDateIso" type="hidden" value="${quickDateIso(1)}"></label>
-              <div class="full segmented" data-date-target="meeting">
-                <button type="button" data-date-offset="0">امروز</button>
-                <button type="button" data-date-offset="1" class="active">فردا</button>
-                <button type="button" data-date-offset="2">پس‌فردا</button>
-                <button type="button" data-date-offset="7">هفته بعد</button>
+          <div class="modal-backdrop hidden" id="meetingModal">
+            <form class="modal-card" id="meetingForm">
+              <div class="panel-head">
+                <h2>جلسه جدید</h2>
+                <button type="button" class="ghost" id="closeMeetingModal">بستن</button>
               </div>
-              <label>ساعت شروع<input name="startTime" type="time" value="09:00" required></label>
-              <label>ساعت پایان<input name="endTime" type="time" value="10:00" required></label>
-              <label class="full">مکان یا لینک<input name="location" placeholder="اتاق جلسه یا لینک"></label>
-              <label class="full">اعضا<select name="members" multiple size="5">${state.users.filter((u) => u.active).map((u) => `<option value="${u.id}">${u.fullName}</option>`).join("")}</select></label>
-            </div>
-            <button class="primary">ثبت جلسه</button>
-          </form>
+              <div class="form-grid">
+                <label class="full">عنوان<input name="title" required></label>
+                <label class="full">توضیح<textarea name="description"></textarea></label>
+                <label class="full">تاریخ جلسه<input id="meetingDateLabel" readonly value="${quickDateLabel(1)}"><input name="meetingDateIso" id="meetingDateIso" type="hidden" value="${quickDateIso(1)}"></label>
+                <div class="full segmented" data-date-target="meeting">
+                  <button type="button" data-date-offset="0">امروز</button>
+                  <button type="button" data-date-offset="1" class="active">فردا</button>
+                  <button type="button" data-date-offset="2">پس‌فردا</button>
+                  <button type="button" data-date-offset="7">هفته بعد</button>
+                </div>
+                <div class="full calendar-picker">
+                  ${jalaliDateFields("meeting", quickDate(1))}
+                  <button type="button" class="blue" id="applyMeetingDate">انتخاب تاریخ</button>
+                </div>
+                <label>ساعت شروع<input name="startTime" type="time" value="09:00" required></label>
+                <label>ساعت پایان<input name="endTime" type="time" value="10:00" required></label>
+                <label class="full">مکان یا لینک<input name="location" placeholder="اتاق جلسه یا لینک"></label>
+                <label class="full">اعضا<select name="members" multiple size="5">${state.users.filter((u) => u.active).map((u) => `<option value="${u.id}">${u.fullName}</option>`).join("")}</select></label>
+              </div>
+              <button class="primary">ثبت جلسه</button>
+            </form>
+          </div>
         </div>`;
-      $("meetingForm").onsubmit = (event) => {
-        event.preventDefault();
-        const form = new FormData(event.target);
-        const members = Array.from(event.target.members.selectedOptions).map((o) => o.value);
-        const meetingDate = new Date(form.get("meetingDateIso"));
-        const [startHour, startMinute] = String(form.get("startTime")).split(":").map(Number);
-        const [endHour, endMinute] = String(form.get("endTime")).split(":").map(Number);
-        const startAt = new Date(meetingDate);
-        startAt.setHours(startHour, startMinute, 0, 0);
-        const endAt = new Date(meetingDate);
-        endAt.setHours(endHour, endMinute, 0, 0);
-        if (backendOnline) {
-          backendFetch("/api/meetings", {
-            method: "POST",
-            body: JSON.stringify({
-              title: form.get("title").trim(),
-              description: form.get("description").trim(),
-              startAt: startAt.toISOString(),
-              endAt: endAt.toISOString(),
-              location: form.get("location").trim(),
-              members
-            })
-          }).then(async () => {
-            await loadBackendState();
-            renderMeetings();
-            toast("جلسه در backend ثبت شد.");
-          }).catch((error) => toast(error.message));
-          return;
-        }
-        if (!members.includes(currentUser().id)) members.push(currentUser().id);
-        state.meetings.unshift({ id: uid("M"), title: form.get("title").trim(), description: form.get("description").trim(), startAt: startAt.toISOString(), endAt: endAt.toISOString(), location: form.get("location").trim(), creatorId: currentUser().id, status: "scheduled", members });
-        saveState();
-        renderMeetings();
-        toast("جلسه ثبت شد و یادآوری یک ساعت قبل/شروع ساخته شد.");
+      $("openMeetingModal").onclick = () => $("meetingModal").classList.remove("hidden");
+      $("closeMeetingModal").onclick = () => $("meetingModal").classList.add("hidden");
+      $("meetingModal").onclick = (event) => {
+        if (event.target.id === "meetingModal") $("meetingModal").classList.add("hidden");
       };
+      $("meetingForm").onsubmit = submitMeetingForm;
       document.querySelectorAll("[data-calendar-view]").forEach((btn) => {
         btn.onclick = (event) => {
           event.preventDefault();
@@ -1692,7 +1772,10 @@
           renderMeetings();
         };
       });
+      bindCalendarNavigation();
       bindDatePresets("meeting");
+      bindJalaliPicker("meeting");
+      bindCalendarDrag();
     }
 
     function renderCalendarView() {
@@ -1702,7 +1785,7 @@
     }
 
     function calendarMonth() {
-      const base = new Date();
+      const base = new Date(calendarFocusDate);
       const year = base.getFullYear();
       const month = base.getMonth();
       const first = new Date(year, month, 1);
@@ -1717,9 +1800,9 @@
         const dim = day.getMonth() !== month ? "dim" : "";
         const today = sameLocalDay(day, new Date()) ? "today" : "";
         cells.push(`
-          <div class="calendar-day ${dim} ${today}">
+          <div class="calendar-day ${dim} ${today}" data-drop-date="${localDateValue(day)}">
             <span class="day-number">${fa(new Intl.DateTimeFormat("fa-IR-u-ca-persian", { day: "numeric" }).format(day).replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)))}</span>
-            ${dayMeetings.slice(0, 3).map((meeting) => `<div class="event-pill"><strong>${meeting.title}</strong><span>${timeFa(meeting.startAt)} · ${meeting.location || "بدون مکان"}</span></div>`).join("")}
+            ${dayMeetings.slice(0, 3).map((meeting) => eventPill(meeting)).join("")}
           </div>`);
       }
       return `<div class="calendar-grid">${weekdays.map((day) => `<div class="calendar-weekday">${day}</div>`).join("")}${cells.join("")}</div>`;
@@ -1735,33 +1818,196 @@
 
     function calendarWeek() {
       const weekdays = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
-      const start = startOfPersianWeek(new Date());
+      const start = startOfPersianWeek(calendarFocusDate);
+      const hours = Array.from({ length: 14 }, (_, index) => index + 7);
       const columns = [];
       for (let i = 0; i < 7; i++) {
         const day = new Date(start);
         day.setDate(start.getDate() + i);
-        const dayMeetings = state.meetings.filter((meeting) => sameLocalDay(new Date(meeting.startAt), day));
+        const cells = hours.map((hour) => {
+          const meetings = state.meetings.filter((meeting) => sameLocalDay(new Date(meeting.startAt), day) && new Date(meeting.startAt).getHours() === hour);
+          return `<div class="week-hour-cell" data-drop-date="${localDateValue(day)}" data-drop-hour="${hour}">${meetings.map((meeting) => eventPill(meeting)).join("")}</div>`;
+        }).join("");
         columns.push(`
           <div class="week-column">
             <header><span>${weekdays[i]}</span><span class="muted small">${new Intl.DateTimeFormat("fa-IR-u-ca-persian", { day: "numeric", month: "short" }).format(day)}</span></header>
-            ${dayMeetings.length ? dayMeetings.map((meeting) => `<div class="event-pill"><strong>${meeting.title}</strong><span>${timeFa(meeting.startAt)} · ${meeting.location || "بدون مکان"}</span></div>`).join("") : `<span class="muted small">برنامه‌ای ثبت نشده</span>`}
+            ${cells}
           </div>`);
       }
-      return `<div class="calendar-week-view">${columns.join("")}</div>`;
+      return `<div class="calendar-week-view"><div class="week-hour-rail"><span></span>${hours.map((hour) => `<span>${fa(hour)}:۰۰</span>`).join("")}</div>${columns.join("")}</div>`;
     }
 
     function calendarDay() {
-      const today = new Date();
+      const today = new Date(calendarFocusDate);
       const rows = [];
       for (let hour = 7; hour <= 20; hour++) {
         const meetings = state.meetings.filter((meeting) => sameLocalDay(new Date(meeting.startAt), today) && new Date(meeting.startAt).getHours() === hour);
         rows.push(`
           <div class="hour-row">
             <div class="hour-label">${fa(hour)}:۰۰</div>
-            <div class="hour-cell">${meetings.length ? meetings.map((meeting) => `<div class="event-pill"><strong>${meeting.title}</strong><span>${timeFa(meeting.startAt)} · ${meeting.location || "بدون مکان"}</span></div>`).join("") : ""}</div>
+            <div class="hour-cell" data-drop-date="${localDateValue(today)}" data-drop-hour="${hour}">${meetings.map((meeting) => eventPill(meeting)).join("")}</div>
           </div>`);
       }
-      return `<div class="panel-head"><h2>برنامه امروز</h2><span class="chip blue">${new Intl.DateTimeFormat("fa-IR-u-ca-persian", { dateStyle: "full" }).format(today)}</span></div><div class="calendar-day-view">${rows.join("")}</div>`;
+      return `<div class="panel-head"><h2>برنامه روزانه</h2><span class="chip blue">${new Intl.DateTimeFormat("fa-IR-u-ca-persian", { dateStyle: "full" }).format(today)}</span></div><div class="calendar-day-view">${rows.join("")}</div>`;
+    }
+
+    function eventPill(meeting) {
+      return `<div class="event-pill" draggable="true" data-meeting-id="${meeting.id}"><strong>${meeting.title}</strong><span>${timeFa(meeting.startAt)} · ${meeting.location || "بدون مکان"}</span></div>`;
+    }
+
+    function calendarViewTitle() {
+      if (calendarView === "day") return new Intl.DateTimeFormat("fa-IR-u-ca-persian", { dateStyle: "full" }).format(calendarFocusDate);
+      if (calendarView === "week") {
+        const start = startOfPersianWeek(calendarFocusDate);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        return `${new Intl.DateTimeFormat("fa-IR-u-ca-persian", { day: "numeric", month: "short" }).format(start)} تا ${new Intl.DateTimeFormat("fa-IR-u-ca-persian", { day: "numeric", month: "short", year: "numeric" }).format(end)}`;
+      }
+      return new Intl.DateTimeFormat("fa-IR-u-ca-persian", { month: "long", year: "numeric" }).format(calendarFocusDate);
+    }
+
+    function calendarNavigation(position) {
+      const j = gregorianToJalali(calendarFocusDate);
+      const prevLabel = calendarView === "month" ? "ماه قبل" : calendarView === "week" ? "هفته قبل" : "روز قبل";
+      const nextLabel = calendarView === "month" ? "ماه بعد" : calendarView === "week" ? "هفته بعد" : "روز بعد";
+      return `
+        <div class="calendar-controls" data-calendar-nav="${position}">
+          <div class="segmented">
+            <button type="button" data-calendar-shift="-1">${prevLabel}</button>
+            <button type="button" data-calendar-today="1">امروز</button>
+            <button type="button" data-calendar-shift="1">${nextLabel}</button>
+          </div>
+          <div class="calendar-picker">
+            <label>سال<input id="calendar${capitalize(position)}Year" inputmode="numeric" value="${fa(j.jy)}"></label>
+            <label>ماه<input id="calendar${capitalize(position)}Month" inputmode="numeric" value="${fa(j.jm)}"></label>
+            <label>روز<input id="calendar${capitalize(position)}Day" inputmode="numeric" value="${fa(j.jd)}"></label>
+            <button type="button" class="blue" data-calendar-apply="${position}">انتخاب تاریخ</button>
+          </div>
+        </div>`;
+    }
+
+    function bindCalendarNavigation() {
+      document.querySelectorAll("[data-calendar-shift]").forEach((btn) => {
+        btn.onclick = () => {
+          const step = Number(btn.dataset.calendarShift);
+          const next = new Date(calendarFocusDate);
+          if (calendarView === "month") next.setMonth(next.getMonth() + step);
+          if (calendarView === "week") next.setDate(next.getDate() + step * 7);
+          if (calendarView === "day") next.setDate(next.getDate() + step);
+          calendarFocusDate = next;
+          renderMeetings();
+        };
+      });
+      document.querySelectorAll("[data-calendar-today]").forEach((btn) => {
+        btn.onclick = () => {
+          calendarFocusDate = new Date();
+          renderMeetings();
+        };
+      });
+      document.querySelectorAll("[data-calendar-apply]").forEach((btn) => {
+        btn.onclick = () => {
+          const key = btn.dataset.calendarApply;
+          const next = readJalaliFields(`calendar${capitalize(key)}`);
+          if (!next) return toast("تاریخ شمسی وارد شده معتبر نیست.");
+          calendarFocusDate = next;
+          renderMeetings();
+        };
+      });
+    }
+
+    async function submitMeetingForm(event) {
+      event.preventDefault();
+      const form = new FormData(event.target);
+      const members = Array.from(event.target.members.selectedOptions).map((o) => o.value);
+      const meetingDate = new Date(form.get("meetingDateIso"));
+      const [startHour, startMinute] = String(form.get("startTime")).split(":").map(Number);
+      const [endHour, endMinute] = String(form.get("endTime")).split(":").map(Number);
+      const startAt = new Date(meetingDate);
+      startAt.setHours(startHour, startMinute, 0, 0);
+      const endAt = new Date(meetingDate);
+      endAt.setHours(endHour, endMinute, 0, 0);
+      if (endAt <= startAt) return toast("ساعت پایان باید بعد از ساعت شروع باشد.");
+      if (backendOnline) {
+        try {
+          await backendFetch("/api/meetings", {
+            method: "POST",
+            body: JSON.stringify({
+              title: form.get("title").trim(),
+              description: form.get("description").trim(),
+              startAt: startAt.toISOString(),
+              endAt: endAt.toISOString(),
+              location: form.get("location").trim(),
+              members
+            })
+          });
+          await loadBackendState();
+          calendarFocusDate = startAt;
+          renderMeetings();
+          toast("جلسه در سیستم ثبت شد.");
+        } catch (error) {
+          toast(error.message);
+        }
+        return;
+      }
+      if (!members.includes(currentUser().id)) members.push(currentUser().id);
+      state.meetings.unshift({ id: uid("M"), title: form.get("title").trim(), description: form.get("description").trim(), startAt: startAt.toISOString(), endAt: endAt.toISOString(), location: form.get("location").trim(), creatorId: currentUser().id, status: "scheduled", members });
+      saveState();
+      calendarFocusDate = startAt;
+      renderMeetings();
+      toast("جلسه ثبت شد.");
+    }
+
+    function bindCalendarDrag() {
+      document.querySelectorAll(".event-pill[draggable='true']").forEach((pill) => {
+        pill.ondragstart = (event) => {
+          event.dataTransfer.setData("text/plain", pill.dataset.meetingId);
+        };
+      });
+      document.querySelectorAll("[data-drop-date], [data-drop-hour]").forEach((target) => {
+        target.ondragover = (event) => {
+          event.preventDefault();
+          target.classList.add("drop-hover");
+        };
+        target.ondragleave = () => target.classList.remove("drop-hover");
+        target.ondrop = async (event) => {
+          event.preventDefault();
+          target.classList.remove("drop-hover");
+          const meetingId = event.dataTransfer.getData("text/plain");
+          await moveMeeting(meetingId, target.dataset.dropDate, target.dataset.dropHour);
+        };
+      });
+    }
+
+    async function moveMeeting(meetingId, dropDate, dropHour) {
+      const meeting = state.meetings.find((item) => item.id === meetingId);
+      if (!meeting || !dropDate) return;
+      const oldStart = new Date(meeting.startAt);
+      const oldEnd = new Date(meeting.endAt);
+      const duration = Math.max(30 * 60000, oldEnd - oldStart);
+      const nextStart = dateFromLocalValue(dropDate);
+      nextStart.setHours(dropHour !== undefined ? Number(dropHour) : oldStart.getHours(), oldStart.getMinutes(), 0, 0);
+      const nextEnd = new Date(nextStart.getTime() + duration);
+      if (backendOnline) {
+        try {
+          await backendFetch("/api/meetings/reschedule", {
+            method: "PATCH",
+            body: JSON.stringify({ meetingId, startAt: nextStart.toISOString(), endAt: nextEnd.toISOString() })
+          });
+          await loadBackendState();
+          calendarFocusDate = nextStart;
+          renderMeetings();
+          toast("زمان جلسه جابه‌جا شد.");
+        } catch (error) {
+          toast(error.message);
+        }
+        return;
+      }
+      meeting.startAt = nextStart.toISOString();
+      meeting.endAt = nextEnd.toISOString();
+      saveState();
+      calendarFocusDate = nextStart;
+      renderMeetings();
+      toast("زمان جلسه جابه‌جا شد.");
     }
 
     function sameLocalDay(a, b) {
@@ -1770,6 +2016,115 @@
 
     function timeFa(value) {
       return new Intl.DateTimeFormat("fa-IR", { hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+    }
+
+    function localDateValue(date) {
+      const d = new Date(date);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+
+    function dateFromLocalValue(value) {
+      const [year, month, day] = String(value).split("-").map(Number);
+      return new Date(year, month - 1, day, 9, 0, 0, 0);
+    }
+
+    function digitsToLatin(value) {
+      return String(value || "")
+        .replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))
+        .replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
+    }
+
+    function capitalize(value) {
+      return String(value).charAt(0).toUpperCase() + String(value).slice(1);
+    }
+
+    function jalaliDateFields(prefix, date) {
+      const j = gregorianToJalali(date);
+      return `
+        <label>سال<input id="${prefix}Year" inputmode="numeric" value="${fa(j.jy)}"></label>
+        <label>ماه<input id="${prefix}Month" inputmode="numeric" value="${fa(j.jm)}"></label>
+        <label>روز<input id="${prefix}Day" inputmode="numeric" value="${fa(j.jd)}"></label>`;
+    }
+
+    function setJalaliFields(prefix, date) {
+      const j = gregorianToJalali(date);
+      if ($(`${prefix}Year`)) $(`${prefix}Year`).value = fa(j.jy);
+      if ($(`${prefix}Month`)) $(`${prefix}Month`).value = fa(j.jm);
+      if ($(`${prefix}Day`)) $(`${prefix}Day`).value = fa(j.jd);
+    }
+
+    function readJalaliFields(prefix) {
+      const year = Number(digitsToLatin($(`${prefix}Year`)?.value));
+      const month = Number(digitsToLatin($(`${prefix}Month`)?.value));
+      const day = Number(digitsToLatin($(`${prefix}Day`)?.value));
+      if (!year || !month || !day || month < 1 || month > 12 || day < 1 || day > 31) return null;
+      const g = jalaliToGregorian(year, month, day);
+      const date = new Date(g.gy, g.gm - 1, g.gd, 9, 0, 0, 0);
+      const check = gregorianToJalali(date);
+      if (check.jy !== year || check.jm !== month || check.jd !== day) return null;
+      return date;
+    }
+
+    function bindJalaliPicker(prefix) {
+      const btn = $(`apply${capitalize(prefix)}Date`);
+      if (!btn) return;
+      btn.onclick = () => {
+        const date = readJalaliFields(prefix);
+        if (!date) return toast("تاریخ شمسی وارد شده معتبر نیست.");
+        $(`${prefix}DateIso`).value = date.toISOString();
+        $(`${prefix}DateLabel`).value = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { dateStyle: "full" }).format(date);
+        document.querySelectorAll(`[data-date-target="${prefix}"] button`).forEach((item) => item.classList.remove("active"));
+      };
+    }
+
+    function div(a, b) {
+      return ~~(a / b);
+    }
+
+    function gregorianToJalali(date) {
+      const gy = date.getFullYear();
+      const gm = date.getMonth() + 1;
+      const gd = date.getDate();
+      const gdm = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+      let jy = gy <= 1600 ? 0 : 979;
+      let gy2 = gy <= 1600 ? gy - 621 : gy - 1600;
+      const gy3 = gm > 2 ? gy2 + 1 : gy2;
+      let days = 365 * gy2 + div(gy3 + 3, 4) - div(gy3 + 99, 100) + div(gy3 + 399, 400) - 80 + gd + gdm[gm - 1];
+      jy += 33 * div(days, 12053);
+      days %= 12053;
+      jy += 4 * div(days, 1461);
+      days %= 1461;
+      if (days > 365) {
+        jy += div(days - 1, 365);
+        days = (days - 1) % 365;
+      }
+      const jm = days < 186 ? 1 + div(days, 31) : 7 + div(days - 186, 30);
+      const jd = 1 + (days < 186 ? days % 31 : (days - 186) % 30);
+      return { jy, jm, jd };
+    }
+
+    function jalaliToGregorian(jy, jm, jd) {
+      jy += jy > 979 ? -979 : 0;
+      let days = 365 * jy + div(jy, 33) * 8 + div((jy % 33) + 3, 4) + 78 + jd + (jm < 7 ? (jm - 1) * 31 : (jm - 7) * 30 + 186);
+      let gy = 1600 + 400 * div(days, 146097);
+      days %= 146097;
+      if (days > 36524) {
+        gy += 100 * div(--days, 36524);
+        days %= 36524;
+        if (days >= 365) days++;
+      }
+      gy += 4 * div(days, 1461);
+      days %= 1461;
+      if (days > 365) {
+        gy += div(days - 1, 365);
+        days = (days - 1) % 365;
+      }
+      let gd = days + 1;
+      const leap = (gy % 4 === 0 && gy % 100 !== 0) || gy % 400 === 0;
+      const salA = [0, 31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+      let gm = 1;
+      while (gm <= 12 && gd > salA[gm]) gd -= salA[gm++];
+      return { gy, gm, gd };
     }
 
     function quickDate(offsetDays) {
@@ -1800,6 +2155,7 @@
           if (target === "meeting") {
             $("meetingDateIso").value = quickDateIso(offset);
             $("meetingDateLabel").value = quickDateLabel(offset);
+            setJalaliFields("meeting", quickDate(offset));
           }
         };
       });
@@ -2364,20 +2720,25 @@
           <div class="user-card-grid" id="userCards">
             ${state.users.map(userCard).join("")}
           </div>
-          <form class="inline-form-panel hidden" id="newUserForm">
-            <h2>افزودن کاربر جدید</h2>
-            <div class="form-grid">
-              <label>نام و نام خانوادگی<input name="fullName" required></label>
-              <label>جایگاه شغلی<input name="jobTitle" required></label>
-              <label>نقش<select name="role"><option value="Employee">Employee</option><option value="Admin">Admin</option></select></label>
-              <label>گروه<select name="groupId">${(state.groups || []).map((g) => `<option value="${g.id}">${g.title}</option>`).join("")}</select></label>
-              <label>شناسه فنی بله<input name="baleChatId" placeholder="اختیاری"></label>
-              <label>آیدی بله<input name="baleUsername" placeholder="@username"></label>
-              <label class="full">لینک پروفایل بله<input name="baleProfileUrl" placeholder="https://ble.ir/username"></label>
-              <label>آیدی تلگرام<input name="telegramChatId" placeholder="اختیاری"></label>
-            </div>
-            <button class="primary">ثبت کاربر</button>
-          </form>
+          <div class="modal-backdrop hidden" id="newUserModal">
+            <form class="modal-card" id="newUserForm">
+              <div class="panel-head">
+                <h2>افزودن کاربر جدید</h2>
+                <button type="button" class="ghost" id="closeNewUserModal">بستن</button>
+              </div>
+              <div class="form-grid">
+                <label>نام و نام خانوادگی<input name="fullName" required></label>
+                <label>جایگاه شغلی<input name="jobTitle" required></label>
+                <label>نقش<select name="role"><option value="Employee">Employee</option><option value="Admin">Admin</option></select></label>
+                <label>گروه<select name="groupId">${(state.groups || []).map((g) => `<option value="${g.id}">${g.title}</option>`).join("")}</select></label>
+                <label>شناسه فنی بله<input name="baleChatId" placeholder="اختیاری"></label>
+                <label>آیدی بله<input name="baleUsername" placeholder="@username"></label>
+                <label class="full">لینک پروفایل بله<input name="baleProfileUrl" placeholder="https://ble.ir/username"></label>
+                <label>آیدی تلگرام<input name="telegramChatId" placeholder="اختیاری"></label>
+              </div>
+              <button class="primary">ثبت کاربر</button>
+            </form>
+          </div>
         </div>
         <div class="panel">
           <div class="panel-head">
@@ -2507,8 +2868,10 @@
       };
       $("userSearch").oninput = applyUserFilters;
       $("userStatusFilter").onchange = applyUserFilters;
-      $("toggleNewUserForm").onclick = () => {
-        $("newUserForm").classList.toggle("hidden");
+      $("toggleNewUserForm").onclick = () => $("newUserModal").classList.remove("hidden");
+      $("closeNewUserModal").onclick = () => $("newUserModal").classList.add("hidden");
+      $("newUserModal").onclick = (event) => {
+        if (event.target.id === "newUserModal") $("newUserModal").classList.add("hidden");
       };
       document.querySelectorAll("[data-suspend-user]").forEach((btn) => {
         btn.onclick = async () => {
