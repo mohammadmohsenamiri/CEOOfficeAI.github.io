@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CEO Office AI Coordinator</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --panel: #fff;
+      --text: #172026;
+      --muted: #667085;
+      --brand: #0f766e;
+      --brand-dark: #115e59;
+      --line: #d9e1e8;
+      --ok: #15803d;
+      --warn: #b45309;
+      --danger: #b91c1c;
+      --blue: #1d4ed8;
+      --shadow: 0 8px 28px rgba(16, 24, 40, .08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Tahoma, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      direction: rtl;
+    }
+    button, input, textarea, select { font-family: inherit; }
+    .layout { min-height: 100vh; display: grid; grid-template-columns: 290px 1fr; }
+    aside { background: #fff; border-left: 1px solid var(--line); padding: 18px; position: sticky; top: 0; height: 100vh; overflow: auto; }
+    .brand { display: grid; gap: 6px; margin-bottom: 20px; }
+    .brand b { color: var(--brand); font-size: 18px; }
+    .nav { display: grid; gap: 8px; }
+    .nav button { border: 1px solid transparent; background: transparent; padding: 10px 12px; border-radius: 10px; text-align: right; color: #344054; cursor: pointer; }
+    .nav button.active, .nav button:hover { background: #e7f5f3; border-color: #b8dfda; color: var(--brand-dark); font-weight: 700; }
+    .session { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); display: grid; gap: 10px; }
+    main { padding: 22px; display: grid; gap: 18px; align-content: start; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 14px; }
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: 24px; }
+    h2 { font-size: 18px; }
+    h3 { font-size: 15px; }
+    .muted { color: var(--muted); }
+    .small { font-size: 12px; }
+    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .metric, .panel, .item-card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+    .metric { padding: 16px; display: grid; gap: 8px; }
+    .metric b { font-size: 26px; color: var(--brand); }
+    .grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 14px; align-items: start; }
+    .panel { padding: 16px; display: grid; gap: 14px; min-width: 0; }
+    .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .full { grid-column: 1 / -1; }
+    label { display: grid; gap: 6px; color: #344054; font-size: 13px; }
+    input, textarea, select { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 10px 11px; background: #fff; color: var(--text); }
+    textarea { min-height: 84px; resize: vertical; }
+    .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .ltr { direction: ltr; text-align: left; }
+    .btn { border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; background: #fff; color: #344054; cursor: pointer; }
+    .btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+    .btn.danger { background: #fff0f0; border-color: #fecaca; color: var(--danger); }
+    .btn.blue { background: #eff6ff; border-color: #bfdbfe; color: var(--blue); }
+    .btn.warn { background: #fff7ed; border-color: #fed7aa; color: var(--warn); }
+    .btn:disabled { opacity: .55; cursor: not-allowed; }
+    .list { display: grid; gap: 10px; }
+    .item-card { padding: 14px; display: grid; gap: 10px; box-shadow: none; }
+    .item-top { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
+    .item-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chips { display: flex; gap: 7px; flex-wrap: wrap; }
+    .chip { display: inline-flex; align-items: center; gap: 5px; background: #eef2f6; border: 1px solid #dde4ec; color: #344054; border-radius: 999px; padding: 4px 9px; font-size: 12px; white-space: nowrap; }
+    .chip.ok { background: #e8f7ee; border-color: #bfe6ce; color: var(--ok); }
+    .chip.warn { background: #fff4e5; border-color: #fed7aa; color: var(--warn); }
+    .chip.danger { background: #fff0f0; border-color: #fecaca; color: var(--danger); }
+    .chip.blue { background: #eff6ff; border-color: #bfdbfe; color: var(--blue); }
+    .page { display: none; gap: 18px; }
+    .page.active { display: grid; }
+    .notice { padding: 12px 14px; border: 1px dashed #b8dfda; background: #f0fdfa; border-radius: 12px; color: #0f5f58; }
+    .messages { min-height: 300px; max-height: 460px; overflow: auto; display: grid; gap: 10px; align-content: start; border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: #fbfcfd; }
+    .msg { padding: 10px 12px; border-radius: 12px; max-width: 88%; white-space: pre-wrap; line-height: 1.7; }
+    .msg.user { background: #e7f5f3; justify-self: end; }
+    .msg.ai { background: #fff; border: 1px solid var(--line); justify-self: start; }
+    .jalali-picker { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .jalali-picker .caption { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
+    .empty { color: var(--muted); padding: 12px; border: 1px dashed var(--line); border-radius: 12px; }
+    @media (max-width: 950px) {
+      .layout { grid-template-columns: 1fr; }
+      aside { position: static; height: auto; }
+      .grid, .metrics, .form-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <aside>
+    <div class="brand">
+      <b>CEO Office AI Coordinator</b>
+      <span class="muted small">هماهنگ‌کننده هوشمند دفتر مدیرعامل</span>
+    </div>
+    <div class="nav" id="nav"></div>
+    <div class="session">
+      <label>کاربر فعال
+        <select id="actorSelect"></select>
+      </label>
+      <button class="btn" id="refreshBtn">به‌روزرسانی داده‌ها</button>
+      <span class="muted small">برای اجرای کامل پیام‌رسان و AI، بک‌اند را اجرا کنید.</span>
+    </div>
+  </aside>
+
+  <main>
+    <section class="page active" id="dashboardPage">
+      <div class="topbar">
+        <div>
+          <h1>داشبورد</h1>
+          <p class="muted">نمای عملیاتی تسک‌ها، جلسات و درخواست‌های دفتر مدیرعامل</p>
+        </div>
+      </div>
+      <div class="metrics" id="metrics"></div>
+      <div class="grid">
+        <div class="panel">
+          <div class="panel-head"><h2>تسک‌های نزدیک</h2><button class="btn" data-go="tasksPage">رفتن به تسک‌ها</button></div>
+          <div class="list" id="dashboardTasks"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>جلسات این هفته</h2><button class="btn" data-go="meetingsPage">رفتن به جلسات</button></div>
+          <div class="list" id="dashboardMeetings"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="tasksPage">
+      <div class="topbar"><div><h1>Tasks section</h1><p class="muted">وظایف زمان‌دار و عملیاتی</p></div></div>
+      <div class="notice">داخل هر کارت تسک، دکمه دقیقاً با عنوان <b>Transfer to long-term tasks section</b> اضافه شده است. این دکمه زمان‌بندی تسک را حذف می‌کند و تمام ویژگی‌های دیگر تسک را حفظ می‌کند.</div>
+      <div class="grid">
+        <div class="panel">
+          <div class="panel-head"><h2>ایجاد تسک زمان‌دار</h2></div>
+          <form id="taskForm" class="form-grid">
+            <label class="full">عنوان<input id="taskTitle" required /></label>
+            <label class="full">شرح<textarea id="taskDescription"></textarea></label>
+            <label>اولویت<select id="taskPriority"><option value="low">کم</option><option value="medium" selected>متوسط</option><option value="high">زیاد</option></select></label>
+            <label>مسئول<select id="taskAssignees" multiple></select></label>
+            <label class="full">تاریخ سررسید جلالی<div class="jalali-picker" id="taskDuePicker"></div><input type="hidden" id="taskDueAt" /></label>
+            <label>ساعت<input id="taskTime" type="time" value="09:00" /></label>
+            <label>گروه<select id="taskGroups" multiple></select></label>
+            <button class="btn primary full" type="submit">ثبت تسک</button>
+          </form>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>فهرست تسک‌ها</h2></div>
+          <div class="list" id="tasksList"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="longTermPage">
+      <div class="topbar"><div><h1>Long-term tasks section</h1><p class="muted">وظایف بدون زمان‌بندی مشخص، در صفحه مستقل</p></div></div>
+      <div class="grid">
+        <div class="panel">
+          <div class="panel-head"><h2>ایجاد وظیفه بلندمدت</h2></div>
+          <form id="longTermForm" class="form-grid">
+            <label class="full">عنوان<input id="longTitle" required /></label>
+            <label class="full">شرح<textarea id="longDescription"></textarea></label>
+            <label>اولویت<select id="longPriority"><option value="low">کم</option><option value="medium" selected>متوسط</option><option value="high">زیاد</option></select></label>
+            <label>مسئول<select id="longAssignees" multiple></select></label>
+            <label class="full">گروه<select id="longGroups" multiple></select></label>
+            <button class="btn primary full" type="submit">ثبت در بخش بلندمدت</button>
+          </form>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>وظایف بلندمدت</h2></div>
+          <div class="list" id="longTermList"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="recurringPage">
+      <div class="topbar"><div><h1>Recurring tasks section</h1><p class="muted">وظایف قابل ایجاد با چرخه تکرار مشخص، در صفحه مستقل</p></div></div>
+      <div class="grid">
+        <div class="panel">
+          <div class="panel-head"><h2>ایجاد چرخه تکرار</h2></div>
+          <form id="recurringForm" class="form-grid">
+            <label class="full">عنوان<input id="recTitle" required /></label>
+            <label class="full">شرح<textarea id="recDescription"></textarea></label>
+            <label>چرخه تکرار<select id="recCycle"><option value="daily">روزانه</option><option value="weekly" selected>هفتگی</option><option value="monthly">ماهانه</option></select></label>
+            <label>هر چند چرخه؟<input id="recInterval" type="number" min="1" value="1" /></label>
+            <label>روزهای هفته<select id="recDays" multiple><option value="6">شنبه</option><option value="0">یکشنبه</option><option value="1">دوشنبه</option><option value="2">سه‌شنبه</option><option value="3">چهارشنبه</option><option value="4">پنجشنبه</option><option value="5">جمعه</option></select></label>
+            <label>روز ماه<input id="recDayOfMonth" type="number" min="1" max="31" placeholder="برای ماهانه" /></label>
+            <label class="full">تاریخ شروع جلالی<div class="jalali-picker" id="recStartPicker"></div><input type="hidden" id="recStartDate" /></label>
+            <label>ساعت<input id="recTime" type="time" value="09:00" /></label>
+            <label>اولویت<select id="recPriority"><option value="low">کم</option><option value="medium" selected>متوسط</option><option value="high">زیاد</option></select></label>
+            <label>مسئول<select id="recAssignees" multiple></select></label>
+            <label class="full">گروه<select id="recGroups" multiple></select></label>
+            <button class="btn primary full" type="submit">ثبت تسک تکرارشونده</button>
+          </form>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>چرخه‌های ثبت‌شده</h2></div>
+          <div class="list" id="recurringList"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="meetingsPage">
+      <div class="topbar"><div><h1>جلسات</h1><p class="muted">ثبت و مشاهده جلسات</p></div></div>
+      <div class="grid">
+        <div class="panel">
+          <div class="panel-head"><h2>ثبت جلسه</h2></div>
+          <form id="meetingForm" class="form-grid">
+            <label class="full">عنوان<input id="meetTitle" required /></label>
+            <label class="full">شرح<textarea id="meetDescription"></textarea></label>
+            <label class="full">تاریخ جلالی<div class="jalali-picker" id="meetDatePicker"></div><input type="hidden" id="meetDate" /></label>
+            <label>شروع<input id="meetStartTime" type="time" value="10:00" /></label>
+            <label>پایان<input id="meetEndTime" type="time" value="11:00" /></label>
+            <label>مکان<input id="meetLocation" /></label>
+            <label>اعضا<select id="meetMembers" multiple></select></label>
+            <button class="btn primary full" type="submit">ثبت جلسه</button>
+          </form>
+        </div>
+        <div class="panel"><div class="panel-head"><h2>فهرست جلسات</h2></div><div class="list" id="meetingsList"></div></div>
+      </div>
+    </section>
+
+    <section class="page" id="messengerPage">
+      <div class="topbar"><div><h1>Messenger / Bale AI</h1><p class="muted">پیام‌رسان باید با AI و بر اساس سطح دسترسی کاربر پاسخ بدهد، نه با پاسخ‌های کدنویسی‌شده.</p></div></div>
+      <div class="panel">
+        <div class="messages" id="messageList"></div>
+        <form id="messageForm" class="row">
+          <input id="messageText" placeholder="مثلاً: تسک‌های این هفته من را نشان بده / برای دوشنبه چه جلسه‌ای داریم؟" />
+          <button class="btn primary" type="submit">ارسال به AI</button>
+        </form>
+        <p class="muted small">برای بله، همین منطق از مسیر <span class="ltr">POST /api/webhooks/bale</span> اجرا می‌شود.</p>
+      </div>
+    </section>
+
+    <section class="page" id="settingsPage">
+      <div class="topbar"><div><h1>تنظیمات</h1><p class="muted">AI، بله و اتصال بک‌اند</p></div></div>
+      <div class="grid">
+        <div class="panel">
+          <h2>تنظیمات AI</h2>
+          <form id="aiSettingsForm" class="form-grid">
+            <label>Provider<select id="aiProvider"><option value="disabled">disabled</option><option value="openai">openai responses</option><option value="openai-chat-compatible">openai chat compatible</option><option value="offline">offline adapter</option></select></label>
+            <label>Model<input id="aiModel" class="ltr" placeholder="gpt-5.4-mini" /></label>
+            <label class="full">Base URL<input id="aiBaseUrl" class="ltr" placeholder="https://api.openai.com" /></label>
+            <label class="full">API Key<input id="aiApiKey" class="ltr" type="password" placeholder="در صورت نیاز" /></label>
+            <button class="btn primary full" type="submit">ذخیره تنظیمات AI</button>
+          </form>
+        </div>
+        <div class="panel">
+          <h2>تنظیمات Bale / بله</h2>
+          <form id="baleSettingsForm" class="form-grid">
+            <label>فعال؟<select id="baleEnabled"><option value="false">خیر</option><option value="true">بله</option></select></label>
+            <label>ارسال پاسخ واقعی؟<select id="baleSendReplies"><option value="false">خیر</option><option value="true">بله</option></select></label>
+            <label class="full">Webhook URL<input id="baleWebhookUrl" class="ltr" /></label>
+            <label class="full">Bot Token<input id="baleBotToken" class="ltr" type="password" /></label>
+            <label class="full">Webhook Secret<input id="baleSecret" class="ltr" type="password" /></label>
+            <button class="btn primary full" type="submit">ذخیره تنظیمات بله</button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<script>
+const API = location.pathname.includes('.html') || location.hostname ? '/api' : 'http://127.0.0.1:4188/api';
+const pages = [
+  ['dashboardPage', 'داشبورد'],
+  ['tasksPage', 'Tasks section'],
+  ['longTermPage', 'Long-term tasks'],
+  ['recurringPage', 'Recurring tasks'],
+  ['meetingsPage', 'جلسات'],
+  ['messengerPage', 'Messenger / Bale AI'],
+  ['settingsPage', 'تنظیمات']
+];
+let state = { users: [], groups: [], tasks: [], recurringTasks: [], meetings: [], messages: [], actorId: localStorage.getItem('actorId') || 'u2' };
+
+function $(id) { return document.getElementById(id); }
+function escapeHtml(s) { return String(s ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+function selectedValues(id) { return Array.from($(id).selectedOptions || []).map(o => o.value); }
+function userName(id) { return state.users.find(u => u.id === id)?.name || id || '-'; }
+function groupName(id) { return state.groups.find(g => g.id === id)?.name || id || '-'; }
+function activeActorHeaders() { return { 'Content-Type': 'application/json', 'X-Actor-Id': state.actorId }; }
+async function api(path, options = {}) {
+  const opts = { ...options, headers: { ...(options.headers || {}), ...(options.body ? activeActorHeaders() : { 'X-Actor-Id': state.actorId }) } };
+  const res = await fetch(API + path, opts);
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(data?.error || res.statusText);
+  return data;
+}
+function fmtDate(iso) {
+  if (!iso) return 'بدون زمان';
+  return new Intl.DateTimeFormat('fa-IR-u-ca-persian', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Tehran' }).format(new Date(iso));
+}
+function badgeStatus(status) {
+  const cls = status === 'done' ? 'ok' : status === 'rejected' ? 'danger' : status === 'accepted' ? 'blue' : 'warn';
+  const map = { todo: 'در انتظار', accepted: 'پذیرفته', rejected: 'رد شده', done: 'انجام شده', active: 'فعال', paused: 'متوقف' };
+  return `<span class="chip ${cls}">${map[status] || status}</span>`;
+}
+function badgePriority(priority) {
+  const cls = priority === 'high' ? 'danger' : priority === 'low' ? 'ok' : 'warn';
+  const map = { low: 'کم', medium: 'متوسط', high: 'زیاد' };
+  return `<span class="chip ${cls}">اولویت: ${map[priority] || priority}</span>`;
+}
+function fillMulti(selectId, items, current = []) {
+  const el = $(selectId);
+  el.innerHTML = items.map(i => `<option value="${i.id}" ${current.includes(i.id) ? 'selected' : ''}>${escapeHtml(i.name)}</option>`).join('');
+}
+
+// Jalali date conversion, adapted as a small embedded picker to avoid external dependencies.
+function div(a, b) { return ~~(a / b); }
+function jalCal(jy) {
+  const breaks = [-61,9,38,199,426,686,756,818,1111,1181,1210,1635,2060,2097,2192,2262,2324,2394,2456,3178];
+  let bl = breaks.length, gy = jy + 621, leapJ = -14, jp = breaks[0], jm, jump, leap, n, i;
+  if (jy < jp || jy >= breaks[bl - 1]) throw new Error('Invalid Jalali year');
+  for (i = 1; i < bl; i += 1) { jm = breaks[i]; jump = jm - jp; if (jy < jm) break; leapJ += div(jump, 33) * 8 + div(jump % 33, 4); jp = jm; }
+  n = jy - jp;
+  leapJ += div(n, 33) * 8 + div((n % 33) + 3, 4);
+  if (jump % 33 === 4 && jump - n === 4) leapJ += 1;
+  const leapG = div(gy, 4) - div((div(gy, 100) + 1) * 3, 4) - 150;
+  const march = 20 + leapJ - leapG;
+  if (jump - n < 6) n = n - jump + div(jump + 4, 33) * 33;
+  leap = (((n + 1) % 33) - 1) % 4;
+  if (leap === -1) leap = 4;
+  return { leap, gy, march };
+}
+function g2d(gy, gm, gd) {
+  let d = div((gy + div(gm - 8, 6) + 100100) * 1461, 4) + div(153 * ((gm + 9) % 12) + 2, 5) + gd - 34840408;
+  d = d - div(div(gy + 100100 + div(gm - 8, 6), 100) * 3, 4) + 752;
+  return d;
+}
+function d2g(jdn) {
+  let j = 4 * jdn + 139361631;
+  j = j + div(div(4 * jdn + 183187720, 146097) * 3, 4) * 4 - 3908;
+  const i = div((j % 1461), 4) * 5 + 308;
+  const gd = div((i % 153), 5) + 1;
+  const gm = ((div(i, 153) % 12) + 1);
+  const gy = div(j, 1461) - 100100 + div(8 - gm, 6);
+  return { gy, gm, gd };
+}
+function j2d(jy, jm, jd) {
+  const r = jalCal(jy);
+  return g2d(r.gy, 3, r.march) + (jm - 1) * 31 - div(jm, 7) * (jm - 7) + jd - 1;
+}
+function d2j(jdn) {
+  const gy = d2g(jdn).gy;
+  let jy = gy - 621;
+  const r = jalCal(jy);
+  const jdn1f = g2d(gy, 3, r.march);
+  let k = jdn - jdn1f;
+  if (k >= 0) {
+    if (k <= 185) return { jy, jm: 1 + div(k, 31), jd: (k % 31) + 1 };
+    k -= 186;
+  } else {
+    jy -= 1;
+    k += 179;
+    if (r.leap === 1) k += 1;
+  }
+  return { jy, jm: 7 + div(k, 30), jd: (k % 30) + 1 };
+}
+function toGregorian(jy, jm, jd) { return d2g(j2d(Number(jy), Number(jm), Number(jd))); }
+function toJalaali(gy, gm, gd) { return d2j(g2d(Number(gy), Number(gm), Number(gd))); }
+function isoDateFromJalali(jy, jm, jd) {
+  const g = toGregorian(jy, jm, jd);
+  return `${g.gy}-${String(g.gm).padStart(2, '0')}-${String(g.gd).padStart(2, '0')}`;
+}
+function todayJalali() {
+  const d = new Date();
+  return toJalaali(d.getFullYear(), d.getMonth() + 1, d.getDate());
+}
+function buildJalaliPicker(containerId, hiddenId, initialIsoDate) {
+  const el = $(containerId), hidden = $(hiddenId);
+  const today = initialIsoDate ? (() => { const [gy, gm, gd] = initialIsoDate.split('-').map(Number); return toJalaali(gy, gm, gd); })() : todayJalali();
+  const years = Array.from({ length: 9 }, (_, i) => today.jy - 2 + i);
+  const monthNames = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
+  el.innerHTML = `
+    <select data-part="year">${years.map(y => `<option value="${y}" ${y === today.jy ? 'selected' : ''}>${y}</option>`).join('')}</select>
+    <select data-part="month">${monthNames.map((m, i) => `<option value="${i+1}" ${i+1 === today.jm ? 'selected' : ''}>${m}</option>`).join('')}</select>
+    <select data-part="day"></select>
+    <span class="caption">انتخابگر تاریخ شمسی؛ مقدار نهایی برای بک‌اند به تاریخ میلادی ISO تبدیل می‌شود.</span>`;
+  const y = el.querySelector('[data-part="year"]'), m = el.querySelector('[data-part="month"]'), d = el.querySelector('[data-part="day"]');
+  function daysInMonth(jm) { return jm <= 6 ? 31 : jm <= 11 ? 30 : 29; }
+  function refreshDays() {
+    const max = daysInMonth(Number(m.value));
+    const current = Number(d.value || today.jd);
+    d.innerHTML = Array.from({ length: max }, (_, i) => `<option value="${i+1}" ${i+1 === Math.min(current, max) ? 'selected' : ''}>${i+1}</option>`).join('');
+    sync();
+  }
+  function sync() { hidden.value = isoDateFromJalali(y.value, m.value, d.value || 1); }
+  y.addEventListener('change', refreshDays); m.addEventListener('change', refreshDays); d.addEventListener('change', sync);
+  refreshDays();
+}
+function isoWithTime(dateOnly, time) {
+  if (!dateOnly) return null;
+  return new Date(`${dateOnly}T${time || '09:00'}:00+03:30`).toISOString();
+}
+
+function setupNav() {
+  $('nav').innerHTML = pages.map(([id, title], idx) => `<button class="${idx === 0 ? 'active' : ''}" data-page="${id}">${title}</button>`).join('');
+  document.querySelectorAll('[data-page], [data-go]').forEach(btn => btn.addEventListener('click', () => showPage(btn.dataset.page || btn.dataset.go)));
+}
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === id));
+  document.querySelectorAll('[data-page]').forEach(b => b.classList.toggle('active', b.dataset.page === id));
+}
+
+async function loadAll() {
+  state.users = await api('/users');
+  state.groups = await api('/groups');
+  fillActorSelect();
+  await Promise.all([loadTasks(), loadRecurring(), loadMeetings(), loadSettings()]);
+  renderAll();
+}
+async function loadTasks() { state.tasks = await api('/tasks'); }
+async function loadRecurring() { state.recurringTasks = await api('/recurring-tasks'); }
+async function loadMeetings() { state.meetings = await api('/meetings'); }
+async function loadSettings() {
+  try {
+    const ai = await api('/settings/ai');
+    $('aiProvider').value = ai.provider || 'disabled'; $('aiModel').value = ai.model || ''; $('aiBaseUrl').value = ai.baseUrl || '';
+    const bale = await api('/settings/bale');
+    $('baleEnabled').value = String(!!bale.enabled); $('baleSendReplies').value = String(!!bale.sendReplies); $('baleWebhookUrl').value = bale.webhookUrl || ''; $('baleSecret').value = bale.webhookSecret || '';
+  } catch (e) {}
+}
+function fillActorSelect() {
+  $('actorSelect').innerHTML = state.users.map(u => `<option value="${u.id}" ${u.id === state.actorId ? 'selected' : ''}>${escapeHtml(u.name)} (${escapeHtml(u.role)})</option>`).join('');
+  ['taskAssignees','longAssignees','recAssignees','meetMembers'].forEach(id => fillMulti(id, state.users));
+  ['taskGroups','longGroups','recGroups'].forEach(id => fillMulti(id, state.groups));
+}
+function renderAll() { renderMetrics(); renderTasks(); renderLongTerm(); renderRecurring(); renderMeetings(); renderDashboard(); }
+function renderMetrics() {
+  const scheduled = state.tasks.filter(t => t.type !== 'long_term');
+  const long = state.tasks.filter(t => t.type === 'long_term');
+  const done = state.tasks.filter(t => t.status === 'done');
+  $('metrics').innerHTML = [
+    ['تسک‌های زمان‌دار', scheduled.length], ['وظایف بلندمدت', long.length], ['چرخه‌های تکرار', state.recurringTasks.length], ['انجام‌شده', done.length]
+  ].map(([label, value]) => `<div class="metric"><span class="muted">${label}</span><b>${value}</b></div>`).join('');
+}
+function taskCard(t, includeTransfer) {
+  return `<div class="item-card">
+    <div class="item-top"><div><h3>${escapeHtml(t.title)}</h3><p class="muted small">${escapeHtml(t.description || '')}</p></div><div class="chips">${badgeStatus(t.status)}${badgePriority(t.priority)}</div></div>
+    <div class="chips"><span class="chip blue">${t.type === 'long_term' ? 'بلندمدت' : 'زمان‌دار'}</span><span class="chip">${fmtDate(t.dueAt || t.scheduledAt)}</span><span class="chip">مسئول: ${(t.assigneeIds || []).map(userName).join('، ') || '-'}</span><span class="chip">گروه: ${(t.groupIds || []).map(groupName).join('، ') || '-'}</span></div>
+    <div class="item-actions">
+      <button class="btn blue" data-task-action="accept" data-id="${t.id}">پذیرش</button>
+      <button class="btn warn" data-task-action="reject" data-id="${t.id}">رد</button>
+      <button class="btn primary" data-task-action="done" data-id="${t.id}">انجام شد</button>
+      ${includeTransfer ? `<button class="btn" data-transfer-long="${t.id}">Transfer to long-term tasks section</button>` : ''}
+      <button class="btn danger" data-delete-task="${t.id}">حذف</button>
+    </div>
+  </div>`;
+}
+function bindTaskButtons(root = document) {
+  root.querySelectorAll('[data-task-action]').forEach(btn => btn.addEventListener('click', async () => {
+    await api('/tasks/assignment', { method: 'PATCH', body: JSON.stringify({ taskId: btn.dataset.id, action: btn.dataset.taskAction }) });
+    await loadTasks(); renderAll();
+  }));
+  root.querySelectorAll('[data-transfer-long]').forEach(btn => btn.addEventListener('click', async () => {
+    await api(`/tasks/${btn.dataset.transferLong}/transfer-to-long-term`, { method: 'POST', body: JSON.stringify({}) });
+    await loadTasks(); renderAll(); showPage('longTermPage');
+  }));
+  root.querySelectorAll('[data-delete-task]').forEach(btn => btn.addEventListener('click', async () => {
+    await api(`/tasks/${btn.dataset.deleteTask}`, { method: 'DELETE', body: JSON.stringify({}) });
+    await loadTasks(); renderAll();
+  }));
+}
+function renderTasks() {
+  const tasks = state.tasks.filter(t => t.type !== 'long_term');
+  $('tasksList').innerHTML = tasks.length ? tasks.map(t => taskCard(t, true)).join('') : '<div class="empty">تسک زمان‌دار قابل نمایش وجود ندارد.</div>';
+  bindTaskButtons($('tasksList'));
+}
+function renderLongTerm() {
+  const tasks = state.tasks.filter(t => t.type === 'long_term');
+  $('longTermList').innerHTML = tasks.length ? tasks.map(t => taskCard(t, false)).join('') : '<div class="empty">وظیفه بلندمدت وجود ندارد.</div>';
+  bindTaskButtons($('longTermList'));
+}
+function renderRecurring() {
+  $('recurringList').innerHTML = state.recurringTasks.length ? state.recurringTasks.map(r => `<div class="item-card">
+    <div class="item-top"><div><h3>${escapeHtml(r.title)}</h3><p class="muted small">${escapeHtml(r.description || '')}</p></div><div class="chips">${badgeStatus(r.status)}${badgePriority(r.priority)}</div></div>
+    <div class="chips"><span class="chip blue">${r.cycle} × ${r.interval || 1}</span><span class="chip">اجرای بعدی: ${fmtDate(r.nextRunAt)}</span><span class="chip">مسئول: ${(r.assigneeIds || []).map(userName).join('، ') || '-'}</span></div>
+    <div class="item-actions"><button class="btn primary" data-generate-rec="${r.id}">ایجاد نمونه بعدی</button></div>
+  </div>`).join('') : '<div class="empty">چرخه تکرار ثبت نشده است.</div>';
+  $('recurringList').querySelectorAll('[data-generate-rec]').forEach(btn => btn.addEventListener('click', async () => {
+    await api(`/recurring-tasks/${btn.dataset.generateRec}/generate-next`, { method: 'POST', body: JSON.stringify({}) });
+    await Promise.all([loadTasks(), loadRecurring()]); renderAll();
+  }));
+}
+function renderMeetings() {
+  $('meetingsList').innerHTML = state.meetings.length ? state.meetings.map(m => `<div class="item-card"><div class="item-top"><div><h3>${escapeHtml(m.title)}</h3><p class="muted small">${escapeHtml(m.description || '')}</p></div></div><div class="chips"><span class="chip blue">${fmtDate(m.startAt)}</span><span class="chip">مکان: ${escapeHtml(m.location || '-')}</span><span class="chip">اعضا: ${(m.memberIds || []).map(userName).join('، ') || '-'}</span></div></div>`).join('') : '<div class="empty">جلسه‌ای ثبت نشده است.</div>';
+}
+function renderDashboard() {
+  $('dashboardTasks').innerHTML = state.tasks.slice(0, 5).map(t => taskCard(t, t.type !== 'long_term')).join('') || '<div class="empty">تسکی برای نمایش نیست.</div>';
+  bindTaskButtons($('dashboardTasks'));
+  $('dashboardMeetings').innerHTML = state.meetings.slice(0, 5).map(m => `<div class="item-card"><h3>${escapeHtml(m.title)}</h3><div class="chips"><span class="chip blue">${fmtDate(m.startAt)}</span><span class="chip">${escapeHtml(m.location || '-')}</span></div></div>`).join('') || '<div class="empty">جلسه‌ای نیست.</div>';
+}
+
+function setupForms() {
+  buildJalaliPicker('taskDuePicker', 'taskDueAt');
+  buildJalaliPicker('recStartPicker', 'recStartDate');
+  buildJalaliPicker('meetDatePicker', 'meetDate');
+  $('refreshBtn').addEventListener('click', loadAll);
+  $('actorSelect').addEventListener('change', async e => { state.actorId = e.target.value; localStorage.setItem('actorId', state.actorId); await loadAll(); });
+
+  $('taskForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    await api('/tasks', { method: 'POST', body: JSON.stringify({
+      title: $('taskTitle').value, description: $('taskDescription').value, priority: $('taskPriority').value,
+      type: 'scheduled', dueAt: isoWithTime($('taskDueAt').value, $('taskTime').value), scheduledAt: isoWithTime($('taskDueAt').value, $('taskTime').value),
+      assigneeIds: selectedValues('taskAssignees'), groupIds: selectedValues('taskGroups')
+    })});
+    e.target.reset(); await loadTasks(); renderAll();
+  });
+  $('longTermForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    await api('/tasks', { method: 'POST', body: JSON.stringify({
+      title: $('longTitle').value, description: $('longDescription').value, priority: $('longPriority').value,
+      type: 'long_term', assigneeIds: selectedValues('longAssignees'), groupIds: selectedValues('longGroups')
+    })});
+    e.target.reset(); await loadTasks(); renderAll();
+  });
+  $('recurringForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const startDate = $('recStartDate').value;
+    await api('/recurring-tasks', { method: 'POST', body: JSON.stringify({
+      title: $('recTitle').value, description: $('recDescription').value, priority: $('recPriority').value,
+      cycle: $('recCycle').value, interval: Number($('recInterval').value || 1), daysOfWeek: selectedValues('recDays').map(Number),
+      dayOfMonth: $('recDayOfMonth').value || null, startDate, time: $('recTime').value, nextRunAt: isoWithTime(startDate, $('recTime').value),
+      assigneeIds: selectedValues('recAssignees'), groupIds: selectedValues('recGroups')
+    })});
+    e.target.reset(); await loadRecurring(); renderAll();
+  });
+  $('meetingForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const date = $('meetDate').value;
+    await api('/meetings', { method: 'POST', body: JSON.stringify({
+      title: $('meetTitle').value, description: $('meetDescription').value, location: $('meetLocation').value,
+      startAt: isoWithTime(date, $('meetStartTime').value), endAt: isoWithTime(date, $('meetEndTime').value), memberIds: selectedValues('meetMembers')
+    })});
+    e.target.reset(); await loadMeetings(); renderAll();
+  });
+  $('messageForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const text = $('messageText').value.trim(); if (!text) return;
+    addMsg(text, 'user'); $('messageText').value = '';
+    try {
+      const result = await api('/messages/ask', { method: 'POST', body: JSON.stringify({ text, channel: 'web' }) });
+      addMsg(result.replyText, 'ai'); await Promise.all([loadTasks(), loadRecurring(), loadMeetings()]); renderAll();
+    } catch (err) { addMsg('خطا: ' + err.message, 'ai'); }
+  });
+  $('aiSettingsForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    await api('/settings/ai', { method: 'PUT', body: JSON.stringify({ provider: $('aiProvider').value, model: $('aiModel').value, baseUrl: $('aiBaseUrl').value, apiKey: $('aiApiKey').value }) });
+    alert('تنظیمات AI ذخیره شد.');
+  });
+  $('baleSettingsForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    await api('/settings/bale', { method: 'PUT', body: JSON.stringify({ enabled: $('baleEnabled').value === 'true', sendReplies: $('baleSendReplies').value === 'true', webhookUrl: $('baleWebhookUrl').value, botToken: $('baleBotToken').value, webhookSecret: $('baleSecret').value }) });
+    alert('تنظیمات بله ذخیره شد.');
+  });
+}
+function addMsg(text, cls) {
+  const div = document.createElement('div'); div.className = 'msg ' + cls; div.textContent = text;
+  $('messageList').appendChild(div); $('messageList').scrollTop = $('messageList').scrollHeight;
+}
+
+setupNav(); setupForms(); loadAll().catch(err => {
+  console.error(err);
+  document.querySelector('main').insertAdjacentHTML('afterbegin', `<div class="notice">اتصال به بک‌اند برقرار نشد: ${escapeHtml(err.message)}. لطفاً از پوشه backend دستور <span class="ltr">node server.js</span> را اجرا کنید.</div>`);
+});
+</script>
+</body>
+</html>
