@@ -1,0 +1,1857 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CEO Office AI Coordinator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17202a;
+      --muted: #667085;
+      --line: #d7dde5;
+      --soft: #f5f7fa;
+      --panel: #ffffff;
+      --brand: #0f766e;
+      --brand-2: #1d4ed8;
+      --warn: #b45309;
+      --danger: #b42318;
+      --ok: #15803d;
+      --shadow: 0 10px 30px rgba(23, 32, 42, .08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--soft);
+      color: var(--ink);
+      font-family: Tahoma, "Segoe UI", Arial, sans-serif;
+      letter-spacing: 0;
+    }
+
+    button, input, select, textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 8px;
+      min-height: 38px;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+
+    button:hover { border-color: #9aa7b6; }
+    button.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+    button.blue { background: var(--brand-2); border-color: var(--brand-2); color: #fff; }
+    button.danger { color: var(--danger); border-color: #f4c7c3; }
+    button.ghost { background: transparent; }
+    button.icon { width: 40px; padding: 0; display: inline-grid; place-items: center; }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 8px;
+      padding: 10px 12px;
+      min-height: 40px;
+    }
+
+    textarea { min-height: 92px; resize: vertical; }
+    label { display: grid; gap: 7px; color: #344054; font-size: 13px; }
+
+    .app {
+      display: grid;
+      grid-template-columns: 270px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    aside {
+      background: #fff;
+      border-left: 1px solid var(--line);
+      padding: 20px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+    }
+
+    .brand {
+      display: grid;
+      gap: 7px;
+      margin-bottom: 22px;
+    }
+
+    .brand strong { font-size: 20px; }
+    .brand span { color: var(--muted); font-size: 13px; line-height: 1.7; }
+
+    nav {
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav-button {
+      width: 100%;
+      text-align: right;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border-color: transparent;
+      background: transparent;
+    }
+
+    .nav-button.active {
+      background: #e7f5f3;
+      border-color: #b8dfda;
+      color: #0f5f58;
+      font-weight: 700;
+    }
+
+    .session {
+      margin-top: 22px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      display: grid;
+      gap: 10px;
+    }
+
+    main {
+      padding: 22px;
+      display: grid;
+      gap: 18px;
+      align-content: start;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: 24px; }
+    h2 { font-size: 18px; }
+    h3 { font-size: 15px; }
+    .muted { color: var(--muted); }
+    .small { font-size: 12px; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .metric, .panel, .item-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .metric {
+      padding: 16px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .metric b { font-size: 26px; color: var(--brand); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap: 14px;
+      align-items: start;
+    }
+
+    .panel {
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .full { grid-column: 1 / -1; }
+
+    .list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .item-card {
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+      box-shadow: none;
+    }
+
+    .item-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .item-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chips {
+      display: flex;
+      gap: 7px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #eef2f6;
+      border: 1px solid #dde4ec;
+      color: #344054;
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .chip.ok { background: #e8f7ee; border-color: #bfe6ce; color: var(--ok); }
+    .chip.warn { background: #fff4e5; border-color: #fed7aa; color: var(--warn); }
+    .chip.danger { background: #fff0f0; border-color: #fecaca; color: var(--danger); }
+    .chip.blue { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+
+    .tabs, .segmented {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tabs button.active, .segmented button.active {
+      background: #17202a;
+      color: #fff;
+      border-color: #17202a;
+    }
+
+    .table-wrap { overflow: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 680px;
+      background: #fff;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 11px 10px;
+      text-align: right;
+      vertical-align: top;
+      font-size: 13px;
+    }
+
+    th {
+      color: #475467;
+      background: #f8fafc;
+      position: sticky;
+      top: 0;
+    }
+
+    .ai-box {
+      background: #f8fafc;
+      border: 1px dashed #b8c3cf;
+      border-radius: 8px;
+      padding: 12px;
+      display: grid;
+      gap: 12px;
+    }
+
+    pre {
+      direction: ltr;
+      text-align: left;
+      white-space: pre-wrap;
+      background: #101828;
+      color: #e7edf5;
+      border-radius: 8px;
+      padding: 12px;
+      overflow: auto;
+      margin: 0;
+      font-family: Consolas, monospace;
+      font-size: 12px;
+    }
+
+    .toast {
+      position: fixed;
+      inset-inline: 20px auto;
+      bottom: 20px;
+      max-width: min(420px, calc(100vw - 40px));
+      background: #17202a;
+      color: #fff;
+      padding: 12px 14px;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      display: none;
+      z-index: 30;
+    }
+
+    .toast.show { display: block; }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 980px) {
+      .app { grid-template-columns: 1fr; }
+      aside { position: relative; height: auto; border-left: 0; border-bottom: 1px solid var(--line); }
+      nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 620px) {
+      main { padding: 14px; }
+      .topbar, .panel-head, .item-top { align-items: stretch; flex-direction: column; }
+      .form-grid, .metrics, nav { grid-template-columns: 1fr; }
+      button { width: 100%; }
+      button.icon { width: 40px; }
+    }
+
+    /* Manus-inspired dark dashboard polish */
+    :root {
+      --ink: #eef2ff;
+      --muted: #98a2b3;
+      --line: rgba(148, 163, 184, .18);
+      --soft: #090b12;
+      --panel: rgba(20, 24, 38, .78);
+      --brand: #8b5cf6;
+      --brand-2: #06b6d4;
+      --warn: #f59e0b;
+      --danger: #f87171;
+      --ok: #34d399;
+      --shadow: 0 24px 70px rgba(0, 0, 0, .34);
+      --glow: 0 0 0 1px rgba(139, 92, 246, .12), 0 20px 70px rgba(7, 10, 20, .42);
+      --surface: rgba(15, 19, 32, .88);
+      --surface-2: rgba(255, 255, 255, .055);
+      --text-strong: #f8fafc;
+    }
+
+    body {
+      background:
+        radial-gradient(circle at 82% 8%, rgba(139, 92, 246, .22), transparent 34%),
+        radial-gradient(circle at 12% 82%, rgba(6, 182, 212, .14), transparent 30%),
+        linear-gradient(145deg, #080a12 0%, #101522 52%, #090b12 100%);
+      color: var(--ink);
+      font-family: Vazirmatn, Tahoma, "Segoe UI", Arial, sans-serif;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, .035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, .025) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: linear-gradient(to bottom, rgba(0, 0, 0, .75), transparent 80%);
+    }
+
+    .app {
+      grid-template-columns: 292px minmax(0, 1fr);
+    }
+
+    aside {
+      background: rgba(9, 11, 18, .78);
+      border-left: 1px solid var(--line);
+      backdrop-filter: blur(18px);
+      box-shadow: 24px 0 80px rgba(0, 0, 0, .22);
+    }
+
+    .brand {
+      background: linear-gradient(145deg, rgba(139, 92, 246, .16), rgba(6, 182, 212, .08));
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: var(--glow);
+    }
+
+    .brand strong {
+      color: var(--text-strong);
+      line-height: 1.35;
+    }
+
+    .brand strong::before {
+      content: "AI";
+      display: inline-grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      margin-left: 10px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      color: #fff;
+      font-size: 13px;
+      vertical-align: middle;
+      box-shadow: 0 12px 28px rgba(139, 92, 246, .28);
+    }
+
+    .brand span {
+      color: #aeb8ca;
+    }
+
+    nav {
+      gap: 7px;
+    }
+
+    .nav-button {
+      color: #cbd5e1;
+      border: 1px solid transparent;
+      min-height: 44px;
+      border-radius: 8px;
+      padding: 10px 12px;
+      justify-content: flex-start;
+      direction: rtl;
+      transition: background .18s ease, border-color .18s ease, color .18s ease, transform .18s ease;
+    }
+
+    .nav-button:hover {
+      background: rgba(255, 255, 255, .055);
+      border-color: rgba(148, 163, 184, .12);
+      transform: translateX(-2px);
+    }
+
+    .nav-button.active {
+      background: linear-gradient(135deg, rgba(139, 92, 246, .20), rgba(6, 182, 212, .10));
+      border-color: rgba(139, 92, 246, .34);
+      color: #fff;
+      box-shadow: 0 12px 34px rgba(139, 92, 246, .13);
+    }
+
+    .nav-main {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      width: 100%;
+      justify-content: flex-start;
+      direction: rtl;
+    }
+
+    .nav-arrow {
+      display: inline-grid;
+      place-items: center;
+      width: 18px;
+      color: #7dd3fc;
+      transform: none;
+    }
+
+    .nav-icon {
+      display: inline-grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .055);
+      border: 1px solid rgba(255, 255, 255, .075);
+      color: #a5b4fc;
+      font-size: 15px;
+      line-height: 1;
+    }
+
+    .svg-icon {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      flex: 0 0 auto;
+    }
+
+    .metric-icon, .card-icon {
+      display: inline-grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, rgba(139, 92, 246, .22), rgba(6, 182, 212, .12));
+      border: 1px solid rgba(255, 255, 255, .10);
+      color: #c4b5fd;
+      box-shadow: 0 14px 36px rgba(139, 92, 246, .14);
+    }
+
+    .card-icon {
+      width: 34px;
+      height: 34px;
+      color: #67e8f9;
+    }
+
+    .nav-button.active .nav-icon {
+      background: linear-gradient(135deg, rgba(139, 92, 246, .36), rgba(6, 182, 212, .22));
+      color: #fff;
+      border-color: rgba(255, 255, 255, .14);
+    }
+
+    .session {
+      border-top-color: var(--line);
+    }
+
+    main {
+      padding: 30px;
+      gap: 22px;
+    }
+
+    .topbar {
+      min-height: 74px;
+      padding: 14px 18px;
+      background: rgba(9, 11, 18, .44);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      backdrop-filter: blur(14px);
+      box-shadow: var(--glow);
+    }
+
+    h1 {
+      color: var(--text-strong);
+      font-size: 30px;
+      font-weight: 900;
+      line-height: 1.25;
+    }
+
+    h2 {
+      color: var(--text-strong);
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    h3 {
+      color: #f1f5f9;
+      font-size: 15px;
+      font-weight: 750;
+      line-height: 1.7;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .metrics {
+      gap: 14px;
+    }
+
+    .metric, .panel, .item-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: var(--glow);
+      backdrop-filter: blur(16px);
+    }
+
+    .metric {
+      min-height: 132px;
+      padding: 20px;
+      overflow: hidden;
+      position: relative;
+      transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+      animation: slideUp .35s ease both;
+    }
+
+    .metric::after {
+      content: "";
+      position: absolute;
+      inset: auto -18px -24px auto;
+      width: 92px;
+      height: 92px;
+      border-radius: 50%;
+      background: rgba(139, 92, 246, .10);
+      filter: blur(18px);
+    }
+
+    .metric:hover, .item-card:hover, .panel:hover {
+      border-color: rgba(139, 92, 246, .32);
+    }
+
+    .metric b {
+      color: var(--text-strong);
+      font-size: 31px;
+      font-weight: 900;
+    }
+
+    .panel {
+      padding: 18px;
+      border-radius: 8px;
+    }
+
+    .item-card {
+      background: rgba(255, 255, 255, .045);
+      border-radius: 8px;
+      transition: transform .18s ease, border-color .18s ease, background .18s ease;
+    }
+
+    .item-card:hover {
+      background: rgba(255, 255, 255, .062);
+      transform: translateY(-1px);
+    }
+
+    button {
+      background: rgba(255, 255, 255, .055);
+      border-color: var(--line);
+      color: #e5e7eb;
+      transition: transform .16s ease, border-color .16s ease, background .16s ease;
+    }
+
+    button:hover {
+      border-color: rgba(139, 92, 246, .38);
+      background: rgba(255, 255, 255, .08);
+      transform: translateY(-1px);
+    }
+
+    button.primary, button.blue {
+      border: 0;
+      color: white;
+      box-shadow: 0 16px 38px rgba(139, 92, 246, .18);
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, #8b5cf6, #14b8a6);
+    }
+
+    button.blue {
+      background: linear-gradient(135deg, #2563eb, #06b6d4);
+    }
+
+    button.danger {
+      background: rgba(248, 113, 113, .10);
+      border-color: rgba(248, 113, 113, .28);
+      color: #fecaca;
+    }
+
+    input, select, textarea {
+      background: rgba(2, 6, 23, .42);
+      border-color: var(--line);
+      color: #f8fafc;
+      outline: none;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: rgba(139, 92, 246, .56);
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, .12);
+    }
+
+    label {
+      color: #cbd5e1;
+    }
+
+    .chip {
+      background: rgba(255, 255, 255, .06);
+      border-color: rgba(255, 255, 255, .10);
+      color: #cbd5e1;
+    }
+
+    .chip.ok {
+      background: rgba(52, 211, 153, .12);
+      border-color: rgba(52, 211, 153, .26);
+      color: #86efac;
+    }
+
+    .chip.warn {
+      background: rgba(245, 158, 11, .12);
+      border-color: rgba(245, 158, 11, .26);
+      color: #fcd34d;
+    }
+
+    .chip.danger {
+      background: rgba(248, 113, 113, .12);
+      border-color: rgba(248, 113, 113, .26);
+      color: #fecaca;
+    }
+
+    .chip.blue {
+      background: rgba(6, 182, 212, .12);
+      border-color: rgba(6, 182, 212, .28);
+      color: #67e8f9;
+    }
+
+    .ai-box {
+      background: rgba(2, 6, 23, .30);
+      border-color: rgba(139, 92, 246, .25);
+      border-style: solid;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04);
+    }
+
+    pre {
+      background: rgba(2, 6, 23, .78);
+      border: 1px solid rgba(148, 163, 184, .16);
+      color: #dbeafe;
+    }
+
+    th {
+      background: rgba(15, 23, 42, .92);
+      color: #cbd5e1;
+    }
+
+    td {
+      color: #e2e8f0;
+    }
+
+    table {
+      background: transparent;
+    }
+
+    th, td {
+      border-bottom-color: var(--line);
+    }
+
+    .toast {
+      background: rgba(15, 23, 42, .94);
+      border: 1px solid rgba(139, 92, 246, .28);
+      color: #fff;
+      backdrop-filter: blur(14px);
+    }
+
+    .calendar-shell {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 340px;
+      gap: 14px;
+      align-items: start;
+    }
+
+    .calendar-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .calendar-title {
+      display: grid;
+      gap: 4px;
+    }
+
+    .calendar-title strong {
+      color: #fff;
+      font-size: 22px;
+      font-weight: 900;
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(96px, 1fr));
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: auto;
+      background: rgba(2, 6, 23, .34);
+    }
+
+    .calendar-weekday {
+      min-height: 42px;
+      display: grid;
+      place-items: center;
+      color: #a5b4fc;
+      font-weight: 800;
+      font-size: 12px;
+      border-left: 1px solid var(--line);
+      background: rgba(255, 255, 255, .045);
+    }
+
+    .calendar-day {
+      min-height: 132px;
+      padding: 10px;
+      border-top: 1px solid var(--line);
+      border-left: 1px solid var(--line);
+      display: grid;
+      align-content: start;
+      gap: 8px;
+      position: relative;
+    }
+
+    .calendar-day.dim {
+      opacity: .45;
+      background: rgba(255, 255, 255, .02);
+    }
+
+    .calendar-day.today {
+      background: linear-gradient(180deg, rgba(139, 92, 246, .14), rgba(6, 182, 212, .045));
+      box-shadow: inset 0 0 0 1px rgba(139, 92, 246, .35);
+    }
+
+    .day-number {
+      display: inline-grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      color: #f8fafc;
+      font-weight: 800;
+      background: rgba(255, 255, 255, .055);
+      font-size: 12px;
+    }
+
+    .calendar-day.today .day-number {
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      color: #fff;
+    }
+
+    .event-pill {
+      border: 1px solid rgba(6, 182, 212, .28);
+      background: rgba(6, 182, 212, .12);
+      color: #cffafe;
+      border-radius: 8px;
+      padding: 6px 7px;
+      font-size: 11px;
+      line-height: 1.55;
+      overflow: hidden;
+    }
+
+    .event-pill strong {
+      display: block;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .calendar-agenda {
+      display: grid;
+      gap: 10px;
+    }
+
+    .agenda-row {
+      display: grid;
+      grid-template-columns: 76px minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .045);
+    }
+
+    .agenda-time {
+      color: #67e8f9;
+      font-weight: 800;
+      font-size: 12px;
+      direction: ltr;
+      text-align: right;
+    }
+
+    .ai-workspace {
+      display: grid;
+      grid-template-columns: minmax(0, .95fr) minmax(360px, 1.05fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .ai-composer {
+      min-height: 430px;
+      background:
+        linear-gradient(145deg, rgba(139, 92, 246, .16), rgba(6, 182, 212, .06)),
+        rgba(2, 6, 23, .36);
+      border: 1px solid rgba(139, 92, 246, .26);
+      border-radius: 8px;
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .ai-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .ai-orb {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      color: #fff;
+      font-weight: 900;
+      box-shadow: 0 18px 42px rgba(139, 92, 246, .28);
+    }
+
+    .prompt-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .intent-preview {
+      min-height: 210px;
+    }
+
+    .message-timeline {
+      display: grid;
+      gap: 10px;
+      max-height: 610px;
+      overflow: auto;
+      padding-left: 4px;
+    }
+
+    @media (max-width: 1100px) {
+      .calendar-shell, .ai-workspace {
+        grid-template-columns: 1fr;
+      }
+      .calendar-grid {
+        grid-template-columns: repeat(7, minmax(82px, 1fr));
+      }
+      .calendar-day {
+        min-height: 112px;
+      }
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 980px) {
+      .app { grid-template-columns: 1fr; }
+      aside { height: auto; }
+      main { padding: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <div class="brand">
+        <strong>CEO Office AI Coordinator</strong>
+        <span>هماهنگ‌کننده هوشمند دفتر مدیرعامل؛ نسخه MVP متنی، فارسی، راست‌چین و مبتنی بر قوانین محرمانگی.</span>
+      </div>
+      <nav id="nav"></nav>
+      <div class="session">
+        <label>کاربر فعال
+          <select id="currentUser"></select>
+        </label>
+        <button class="ghost" id="resetData" title="بازگردانی داده‌های نمونه">بازنشانی داده‌ها</button>
+      </div>
+    </aside>
+
+    <main>
+      <div class="topbar">
+        <div>
+          <h1 id="pageTitle">داشبورد</h1>
+          <p class="muted" id="pageSubtitle">نمای عملیاتی تسک‌ها، جلسات و درخواست‌های مدیرعامل</p>
+        </div>
+        <div class="chips">
+          <span class="chip blue" id="todayChip"></span>
+          <span class="chip" id="roleChip"></span>
+        </div>
+      </div>
+
+      <section id="view-dashboard"></section>
+      <section id="view-tasks" class="hidden"></section>
+      <section id="view-requests" class="hidden"></section>
+      <section id="view-meetings" class="hidden"></section>
+      <section id="view-messenger" class="hidden"></section>
+      <section id="view-bale" class="hidden"></section>
+      <section id="view-analytics" class="hidden"></section>
+      <section id="view-deploy" class="hidden"></section>
+      <section id="view-offline" class="hidden"></section>
+      <section id="view-users" class="hidden"></section>
+      <section id="view-rules" class="hidden"></section>
+    </main>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const storageKey = "ceo-office-ai-coordinator-v1";
+    const nf = new Intl.NumberFormat("fa-IR");
+    const df = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { dateStyle: "medium", timeStyle: "short" });
+
+    const icons = {
+      dashboard: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M3 13h8V3H3z"/><path d="M13 21h8V11h-8z"/><path d="M13 3h8v4h-8z"/><path d="M3 17h8v4H3z"/></svg>',
+      tasks: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+      requests: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 3l7 4v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7z"/><path d="M9 12l2 2 4-5"/></svg>',
+      meetings: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/><path d="M5 4h14a2 2 0 0 1 2 2v15H3V6a2 2 0 0 1 2-2z"/></svg>',
+      messenger: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path d="M8 10h8"/><path d="M8 14h5"/></svg>',
+      bale: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3.2-6.9"/><path d="M8 12h8"/><path d="M12 8v8"/><path d="M16 4h5v5"/></svg>',
+      analytics: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 16l4-5 4 3 5-8"/></svg>',
+      deploy: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><path d="M5 21h14"/></svg>',
+      offline: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 18h.01"/><path d="M8.5 14.5a5 5 0 0 1 7 0"/><path d="M5 11a10 10 0 0 1 14 0"/><path d="M2 8a15 15 0 0 1 20 0"/><path d="M3 3l18 18"/></svg>',
+      users: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+      rules: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-5"/></svg>',
+      clock: '<svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+      done: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>',
+      alert: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M10.3 3.9L2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>',
+      bot: '<svg class="svg-icon" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 4v4"/><path d="M8 14h.01"/><path d="M16 14h.01"/><path d="M9 18h6"/></svg>',
+      user: '<svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>',
+      lock: '<svg class="svg-icon" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
+      spark: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 2l1.7 6.3L20 10l-6.3 1.7L12 18l-1.7-6.3L4 10l6.3-1.7z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></svg>'
+    };
+
+    const pages = [
+      ["dashboard", "داشبورد", "نمای خلاصه عملیات", "dashboard"],
+      ["tasks", "تسک‌ها", "چرخه چندمسئوله قبول، رد و Done", "tasks"],
+      ["requests", "درخواست از مدیرعامل", "مسیر مجاز برای درخواست‌های خصوصی CEO", "requests"],
+      ["meetings", "جلسات", "تقویم شمسی و یادآوری", "meetings"],
+      ["messenger", "پیام‌رسان و AI", "شبیه‌ساز متن بله/تلگرام و JSON intent", "messenger"],
+      ["bale", "تنظیمات بله", "اتصال بازوی بله، webhook و پیام تایید فارسی", "bale"],
+      ["analytics", "تحلیل و هشدارها", "پیشنهادهای هوشمند، KPI و کارهای عقب‌افتاده", "analytics"],
+      ["deploy", "استقرار رایگان", "آماده‌سازی preview آنلاین و webhook عمومی", "deploy"],
+      ["offline", "فاز آفلاین", "AI محلی، سرور داخلی و IP ثابت", "offline"],
+      ["users", "افراد", "کاربران، نقش‌ها و اتصال پیام‌رسان", "users"],
+      ["rules", "قوانین", "قواعد دسترسی و محرمانگی", "rules"]
+    ];
+
+    const seed = {
+      currentUserId: "u2",
+      users: [
+        { id: "u1", fullName: "مریم رضایی", jobTitle: "مدیرعامل", role: "CEO", group: "مدیریت", telegram: "1001", bale: "2001", active: true, isCeo: true },
+        { id: "u2", fullName: "علی کریمی", jobTitle: "هماهنگ‌کننده دفتر", role: "Admin", group: "دفتر مدیرعامل", telegram: "1002", bale: "2002", active: true, isCeo: false },
+        { id: "u3", fullName: "سارا احمدی", jobTitle: "مدیر فروش", role: "Employee", group: "فروش", telegram: "1003", bale: "2003", active: true, isCeo: false },
+        { id: "u4", fullName: "حسین نوری", jobTitle: "مسئول عملیات", role: "Employee", group: "عملیات", telegram: "1004", bale: "2004", active: true, isCeo: false }
+      ],
+      tasks: [
+        { id: "T-1001", title: "آماده‌سازی گزارش فروش هفتگی", description: "خلاصه فروش، ریسک‌ها و اقدامات پیشنهادی برای جلسه صبح شنبه.", creatorId: "u2", group: "فروش", type: "task", dueAt: "2026-06-06T07:30:00.000Z", visibility: "group", assignees: [
+          { userId: "u3", status: "accepted", rejectReason: "", doneAt: "" },
+          { userId: "u4", status: "pending", rejectReason: "", doneAt: "" }
+        ]},
+        { id: "T-1002", title: "مرور برنامه روزانه مدیرعامل", description: "چک‌لیست تماس‌ها، جلسات و اولویت‌های امروز.", creatorId: "u1", group: "مدیریت", type: "ceo_private", dueAt: "2026-06-05T12:30:00.000Z", visibility: "ceo_private", assignees: [
+          { userId: "u1", status: "accepted", rejectReason: "", doneAt: "" }
+        ]}
+      ],
+      requests: [
+        { id: "R-2201", title: "درخواست تایید بودجه رویداد مشتریان", description: "بودجه اولیه برای رویداد تیرماه نیاز به تایید دارد.", requesterId: "u3", ceoId: "u1", status: "pending", decisionReason: "", delegatedTaskId: "" }
+      ],
+      meetings: [
+        { id: "M-3001", title: "جلسه هماهنگی فروش و عملیات", description: "بررسی تعهدات باز و تصمیم برای هفته آینده.", startAt: "2026-06-06T08:00:00.000Z", endAt: "2026-06-06T09:00:00.000Z", location: "اتاق جلسات اصلی", creatorId: "u2", status: "scheduled", members: ["u2", "u3", "u4"] }
+      ],
+      messages: [
+        { id: "MSG-1", source: "telegram", sender: "1002", text: "برای سارا و حسین تسک گزارش فروش تا شنبه بساز", status: "parsed", parsedIntent: { intent: "create_task", title: "گزارش فروش", assignees: ["سارا احمدی", "حسین نوری"], needsConfirmation: true } }
+      ],
+      notifications: []
+    };
+
+    let state = loadState();
+    let activePage = "dashboard";
+
+    function loadState() {
+      const saved = localStorage.getItem(storageKey);
+      if (!saved) return structuredClone(seed);
+      try { return JSON.parse(saved); } catch { return structuredClone(seed); }
+    }
+
+    function saveState() {
+      localStorage.setItem(storageKey, JSON.stringify(state));
+    }
+
+    function user(id) {
+      return state.users.find((u) => u.id === id);
+    }
+
+    function currentUser() {
+      return user(state.currentUserId) || state.users[0];
+    }
+
+    function isPrivileged() {
+      const u = currentUser();
+      return u.role === "Admin" || u.role === "CEO";
+    }
+
+    function fa(value) {
+      return nf.format(value);
+    }
+
+    function dateFa(value) {
+      return df.format(new Date(value));
+    }
+
+    function uid(prefix) {
+      return `${prefix}-${Math.floor(Date.now() / 10).toString().slice(-6)}`;
+    }
+
+    function toast(text) {
+      const box = $("toast");
+      box.textContent = text;
+      box.classList.add("show");
+      setTimeout(() => box.classList.remove("show"), 2600);
+    }
+
+    function visibleTasks() {
+      const u = currentUser();
+      return state.tasks.filter((task) => {
+        const hasMe = task.creatorId === u.id || task.assignees.some((a) => a.userId === u.id);
+        if (task.visibility === "ceo_private") return u.role === "CEO" || task.creatorId === u.id || task.assignees.some((a) => a.userId === u.id);
+        if (isPrivileged()) return true;
+        return hasMe || task.group === u.group;
+      });
+    }
+
+    function visibleRequests() {
+      const u = currentUser();
+      return state.requests.filter((r) => u.role === "CEO" || r.requesterId === u.id || u.role === "Admin");
+    }
+
+    function canAssignTo(assigneeIds) {
+      const actor = currentUser();
+      const ceo = state.users.find((u) => u.isCeo);
+      if (!ceo) return true;
+      if (!assigneeIds.includes(ceo.id)) return true;
+      return actor.role === "CEO" && assigneeIds.every((id) => id === ceo.id);
+    }
+
+    function statusChip(status) {
+      const labels = { pending: "در انتظار", accepted: "قبول شده", rejected: "رد شده", done: "انجام شد", scheduled: "برنامه‌ریزی‌شده", cancelled: "لغو شده", approved: "تایید شده", delegated: "ارجاع شده" };
+      const cls = status === "done" || status === "approved" ? "ok" : status === "rejected" || status === "cancelled" ? "danger" : status === "accepted" || status === "delegated" ? "blue" : "warn";
+      return `<span class="chip ${cls}">${labels[status] || status}</span>`;
+    }
+
+    function renderShell() {
+      $("nav").innerHTML = pages.map(([id, title, , icon]) => `<button class="nav-button ${id === activePage ? "active" : ""}" data-page="${id}"><span class="nav-main"><span class="nav-arrow">›</span><span class="nav-icon">${icons[icon]}</span><span class="nav-label">${title}</span></span></button>`).join("");
+      $("nav").querySelectorAll("button").forEach((btn) => btn.addEventListener("click", () => {
+        activePage = btn.dataset.page;
+        render();
+      }));
+
+      $("currentUser").innerHTML = state.users.map((u) => `<option value="${u.id}" ${u.id === state.currentUserId ? "selected" : ""}>${u.fullName} - ${u.role}</option>`).join("");
+      $("currentUser").onchange = (event) => {
+        state.currentUserId = event.target.value;
+        saveState();
+        render();
+      };
+      $("resetData").onclick = () => {
+        state = structuredClone(seed);
+        saveState();
+        render();
+        toast("داده‌های نمونه بازنشانی شد.");
+      };
+      $("todayChip").textContent = dateFa(new Date().toISOString());
+      $("roleChip").textContent = `${currentUser().fullName} | ${currentUser().role}`;
+    }
+
+    function render() {
+      renderShell();
+      pages.forEach(([id]) => $(`view-${id}`).classList.toggle("hidden", id !== activePage));
+      const page = pages.find(([id]) => id === activePage);
+      $("pageTitle").textContent = page[1];
+      $("pageSubtitle").textContent = page[2];
+      ({
+        dashboard: renderDashboard,
+        tasks: renderTasks,
+        requests: renderRequests,
+        meetings: renderMeetings,
+        messenger: renderMessenger,
+        bale: renderBaleSettings,
+        analytics: renderAnalytics,
+        deploy: renderDeploy,
+        offline: renderOffline,
+        users: renderUsers,
+        rules: renderRules
+      }[activePage])();
+    }
+
+    function renderDashboard() {
+      const tasks = visibleTasks();
+      const mine = tasks.filter((t) => t.assignees.some((a) => a.userId === currentUser().id));
+      const pending = tasks.flatMap((t) => t.assignees).filter((a) => a.status === "pending").length;
+      const done = tasks.filter((t) => t.assignees.every((a) => a.status === "done")).length;
+      $("view-dashboard").innerHTML = `
+        <div class="metrics">
+          <div class="metric"><span class="metric-icon">${icons.dashboard}</span><span class="muted">تسک‌های قابل مشاهده</span><b>${fa(tasks.length)}</b></div>
+          <div class="metric"><span class="metric-icon">${icons.tasks}</span><span class="muted">تسک‌های من</span><b>${fa(mine.length)}</b></div>
+          <div class="metric"><span class="metric-icon">${icons.clock}</span><span class="muted">در انتظار قبول</span><b>${fa(pending)}</b></div>
+          <div class="metric"><span class="metric-icon">${icons.done}</span><span class="muted">تکمیل‌شده</span><b>${fa(done)}</b></div>
+        </div>
+        <div class="grid">
+          <div class="panel">
+            <div class="panel-head"><h2>آخرین تسک‌ها</h2><button class="blue" data-go="tasks">مدیریت تسک</button></div>
+            <div class="list">${tasks.slice(0, 4).map(taskCard).join("") || empty("تسکی برای نمایش وجود ندارد.")}</div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>درخواست‌های مدیرعامل</h2><button class="primary" data-go="requests">ثبت درخواست</button></div>
+            <div class="list">${visibleRequests().slice(0, 4).map(requestCard).join("") || empty("درخواستی برای نمایش وجود ندارد.")}</div>
+          </div>
+        </div>`;
+      bindGoButtons();
+    }
+
+    function renderTasks() {
+      $("view-tasks").innerHTML = `
+        <div class="grid">
+          <div class="panel">
+            <div class="panel-head"><h2>فهرست تسک‌ها</h2><span class="chip">${fa(visibleTasks().length)} مورد</span></div>
+            <div class="list">${visibleTasks().map(taskCard).join("") || empty("تسکی مطابق دسترسی شما وجود ندارد.")}</div>
+          </div>
+          <form class="panel" id="taskForm">
+            <h2>تسک جدید</h2>
+            <div class="form-grid">
+              <label class="full">عنوان<input name="title" required placeholder="مثلاً پیگیری قرارداد مشتری"></label>
+              <label class="full">توضیح<textarea name="description" placeholder="جزئیات کار"></textarea></label>
+              <label>گروه<input name="group" value="${currentUser().group}"></label>
+              <label>سررسید<input name="dueAt" type="datetime-local" required></label>
+              <label class="full">مسئولان<select name="assignees" multiple size="5">${state.users.filter((u) => u.active).map((u) => `<option value="${u.id}">${u.fullName} - ${u.group}</option>`).join("")}</select></label>
+            </div>
+            <button class="primary">ثبت تسک</button>
+            <p class="muted small">اگر مسئول مدیرعامل باشد، قانون R-CEO-02 اجرا می‌شود و کاربران غیر CEO باید درخواست مدیرعامل ثبت کنند.</p>
+          </form>
+        </div>`;
+      $("taskForm").onsubmit = createTask;
+      bindTaskActions();
+    }
+
+    function taskCard(task) {
+      const creator = user(task.creatorId);
+      const progress = Math.round(task.assignees.filter((a) => a.status === "done").length / task.assignees.length * 100);
+      const ceo = task.visibility === "ceo_private" ? `<span class="chip danger">خصوصی CEO</span>` : "";
+      return `
+        <article class="item-card">
+          <div class="item-top">
+            <div style="display:flex; gap:10px; align-items:flex-start;">
+              <span class="card-icon">${task.visibility === "ceo_private" ? icons.lock : icons.tasks}</span>
+              <div>
+              <h3>${task.title}</h3>
+              <p class="muted small">${task.description || "بدون توضیح"}</p>
+              </div>
+            </div>
+            <div class="chips">${ceo}<span class="chip">${fa(progress)}٪ پیشرفت</span></div>
+          </div>
+          <div class="chips">
+            <span class="chip">سازنده: ${creator ? creator.fullName : "نامشخص"}</span>
+            <span class="chip">گروه: ${task.group}</span>
+            <span class="chip blue">سررسید: ${dateFa(task.dueAt)}</span>
+          </div>
+          <div class="chips">${task.assignees.map((a) => `<span class="chip">${user(a.userId)?.fullName || "کاربر"} ${statusChip(a.status)}</span>`).join("")}</div>
+          ${task.assignees.some((a) => a.userId === currentUser().id && a.status !== "done") ? `
+            <div class="item-actions">
+              <button class="primary" data-task-action="accepted" data-task="${task.id}">قبول</button>
+              <button class="blue" data-task-action="done" data-task="${task.id}">Done</button>
+              <button class="danger" data-task-action="rejected" data-task="${task.id}">رد</button>
+            </div>` : ""}
+        </article>`;
+    }
+
+    function createTask(event) {
+      event.preventDefault();
+      const form = new FormData(event.target);
+      const assignees = Array.from(event.target.assignees.selectedOptions).map((o) => o.value);
+      if (!assignees.length) return toast("حداقل یک مسئول انتخاب کنید.");
+      if (!canAssignTo(assignees)) return toast("تعریف مستقیم تسک برای مدیرعامل مجاز نیست. از بخش درخواست از مدیرعامل استفاده کنید.");
+      const task = {
+        id: uid("T"),
+        title: form.get("title").trim(),
+        description: form.get("description").trim(),
+        creatorId: currentUser().id,
+        group: form.get("group").trim() || currentUser().group,
+        type: assignees.some((id) => user(id)?.isCeo) ? "ceo_private" : "task",
+        dueAt: new Date(form.get("dueAt")).toISOString(),
+        visibility: assignees.some((id) => user(id)?.isCeo) ? "ceo_private" : "group",
+        assignees: assignees.map((id) => ({ userId: id, status: "pending", rejectReason: "", doneAt: "" }))
+      };
+      state.tasks.unshift(task);
+      saveState();
+      renderTasks();
+      toast("تسک ثبت شد و نوتیف assign ساخته شد.");
+    }
+
+    function bindTaskActions() {
+      document.querySelectorAll("[data-task-action]").forEach((btn) => {
+        btn.onclick = () => {
+          const task = state.tasks.find((t) => t.id === btn.dataset.task);
+          const mine = task?.assignees.find((a) => a.userId === currentUser().id);
+          if (!mine) return;
+          mine.status = btn.dataset.taskAction;
+          mine.doneAt = mine.status === "done" ? new Date().toISOString() : "";
+          if (mine.status === "rejected") mine.rejectReason = "رد شده در MVP";
+          saveState();
+          render();
+          toast(mine.status === "done" ? "سهم شما Done شد." : "وضعیت تسک ثبت شد.");
+        };
+      });
+    }
+
+    function renderRequests() {
+      $("view-requests").innerHTML = `
+        <div class="grid">
+          <div class="panel">
+            <div class="panel-head"><h2>Inbox درخواست‌ها</h2><span class="chip">${fa(visibleRequests().length)} مورد</span></div>
+            <div class="list">${visibleRequests().map(requestCard).join("") || empty("درخواستی برای نمایش وجود ندارد.")}</div>
+          </div>
+          <form class="panel" id="requestForm">
+            <h2>ثبت درخواست از مدیرعامل</h2>
+            <label>عنوان<input name="title" required placeholder="مثلاً تایید بودجه"></label>
+            <label>شرح<textarea name="description" required placeholder="درخواست فقط برای شما و مدیرعامل قابل مشاهده خواهد بود."></textarea></label>
+            <button class="primary">ارسال درخواست</button>
+          </form>
+        </div>`;
+      $("requestForm").onsubmit = (event) => {
+        event.preventDefault();
+        const form = new FormData(event.target);
+        const ceo = state.users.find((u) => u.isCeo);
+        state.requests.unshift({ id: uid("R"), title: form.get("title").trim(), description: form.get("description").trim(), requesterId: currentUser().id, ceoId: ceo.id, status: "pending", decisionReason: "", delegatedTaskId: "" });
+        saveState();
+        renderRequests();
+        toast("درخواست خصوصی برای مدیرعامل ثبت شد.");
+      };
+      bindRequestActions();
+    }
+
+    function requestCard(req) {
+      const canDecide = currentUser().role === "CEO" && req.status === "pending";
+      return `
+        <article class="item-card">
+          <div class="item-top"><div style="display:flex; gap:10px; align-items:flex-start;"><span class="card-icon">${icons.requests}</span><div><h3>${req.title}</h3><p class="muted small">${req.description}</p></div></div>${statusChip(req.status)}</div>
+          <div class="chips"><span class="chip">درخواست‌کننده: ${user(req.requesterId)?.fullName || "نامشخص"}</span><span class="chip danger">خصوصی</span></div>
+          ${canDecide ? `<div class="item-actions"><button class="primary" data-request-action="approved" data-request="${req.id}">تایید</button><button class="blue" data-request-action="delegated" data-request="${req.id}">ارجاع به عملیات</button><button class="danger" data-request-action="rejected" data-request="${req.id}">رد</button></div>` : ""}
+        </article>`;
+    }
+
+    function bindRequestActions() {
+      document.querySelectorAll("[data-request-action]").forEach((btn) => {
+        btn.onclick = () => {
+          const req = state.requests.find((r) => r.id === btn.dataset.request);
+          if (!req) return;
+          req.status = btn.dataset.requestAction;
+          req.decisionReason = req.status === "rejected" ? "رد شده در MVP" : "";
+          if (req.status === "delegated") {
+            const target = state.users.find((u) => u.group === "عملیات" && !u.isCeo) || state.users.find((u) => !u.isCeo);
+            const taskId = uid("T");
+            req.delegatedTaskId = taskId;
+            state.tasks.unshift({ id: taskId, title: req.title, description: req.description, creatorId: currentUser().id, group: target.group, type: "task", dueAt: new Date(Date.now() + 86400000).toISOString(), visibility: "group", assignees: [{ userId: target.id, status: "pending", rejectReason: "", doneAt: "" }] });
+          }
+          saveState();
+          renderRequests();
+          toast("تصمیم مدیرعامل ثبت شد.");
+        };
+      });
+    }
+
+    function renderMeetings() {
+      const monthDate = new Date();
+      const monthTitle = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { month: "long", year: "numeric" }).format(monthDate);
+      $("view-meetings").innerHTML = `
+        <div class="calendar-shell">
+          <div class="panel">
+            <div class="calendar-toolbar">
+              <div class="calendar-title">
+                <strong>${monthTitle}</strong>
+                <span class="muted small">تقویم کاری فارسی، راست‌چین و نزدیک به تجربه Google Calendar</span>
+              </div>
+              <div class="segmented">
+                <button class="active">ماه</button>
+                <button>هفته</button>
+                <button>روز</button>
+              </div>
+            </div>
+            ${calendarMonth()}
+            <div class="panel-head">
+              <h2>برنامه پیش رو</h2>
+              <span class="chip">${fa(state.meetings.length)} جلسه</span>
+            </div>
+            <div class="calendar-agenda">${state.meetings.map(agendaRow).join("") || empty("جلسه‌ای برای نمایش وجود ندارد.")}</div>
+          </div>
+          <form class="panel" id="meetingForm">
+            <h2>جلسه جدید</h2>
+            <div class="form-grid">
+              <label class="full">عنوان<input name="title" required></label>
+              <label class="full">توضیح<textarea name="description"></textarea></label>
+              <label>شروع<input name="startAt" type="datetime-local" required></label>
+              <label>پایان<input name="endAt" type="datetime-local" required></label>
+              <label class="full">مکان یا لینک<input name="location" placeholder="اتاق جلسه یا لینک"></label>
+              <label class="full">اعضا<select name="members" multiple size="5">${state.users.filter((u) => u.active).map((u) => `<option value="${u.id}">${u.fullName}</option>`).join("")}</select></label>
+            </div>
+            <button class="primary">ثبت جلسه</button>
+          </form>
+        </div>`;
+      $("meetingForm").onsubmit = (event) => {
+        event.preventDefault();
+        const form = new FormData(event.target);
+        const members = Array.from(event.target.members.selectedOptions).map((o) => o.value);
+        if (!members.includes(currentUser().id)) members.push(currentUser().id);
+        state.meetings.unshift({ id: uid("M"), title: form.get("title").trim(), description: form.get("description").trim(), startAt: new Date(form.get("startAt")).toISOString(), endAt: new Date(form.get("endAt")).toISOString(), location: form.get("location").trim(), creatorId: currentUser().id, status: "scheduled", members });
+        saveState();
+        renderMeetings();
+        toast("جلسه ثبت شد و یادآوری یک ساعت قبل/شروع ساخته شد.");
+      };
+    }
+
+    function calendarMonth() {
+      const base = new Date();
+      const year = base.getFullYear();
+      const month = base.getMonth();
+      const first = new Date(year, month, 1);
+      const startOffset = (first.getDay() + 1) % 7;
+      const start = new Date(year, month, 1 - startOffset);
+      const weekdays = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
+      const cells = [];
+      for (let i = 0; i < 42; i++) {
+        const day = new Date(start);
+        day.setDate(start.getDate() + i);
+        const dayMeetings = state.meetings.filter((meeting) => sameLocalDay(new Date(meeting.startAt), day));
+        const dim = day.getMonth() !== month ? "dim" : "";
+        const today = sameLocalDay(day, new Date()) ? "today" : "";
+        cells.push(`
+          <div class="calendar-day ${dim} ${today}">
+            <span class="day-number">${fa(new Intl.DateTimeFormat("fa-IR-u-ca-persian", { day: "numeric" }).format(day).replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)))}</span>
+            ${dayMeetings.slice(0, 3).map((meeting) => `<div class="event-pill"><strong>${meeting.title}</strong><span>${timeFa(meeting.startAt)} · ${meeting.location || "بدون مکان"}</span></div>`).join("")}
+          </div>`);
+      }
+      return `<div class="calendar-grid">${weekdays.map((day) => `<div class="calendar-weekday">${day}</div>`).join("")}${cells.join("")}</div>`;
+    }
+
+    function sameLocalDay(a, b) {
+      return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+    }
+
+    function timeFa(value) {
+      return new Intl.DateTimeFormat("fa-IR", { hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+    }
+
+    function agendaRow(meeting) {
+      return `
+        <article class="agenda-row">
+          <div class="agenda-time">${timeFa(meeting.startAt)}</div>
+          <div>
+            <div style="display:flex; gap:10px; align-items:flex-start;">
+            <span class="card-icon">${icons.meetings}</span>
+            <div>
+            <h3>${meeting.title}</h3>
+            <p class="muted small">${dateFa(meeting.startAt)} · ${meeting.location || "بدون مکان"}</p>
+            </div>
+            </div>
+            <div class="chips">${meeting.members.map((id) => `<span class="chip">${user(id)?.fullName || "کاربر"}</span>`).join("")}</div>
+          </div>
+        </article>`;
+    }
+
+    function meetingCard(meeting) {
+      return `
+        <article class="item-card">
+          <div class="item-top"><div style="display:flex; gap:10px; align-items:flex-start;"><span class="card-icon">${icons.meetings}</span><div><h3>${meeting.title}</h3><p class="muted small">${meeting.description || "بدون توضیح"}</p></div></div>${statusChip(meeting.status)}</div>
+          <div class="chips"><span class="chip blue">شروع: ${dateFa(meeting.startAt)}</span><span class="chip">مکان: ${meeting.location || "ثبت نشده"}</span></div>
+          <div class="chips">${meeting.members.map((id) => `<span class="chip">${user(id)?.fullName || "کاربر"}</span>`).join("")}</div>
+        </article>`;
+    }
+
+    function renderMessenger() {
+      $("view-messenger").innerHTML = `
+        <div class="ai-workspace">
+          <div class="ai-composer">
+            <div class="ai-header">
+              <div style="display:flex; align-items:center; gap:12px;">
+                <div class="ai-orb">${icons.spark}</div>
+                <div>
+                  <h2>دستیار هوشمند دفتر مدیرعامل</h2>
+                  <p class="muted small">متن فارسی را به عملیات قابل تایید تبدیل می‌کند.</p>
+                </div>
+              </div>
+              <div class="segmented">
+                <button class="active" data-source="telegram">تلگرام</button>
+                <button data-source="bale">بله</button>
+              </div>
+            </div>
+            <div class="ai-box">
+              <label>پیام کاربر
+                <textarea id="messageText">برای سارا و حسین تسک آماده‌سازی گزارش فروش تا فردا بساز</textarea>
+              </label>
+              <div class="prompt-row">
+                <label>نمونه سریع
+                  <select id="promptPreset">
+                    <option value="برای سارا و حسین تسک آماده‌سازی گزارش فروش تا فردا بساز">ساخت تسک چندمسئوله</option>
+                    <option value="برای فردا ساعت ۱۰ جلسه هماهنگی فروش و عملیات با سارا و حسین ثبت کن">ساخت جلسه</option>
+                    <option value="درخواست تایید بودجه رویداد مشتریان را برای مدیرعامل ثبت کن">درخواست از مدیرعامل</option>
+                  </select>
+                </label>
+                <button class="primary" id="parseMessage">تحلیل پیام</button>
+              </div>
+              <pre class="intent-preview" id="aiOutput">{
+  "intent": "در انتظار تحلیل",
+  "needsConfirmation": true
+}</pre>
+              <button class="blue" id="confirmIntent">تایید و ثبت عملیات</button>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>جریان پیام‌ها</h2><span class="chip">${fa(state.messages.length)} پیام</span></div>
+            <div class="message-timeline">${state.messages.map((m) => `<article class="item-card"><div class="item-top"><div style="display:flex; gap:10px; align-items:flex-start;"><span class="card-icon">${icons.messenger}</span><div><div class="chips"><span class="chip blue">${m.source}</span><span class="chip">${m.status}</span></div><h3>${m.text}</h3></div></div></div><pre>${JSON.stringify(m.parsedIntent, null, 2)}</pre></article>`).join("")}</div>
+          </div>
+        </div>`;
+      let source = "telegram";
+      document.querySelectorAll("[data-source]").forEach((btn) => {
+        btn.onclick = (event) => {
+          event.preventDefault();
+          document.querySelectorAll("[data-source]").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          source = btn.dataset.source;
+        };
+      });
+      $("parseMessage").onclick = () => {
+        const intent = parsePersianMessage($("messageText").value);
+        $("aiOutput").textContent = JSON.stringify(intent, null, 2);
+        $("aiOutput").dataset.intent = JSON.stringify({ source, intent, text: $("messageText").value });
+      };
+      $("promptPreset").onchange = (event) => {
+        $("messageText").value = event.target.value;
+      };
+      $("confirmIntent").onclick = () => {
+        if (!$("aiOutput").dataset.intent) return toast("اول پیام را Parse کنید.");
+        confirmIntent(JSON.parse($("aiOutput").dataset.intent));
+      };
+    }
+
+    function parsePersianMessage(text) {
+      const names = state.users.filter((u) => !u.isCeo).filter((u) => text.includes(u.fullName.split(" ")[0])).map((u) => u.id);
+      if (text.includes("جلسه")) return { intent: "create_meeting", title: cleanupTitle(text, "جلسه"), members: names.length ? names : [currentUser().id], startText: text.includes("فردا") ? "فردا" : "امروز", confidence: .76, needsConfirmation: true };
+      if (text.includes("مدیرعامل") || text.includes("بودجه") || text.includes("تایید")) return { intent: "create_manager_request", title: cleanupTitle(text, "درخواست"), confidence: .72, needsConfirmation: true };
+      if (text.includes("تسک") || text.includes("کار")) return { intent: "create_task", title: cleanupTitle(text, "تسک"), assignees: names, dueText: text.includes("فردا") ? "فردا" : "امروز", confidence: .81, needsConfirmation: true };
+      if (text.includes("تسک‌های من")) return { intent: "list_my_tasks", confidence: .93, needsConfirmation: false };
+      return { intent: "unknown", confidence: .3, needsConfirmation: false, question: "لطفاً بفرمایید تسک، جلسه یا درخواست مدیرعامل می‌خواهید؟" };
+    }
+
+    function cleanupTitle(text, fallback) {
+      return text.replace(/برای|بساز|ثبت کن|تا فردا|تا امروز|تسک|جلسه/g, "").trim().slice(0, 70) || fallback;
+    }
+
+    function confirmIntent(payload) {
+      const { intent } = payload;
+      state.messages.unshift({ id: uid("MSG"), source: payload.source, sender: currentUser().telegram, text: payload.text, status: "confirmed", parsedIntent: intent });
+      if (intent.intent === "create_task") {
+        const assignees = intent.assignees.length ? intent.assignees : [currentUser().id];
+        if (!canAssignTo(assignees)) return toast("قانون CEO اجازه ثبت مستقیم این تسک را نمی‌دهد.");
+        state.tasks.unshift({ id: uid("T"), title: intent.title, description: payload.text, creatorId: currentUser().id, group: currentUser().group, type: "task", dueAt: new Date(Date.now() + 86400000).toISOString(), visibility: "group", assignees: assignees.map((id) => ({ userId: id, status: "pending", rejectReason: "", doneAt: "" })) });
+      }
+      if (intent.intent === "create_manager_request") {
+        const ceo = state.users.find((u) => u.isCeo);
+        state.requests.unshift({ id: uid("R"), title: intent.title, description: payload.text, requesterId: currentUser().id, ceoId: ceo.id, status: "pending", decisionReason: "", delegatedTaskId: "" });
+      }
+      if (intent.intent === "create_meeting") {
+        state.meetings.unshift({ id: uid("M"), title: intent.title, description: payload.text, startAt: new Date(Date.now() + 86400000).toISOString(), endAt: new Date(Date.now() + 90000000).toISOString(), location: "ثبت نشده", creatorId: currentUser().id, status: "scheduled", members: [...new Set([currentUser().id, ...intent.members])] });
+      }
+      saveState();
+      renderMessenger();
+      toast("عملیات بعد از تایید کاربر ثبت شد.");
+    }
+
+    async function backendFetch(path, options = {}) {
+      const response = await fetch(`http://127.0.0.1:4188${path}`, {
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          "X-Actor-Id": state.currentUserId,
+          ...(options.headers || {})
+        }
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "خطای ارتباط با backend");
+      return body;
+    }
+
+    async function renderBaleSettings() {
+      $("view-bale").innerHTML = `
+        <div class="grid">
+          <form class="panel" id="baleForm">
+            <div class="panel-head">
+              <div style="display:flex; gap:10px; align-items:center;">
+                <span class="card-icon">${icons.bale}</span>
+                <div>
+                  <h2>تنظیمات بازوی بله</h2>
+                  <p class="muted small">Webhook، token، secret و قالب پاسخ فارسی</p>
+                </div>
+              </div>
+              <span class="chip warn" id="baleBackendStatus">در حال بررسی backend</span>
+            </div>
+            <div class="form-grid">
+              <label>فعال‌سازی
+                <select name="enabled">
+                  <option value="true">فعال</option>
+                  <option value="false">غیرفعال</option>
+                </select>
+              </label>
+              <label>حالت پاسخ
+                <select name="defaultReplyMode">
+                  <option value="persian-confirmation">تایید فارسی قبل از ثبت</option>
+                  <option value="persian-command-only">فقط دستورهای متنی فارسی</option>
+                </select>
+              </label>
+              <label class="full">Bot Token
+                <input name="botToken" placeholder="توکن بازوی بله">
+              </label>
+              <label class="full">Webhook URL
+                <input name="webhookUrl" value="http://127.0.0.1:4188/api/webhooks/bale">
+              </label>
+              <label class="full">Secret Header
+                <input name="secret" placeholder="اختیاری: X-Bale-Secret">
+              </label>
+            </div>
+            <div class="item-actions">
+              <button class="primary">ذخیره تنظیمات</button>
+              <button class="blue" type="button" id="testBaleWebhook">تست پیام بله</button>
+            </div>
+          </form>
+          <div class="panel">
+            <h2>راهنمای اتصال بله</h2>
+            <div class="list">
+              <article class="item-card"><div class="item-top"><div style="display:flex; gap:10px;"><span class="card-icon">${icons.bale}</span><div><h3>Webhook Endpoint</h3><p class="muted small">در محیط production این آدرس باید HTTPS عمومی باشد. برای تست محلی از endpoint backend استفاده می‌شود.</p></div></div></div><pre>POST /api/webhooks/bale</pre></article>
+              <article class="item-card"><div class="item-top"><div style="display:flex; gap:10px;"><span class="card-icon">${icons.lock}</span><div><h3>Security</h3><p class="muted small">اگر secret تنظیم شود، درخواست webhook باید header زیر را بفرستد.</p></div></div></div><pre>X-Bale-Secret: your-secret</pre></article>
+              <article class="item-card"><div class="item-top"><div style="display:flex; gap:10px;"><span class="card-icon">${icons.messenger}</span><div><h3>Persian Reply</h3><p class="muted small">پاسخ bot فارسی است و برای متن‌های AI-created مرحله تایید می‌سازد.</p></div></div></div></article>
+            </div>
+          </div>
+        </div>`;
+
+      try {
+        const settings = await backendFetch("/api/settings/bale");
+        $("baleBackendStatus").textContent = "backend متصل";
+        $("baleBackendStatus").className = "chip ok";
+        const form = $("baleForm");
+        form.enabled.value = String(settings.enabled);
+        form.botToken.value = settings.botToken || "";
+        form.webhookUrl.value = settings.webhookUrl || "http://127.0.0.1:4188/api/webhooks/bale";
+        form.secret.value = settings.secret ? "********" : "";
+        form.defaultReplyMode.value = settings.defaultReplyMode || "persian-confirmation";
+      } catch (error) {
+        $("baleBackendStatus").textContent = "backend اجرا نیست";
+        $("baleBackendStatus").className = "chip danger";
+      }
+
+      $("baleForm").onsubmit = async (event) => {
+        event.preventDefault();
+        const form = new FormData(event.target);
+        try {
+          await backendFetch("/api/settings/bale", {
+            method: "PUT",
+            body: JSON.stringify({
+              enabled: form.get("enabled") === "true",
+              botToken: form.get("botToken"),
+              webhookUrl: form.get("webhookUrl"),
+              secret: form.get("secret"),
+              defaultReplyMode: form.get("defaultReplyMode")
+            })
+          });
+          toast("تنظیمات بله ذخیره شد.");
+          renderBaleSettings();
+        } catch (error) {
+          toast(error.message);
+        }
+      };
+
+      $("testBaleWebhook").onclick = async () => {
+        try {
+          const result = await backendFetch("/api/webhooks/bale", {
+            method: "POST",
+            body: JSON.stringify({ message: { chat: { id: currentUser().bale }, text: "برای سارا تسک پیگیری گزارش تا فردا بساز" } })
+          });
+          toast(result.reply);
+        } catch (error) {
+          toast(error.message);
+        }
+      };
+    }
+
+    async function renderAnalytics() {
+      $("view-analytics").innerHTML = `
+        <div class="grid">
+          <div class="panel">
+            <div class="panel-head"><h2>تحلیل عملکرد</h2><span class="chip warn" id="analyticsStatus">در حال دریافت</span></div>
+            <div class="metrics" id="analyticsMetrics"></div>
+            <div class="table-wrap"><table><thead><tr><th>کاربر</th><th>نقش</th><th>Assign</th><th>Done</th><th>رد</th><th>در انتظار</th><th>نرخ تکمیل</th></tr></thead><tbody id="analyticsRows"></tbody></table></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>پیشنهادهای هوشمند</h2><button class="primary" id="runSmartRules">اجرای قوانین</button></div>
+            <div class="list" id="smartSuggestions">${empty("در حال بررسی پیشنهادها...")}</div>
+          </div>
+        </div>`;
+      try {
+        const overview = await backendFetch("/api/analytics/overview");
+        const suggestions = await backendFetch("/api/smart-notifications/suggestions");
+        $("analyticsStatus").textContent = "backend متصل";
+        $("analyticsStatus").className = "chip ok";
+        $("analyticsMetrics").innerHTML = `
+          <div class="metric"><span class="metric-icon">${icons.tasks}</span><span class="muted">تسک‌ها</span><b>${fa(overview.totals.tasks)}</b></div>
+          <div class="metric"><span class="metric-icon">${icons.done}</span><span class="muted">تکمیل‌شده</span><b>${fa(overview.totals.doneTasks)}</b></div>
+          <div class="metric"><span class="metric-icon">${icons.meetings}</span><span class="muted">جلسات</span><b>${fa(overview.totals.meetings)}</b></div>
+          <div class="metric"><span class="metric-icon">${icons.alert}</span><span class="muted">هشدارها</span><b>${fa(suggestions.suggestions.length)}</b></div>`;
+        $("analyticsRows").innerHTML = overview.byUser.map((row) => `<tr><td>${row.fullName}</td><td>${row.role}</td><td>${fa(row.assigned)}</td><td>${fa(row.done)}</td><td>${fa(row.rejected)}</td><td>${fa(row.pending)}</td><td>${fa(row.completionRate)}٪</td></tr>`).join("");
+        $("smartSuggestions").innerHTML = suggestions.suggestions.length
+          ? suggestions.suggestions.map((s) => `<article class="item-card"><div class="item-top"><div style="display:flex; gap:10px;"><span class="card-icon">${icons.alert}</span><div><h3>${s.title}</h3><p class="muted small">${s.body}</p></div></div><span class="chip warn">${s.severity}</span></div></article>`).join("")
+          : empty("پیشنهاد هوشمند فعالی وجود ندارد.");
+      } catch (error) {
+        $("analyticsStatus").textContent = "backend اجرا نیست";
+        $("analyticsStatus").className = "chip danger";
+        $("smartSuggestions").innerHTML = empty(error.message);
+      }
+      $("runSmartRules").onclick = async () => {
+        try {
+          const result = await backendFetch("/api/smart-notifications/run", { method: "POST", body: JSON.stringify({}) });
+          toast(`${fa(result.created)} هشدار ساخته شد.`);
+          renderAnalytics();
+        } catch (error) {
+          toast(error.message);
+        }
+      };
+    }
+
+    async function renderDeploy() {
+      $("view-deploy").innerHTML = `
+        <div class="grid">
+          <form class="panel" id="deployForm">
+            <div class="panel-head"><h2>استقرار رایگان / Preview آنلاین</h2><span class="chip warn" id="deployStatus">در حال دریافت</span></div>
+            <div class="form-grid">
+              <label>هدف استقرار<select name="target"><option value="local">Local</option><option value="render">Render Free</option><option value="github-pages">GitHub Pages UI</option><option value="vercel">Vercel UI</option></select></label>
+              <label>Database Mode<select name="databaseMode"><option value="json-file">JSON File MVP</option><option value="postgres-free">PostgreSQL Free</option></select></label>
+              <label>Provider رایگان<select name="freeHostingProvider"><option value="render">Render</option><option value="github-pages">GitHub Pages</option><option value="vercel">Vercel</option></select></label>
+              <label class="full">Public Base URL<input name="publicBaseUrl" placeholder="https://your-preview.onrender.com"></label>
+            </div>
+            <button class="primary">ذخیره تنظیمات استقرار</button>
+          </form>
+          <div class="panel">
+            <h2>چک‌لیست Preview</h2>
+            <div class="list">
+              <article class="item-card"><div class="item-top"><div style="display:flex;gap:10px;"><span class="card-icon">${icons.deploy}</span><div><h3>Frontend-only</h3><p class="muted small">برای نمایش سریع UI: GitHub Pages یا Vercel.</p></div></div></div></article>
+              <article class="item-card"><div class="item-top"><div style="display:flex;gap:10px;"><span class="card-icon">${icons.deploy}</span><div><h3>Full backend preview</h3><p class="muted small">برای API و Bale settings: Render Free با Node backend.</p></div></div></div></article>
+              <article class="item-card"><div class="item-top"><div style="display:flex;gap:10px;"><span class="card-icon">${icons.bale}</span><div><h3>Bale webhook</h3><p class="muted small">بعد از deploy، webhook باید HTTPS عمومی داشته باشد.</p></div></div></div></article>
+            </div>
+          </div>
+        </div>`;
+      try {
+        const deployment = await backendFetch("/api/settings/deployment");
+        $("deployStatus").textContent = "backend متصل";
+        $("deployStatus").className = "chip ok";
+        const form = $("deployForm");
+        form.target.value = deployment.target || "local";
+        form.databaseMode.value = deployment.databaseMode || "json-file";
+        form.freeHostingProvider.value = deployment.freeHostingProvider || "render";
+        form.publicBaseUrl.value = deployment.publicBaseUrl || "";
+      } catch (error) {
+        $("deployStatus").textContent = "backend اجرا نیست";
+        $("deployStatus").className = "chip danger";
+      }
+      $("deployForm").onsubmit = async (event) => {
+        event.preventDefault();
+        const form = new FormData(event.target);
+        try {
+          await backendFetch("/api/settings/deployment", { method: "PUT", body: JSON.stringify(Object.fromEntries(form.entries())) });
+          toast("تنظیمات استقرار ذخیره شد.");
+          renderDeploy();
+        } catch (error) {
+          toast(error.message);
+        }
+      };
+    }
+
+    async function renderOffline() {
+      $("view-offline").innerHTML = `
+        <div class="grid">
+          <form class="panel" id="offlineForm">
+            <div class="panel-head"><h2>AI آفلاین و استقرار داخلی</h2><span class="chip warn" id="offlineStatus">در حال دریافت</span></div>
+            <div class="form-grid">
+              <label>AI Mode<select name="mode"><option value="online">Online MVP</option><option value="offline">Offline/Internal</option></select></label>
+              <label>Fallback Parser<select name="fallbackParserEnabled"><option value="true">فعال</option><option value="false">غیرفعال</option></select></label>
+              <label class="full">Online Provider<input name="onlineProvider" placeholder="OpenAI / other provider"></label>
+              <label class="full">Offline Model Path<input name="offlineModelPath" placeholder="/models/local-persian-intent"></label>
+            </div>
+            <button class="primary">ذخیره تنظیمات AI</button>
+          </form>
+          <div class="panel">
+            <h2>وضعیت فاز آخر</h2>
+            <div class="list" id="offlineInfo">${empty("در حال دریافت وضعیت...")}</div>
+          </div>
+        </div>`;
+      try {
+        const ai = await backendFetch("/api/settings/ai");
+        const status = await backendFetch("/api/offline/status");
+        $("offlineStatus").textContent = status.offlineReady ? "آماده داخلی" : "نیازمند مدل/سرور";
+        $("offlineStatus").className = status.offlineReady ? "chip ok" : "chip warn";
+        const form = $("offlineForm");
+        form.mode.value = ai.mode || "online";
+        form.fallbackParserEnabled.value = String(ai.fallbackParserEnabled !== false);
+        form.onlineProvider.value = ai.onlineProvider || "";
+        form.offlineModelPath.value = ai.offlineModelPath || "";
+        $("offlineInfo").innerHTML = `
+          <article class="item-card"><div class="item-top"><div style="display:flex;gap:10px;"><span class="card-icon">${icons.offline}</span><div><h3>${status.mode}</h3><p class="muted small">${status.message}</p></div></div></div></article>
+          <article class="item-card"><div class="item-top"><div style="display:flex;gap:10px;"><span class="card-icon">${icons.lock}</span><div><h3>Internal static IP</h3><p class="muted small">برای production داخلی باید reverse proxy، HTTPS، backup، و static IP سازمانی تنظیم شود.</p></div></div></div></article>`;
+      } catch (error) {
+        $("offlineStatus").textContent = "backend اجرا نیست";
+        $("offlineStatus").className = "chip danger";
+      }
+      $("offlineForm").onsubmit = async (event) => {
+        event.preventDefault();
+        const form = new FormData(event.target);
+        try {
+          await backendFetch("/api/settings/ai", {
+            method: "PUT",
+            body: JSON.stringify({
+              mode: form.get("mode"),
+              fallbackParserEnabled: form.get("fallbackParserEnabled") === "true",
+              onlineProvider: form.get("onlineProvider"),
+              offlineModelPath: form.get("offlineModelPath")
+            })
+          });
+          toast("تنظیمات AI ذخیره شد.");
+          renderOffline();
+        } catch (error) {
+          toast(error.message);
+        }
+      };
+    }
+
+    function renderUsers() {
+      $("view-users").innerHTML = `
+        <div class="panel">
+          <div class="panel-head"><h2>کاربران سازمان</h2><span class="chip">${fa(state.users.length)} نفر</span></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>نام</th><th>سمت</th><th>نقش</th><th>گروه</th><th>تلگرام</th><th>بله</th><th>وضعیت</th></tr></thead>
+              <tbody>${state.users.map((u) => `<tr><td><span style="display:inline-flex; gap:8px; align-items:center;"><span class="card-icon" style="width:28px;height:28px;">${u.isCeo ? icons.lock : icons.user}</span>${u.fullName}</span></td><td>${u.jobTitle}</td><td>${u.role}</td><td>${u.group}</td><td>${u.telegram}</td><td>${u.bale}</td><td>${u.active ? statusChip("accepted") : statusChip("cancelled")}</td></tr>`).join("")}</tbody>
+            </table>
+          </div>
+        </div>`;
+    }
+
+    function renderRules() {
+      const rows = [
+        ["R-CEO-01", "هیچ‌کس وظایف مدیرعامل را نمی‌بیند مگر خود CEO یا نقش مجاز."],
+        ["R-CEO-02", "تعریف مستقیم تسک برای CEO فقط توسط خود CEO مجاز است."],
+        ["R-CEO-03", "درخواست از مدیرعامل فقط برای درخواست‌کننده و CEO قابل مشاهده است."],
+        ["R-TASK-02", "هر مسئول تسک می‌تواند قبول، رد یا Done کند."],
+        ["R-NOTIF-01", "در Assign، سررسید و تکمیل نهایی نوتیف ساخته می‌شود."],
+        ["R-UI-01", "تمام رابط فارسی، RTL، شمسی و با اعداد فارسی نمایش داده می‌شود."]
+      ];
+      $("view-rules").innerHTML = `<div class="panel"><h2>قوانین پیاده‌سازی‌شده در MVP</h2><div class="list">${rows.map(([code, text]) => `<article class="item-card"><div class="item-top"><div style="display:flex; gap:10px; align-items:flex-start;"><span class="card-icon">${icons.rules}</span><div><div class="chips"><span class="chip blue">${code}</span></div><p>${text}</p></div></div></div></article>`).join("")}</div></div>`;
+    }
+
+    function bindGoButtons() {
+      document.querySelectorAll("[data-go]").forEach((btn) => {
+        btn.onclick = () => {
+          activePage = btn.dataset.go;
+          render();
+        };
+      });
+      bindTaskActions();
+      bindRequestActions();
+    }
+
+    function empty(text) {
+      return `<div class="item-card"><p class="muted">${text}</p></div>`;
+    }
+
+    render();
+  </script>
+</body>
+</html>
