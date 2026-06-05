@@ -1,3032 +1,570 @@
 <!doctype html>
 <html lang="fa" dir="rtl">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>CEO Office AI Coordinator</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     :root {
-      color-scheme: light;
-      --ink: #17202a;
+      --bg: #f6f7f9;
+      --panel: #fff;
+      --text: #172026;
       --muted: #667085;
-      --line: #d7dde5;
-      --soft: #f5f7fa;
-      --panel: #ffffff;
       --brand: #0f766e;
-      --brand-2: #1d4ed8;
-      --warn: #b45309;
-      --danger: #b42318;
+      --brand-dark: #115e59;
+      --line: #d9e1e8;
       --ok: #15803d;
-      --shadow: 0 10px 30px rgba(23, 32, 42, .08);
+      --warn: #b45309;
+      --danger: #b91c1c;
+      --blue: #1d4ed8;
+      --shadow: 0 8px 28px rgba(16, 24, 40, .08);
     }
-
     * { box-sizing: border-box; }
-
     body {
       margin: 0;
-      min-height: 100vh;
-      background: var(--soft);
-      color: var(--ink);
-      font-family: Tahoma, "Segoe UI", Arial, sans-serif;
-      letter-spacing: 0;
+      font-family: Tahoma, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      direction: rtl;
     }
-
-    button, input, select, textarea {
-      font: inherit;
-    }
-
-    button {
-      border: 1px solid var(--line);
-      background: #fff;
-      color: var(--ink);
-      border-radius: 8px;
-      min-height: 38px;
-      padding: 8px 12px;
-      cursor: pointer;
-    }
-
-    button:hover { border-color: #9aa7b6; }
-    button.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
-    button.blue { background: var(--brand-2); border-color: var(--brand-2); color: #fff; }
-    button.danger { color: var(--danger); border-color: #f4c7c3; }
-    button.ghost { background: transparent; }
-    button.icon { width: 40px; padding: 0; display: inline-grid; place-items: center; }
-
-    input, select, textarea {
-      width: 100%;
-      border: 1px solid var(--line);
-      background: #fff;
-      color: var(--ink);
-      border-radius: 8px;
-      padding: 10px 12px;
-      min-height: 40px;
-    }
-
-    textarea { min-height: 92px; resize: vertical; }
-    label { display: grid; gap: 7px; color: #344054; font-size: 13px; }
-
-    .app {
-      display: grid;
-      grid-template-columns: 270px minmax(0, 1fr);
-      min-height: 100vh;
-    }
-
-    aside {
-      background: #fff;
-      border-left: 1px solid var(--line);
-      padding: 20px;
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      overflow: auto;
-    }
-
-    .brand {
-      display: grid;
-      gap: 7px;
-      margin-bottom: 22px;
-    }
-
-    .brand strong { font-size: 20px; }
-    .brand span { color: var(--muted); font-size: 13px; line-height: 1.7; }
-
-    nav {
-      display: grid;
-      gap: 8px;
-    }
-
-    .nav-button {
-      width: 100%;
-      text-align: right;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      border-color: transparent;
-      background: transparent;
-    }
-
-    .nav-button.active {
-      background: #e7f5f3;
-      border-color: #b8dfda;
-      color: #0f5f58;
-      font-weight: 700;
-    }
-
-    .session {
-      margin-top: 22px;
-      padding-top: 18px;
-      border-top: 1px solid var(--line);
-      display: grid;
-      gap: 10px;
-    }
-
-    main {
-      padding: 22px;
-      display: grid;
-      gap: 18px;
-      align-content: start;
-    }
-
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-    }
-
+    button, input, textarea, select { font-family: inherit; }
+    .layout { min-height: 100vh; display: grid; grid-template-columns: 290px 1fr; }
+    aside { background: #fff; border-left: 1px solid var(--line); padding: 18px; position: sticky; top: 0; height: 100vh; overflow: auto; }
+    .brand { display: grid; gap: 6px; margin-bottom: 20px; }
+    .brand b { color: var(--brand); font-size: 18px; }
+    .nav { display: grid; gap: 8px; }
+    .nav button { border: 1px solid transparent; background: transparent; padding: 10px 12px; border-radius: 10px; text-align: right; color: #344054; cursor: pointer; }
+    .nav button.active, .nav button:hover { background: #e7f5f3; border-color: #b8dfda; color: var(--brand-dark); font-weight: 700; }
+    .session { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); display: grid; gap: 10px; }
+    main { padding: 22px; display: grid; gap: 18px; align-content: start; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 14px; }
     h1, h2, h3, p { margin: 0; }
     h1 { font-size: 24px; }
     h2 { font-size: 18px; }
     h3 { font-size: 15px; }
     .muted { color: var(--muted); }
     .small { font-size: 12px; }
-
-    .metrics {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
-    }
-
-    .metric, .panel, .item-card {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      box-shadow: var(--shadow);
-    }
-
-    .metric {
-      padding: 16px;
-      display: grid;
-      gap: 8px;
-    }
-
+    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .metric, .panel, .item-card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+    .metric { padding: 16px; display: grid; gap: 8px; }
     .metric b { font-size: 26px; color: var(--brand); }
-
-    .grid {
-      display: grid;
-      grid-template-columns: 1.15fr .85fr;
-      gap: 14px;
-      align-items: start;
-    }
-
-    .panel {
-      padding: 16px;
-      display: grid;
-      gap: 14px;
-      min-width: 0;
-    }
-
-    .panel-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
-    }
-
+    .grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 14px; align-items: start; }
+    .panel { padding: 16px; display: grid; gap: 14px; min-width: 0; }
+    .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .full { grid-column: 1 / -1; }
-
-    .list {
-      display: grid;
-      gap: 10px;
-    }
-
-    .item-card {
-      padding: 14px;
-      display: grid;
-      gap: 10px;
-      box-shadow: none;
-    }
-
-    .item-top {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: start;
-    }
-
-    .item-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .chips {
-      display: flex;
-      gap: 7px;
-      flex-wrap: wrap;
-    }
-
-    .chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      background: #eef2f6;
-      border: 1px solid #dde4ec;
-      color: #344054;
-      border-radius: 999px;
-      padding: 4px 9px;
-      font-size: 12px;
-      white-space: nowrap;
-    }
-
+    label { display: grid; gap: 6px; color: #344054; font-size: 13px; }
+    input, textarea, select { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 10px 11px; background: #fff; color: var(--text); }
+    textarea { min-height: 84px; resize: vertical; }
+    .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .ltr { direction: ltr; text-align: left; }
+    .btn { border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; background: #fff; color: #344054; cursor: pointer; }
+    .btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+    .btn.danger { background: #fff0f0; border-color: #fecaca; color: var(--danger); }
+    .btn.blue { background: #eff6ff; border-color: #bfdbfe; color: var(--blue); }
+    .btn.warn { background: #fff7ed; border-color: #fed7aa; color: var(--warn); }
+    .btn:disabled { opacity: .55; cursor: not-allowed; }
+    .list { display: grid; gap: 10px; }
+    .item-card { padding: 14px; display: grid; gap: 10px; box-shadow: none; }
+    .item-top { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
+    .item-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chips { display: flex; gap: 7px; flex-wrap: wrap; }
+    .chip { display: inline-flex; align-items: center; gap: 5px; background: #eef2f6; border: 1px solid #dde4ec; color: #344054; border-radius: 999px; padding: 4px 9px; font-size: 12px; white-space: nowrap; }
     .chip.ok { background: #e8f7ee; border-color: #bfe6ce; color: var(--ok); }
     .chip.warn { background: #fff4e5; border-color: #fed7aa; color: var(--warn); }
     .chip.danger { background: #fff0f0; border-color: #fecaca; color: var(--danger); }
-    .chip.blue { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
-
-    .tabs, .segmented {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .tabs button.active, .segmented button.active {
-      background: #17202a;
-      color: #fff;
-      border-color: #17202a;
-    }
-
-    .table-wrap { overflow: auto; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 680px;
-      background: #fff;
-    }
-
-    th, td {
-      border-bottom: 1px solid var(--line);
-      padding: 11px 10px;
-      text-align: right;
-      vertical-align: top;
-      font-size: 13px;
-    }
-
-    th {
-      color: #475467;
-      background: #f8fafc;
-      position: sticky;
-      top: 0;
-    }
-
-    .ai-box {
-      background: #f8fafc;
-      border: 1px dashed #b8c3cf;
-      border-radius: 8px;
-      padding: 12px;
-      display: grid;
-      gap: 12px;
-    }
-
-    pre {
-      direction: ltr;
-      text-align: left;
-      white-space: pre-wrap;
-      background: #101828;
-      color: #e7edf5;
-      border-radius: 8px;
-      padding: 12px;
-      overflow: auto;
-      margin: 0;
-      font-family: Consolas, monospace;
-      font-size: 12px;
-    }
-
-    .toast {
-      position: fixed;
-      inset-inline: 20px auto;
-      bottom: 20px;
-      max-width: min(420px, calc(100vw - 40px));
-      background: #17202a;
-      color: #fff;
-      padding: 12px 14px;
-      border-radius: 8px;
-      box-shadow: var(--shadow);
-      display: none;
-      z-index: 30;
-    }
-
-    .toast.show { display: block; }
-
-    .hidden { display: none !important; }
-
-    @media (max-width: 980px) {
-      .app { grid-template-columns: 1fr; }
-      aside { position: relative; height: auto; border-left: 0; border-bottom: 1px solid var(--line); }
-      nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .grid { grid-template-columns: 1fr; }
-    }
-
-    @media (max-width: 620px) {
-      main { padding: 14px; }
-      .topbar, .panel-head, .item-top { align-items: stretch; flex-direction: column; }
-      .form-grid, .metrics, nav { grid-template-columns: 1fr; }
-      button { width: 100%; }
-      button.icon { width: 40px; }
-    }
-
-    /* Manus-inspired dark dashboard polish */
-    :root {
-      --ink: #eef2ff;
-      --muted: #98a2b3;
-      --line: rgba(148, 163, 184, .18);
-      --soft: #090b12;
-      --panel: rgba(20, 24, 38, .78);
-      --brand: #8b5cf6;
-      --brand-2: #06b6d4;
-      --warn: #f59e0b;
-      --danger: #f87171;
-      --ok: #34d399;
-      --shadow: 0 24px 70px rgba(0, 0, 0, .34);
-      --glow: 0 0 0 1px rgba(139, 92, 246, .12), 0 20px 70px rgba(7, 10, 20, .42);
-      --surface: rgba(15, 19, 32, .88);
-      --surface-2: rgba(255, 255, 255, .055);
-      --text-strong: #f8fafc;
-    }
-
-    body {
-      background:
-        radial-gradient(circle at 82% 8%, rgba(139, 92, 246, .22), transparent 34%),
-        radial-gradient(circle at 12% 82%, rgba(6, 182, 212, .14), transparent 30%),
-        linear-gradient(145deg, #080a12 0%, #101522 52%, #090b12 100%);
-      color: var(--ink);
-      font-family: Vazirmatn, Tahoma, "Segoe UI", Arial, sans-serif;
-    }
-
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      background-image:
-        linear-gradient(rgba(255, 255, 255, .035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, .025) 1px, transparent 1px);
-      background-size: 44px 44px;
-      mask-image: linear-gradient(to bottom, rgba(0, 0, 0, .75), transparent 80%);
-    }
-
-    .app {
-      grid-template-columns: 292px minmax(0, 1fr);
-    }
-
-    aside {
-      background: rgba(9, 11, 18, .78);
-      border-left: 1px solid var(--line);
-      backdrop-filter: blur(18px);
-      box-shadow: 24px 0 80px rgba(0, 0, 0, .22);
-    }
-
-    .brand {
-      background: linear-gradient(145deg, rgba(139, 92, 246, .16), rgba(6, 182, 212, .08));
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 16px;
-      box-shadow: var(--glow);
-    }
-
-    .brand strong {
-      color: var(--text-strong);
-      line-height: 1.35;
-    }
-
-    .brand strong::before {
-      content: "AI";
-      display: inline-grid;
-      place-items: center;
-      width: 34px;
-      height: 34px;
-      margin-left: 10px;
-      border-radius: 8px;
-      background: linear-gradient(135deg, var(--brand), var(--brand-2));
-      color: #fff;
-      font-size: 13px;
-      vertical-align: middle;
-      box-shadow: 0 12px 28px rgba(139, 92, 246, .28);
-    }
-
-    .brand span {
-      color: #aeb8ca;
-    }
-
-    nav {
-      gap: 7px;
-    }
-
-    .nav-button {
-      color: #cbd5e1;
-      border: 1px solid transparent;
-      min-height: 44px;
-      border-radius: 8px;
-      padding: 10px 12px;
-      justify-content: flex-start;
-      direction: rtl;
-      transition: background .18s ease, border-color .18s ease, color .18s ease, transform .18s ease;
-    }
-
-    .nav-button:hover {
-      background: rgba(255, 255, 255, .055);
-      border-color: rgba(148, 163, 184, .12);
-      transform: translateX(-2px);
-    }
-
-    .nav-button.active {
-      background: linear-gradient(135deg, rgba(139, 92, 246, .20), rgba(6, 182, 212, .10));
-      border-color: rgba(139, 92, 246, .34);
-      color: #fff;
-      box-shadow: 0 12px 34px rgba(139, 92, 246, .13);
-    }
-
-    .nav-main {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      min-width: 0;
-      width: 100%;
-      justify-content: flex-start;
-      direction: rtl;
-    }
-
-    .nav-arrow {
-      display: inline-grid;
-      place-items: center;
-      width: 18px;
-      color: #7dd3fc;
-      transform: none;
-    }
-
-    .nav-icon {
-      display: inline-grid;
-      place-items: center;
-      width: 28px;
-      height: 28px;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, .055);
-      border: 1px solid rgba(255, 255, 255, .075);
-      color: #a5b4fc;
-      font-size: 15px;
-      line-height: 1;
-    }
-
-    .svg-icon {
-      width: 18px;
-      height: 18px;
-      stroke: currentColor;
-      stroke-width: 2;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      fill: none;
-      flex: 0 0 auto;
-    }
-
-    .metric-icon, .card-icon {
-      display: inline-grid;
-      place-items: center;
-      width: 44px;
-      height: 44px;
-      border-radius: 8px;
-      background: linear-gradient(135deg, rgba(139, 92, 246, .22), rgba(6, 182, 212, .12));
-      border: 1px solid rgba(255, 255, 255, .10);
-      color: #c4b5fd;
-      box-shadow: 0 14px 36px rgba(139, 92, 246, .14);
-    }
-
-    .card-icon {
-      width: 34px;
-      height: 34px;
-      color: #67e8f9;
-    }
-
-    .nav-button.active .nav-icon {
-      background: linear-gradient(135deg, rgba(139, 92, 246, .36), rgba(6, 182, 212, .22));
-      color: #fff;
-      border-color: rgba(255, 255, 255, .14);
-    }
-
-    .session {
-      border-top-color: var(--line);
-    }
-
-    main {
-      padding: 30px;
-      gap: 22px;
-    }
-
-    .topbar {
-      min-height: 74px;
-      padding: 14px 18px;
-      background: rgba(9, 11, 18, .44);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      backdrop-filter: blur(14px);
-      box-shadow: var(--glow);
-    }
-
-    h1 {
-      color: var(--text-strong);
-      font-size: 30px;
-      font-weight: 900;
-      line-height: 1.25;
-    }
-
-    h2 {
-      color: var(--text-strong);
-      font-size: 18px;
-      font-weight: 800;
-    }
-
-    h3 {
-      color: #f1f5f9;
-      font-size: 15px;
-      font-weight: 750;
-      line-height: 1.7;
-    }
-
-    .muted {
-      color: var(--muted);
-    }
-
-    .metrics {
-      gap: 14px;
-    }
-
-    .metric, .panel, .item-card {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      box-shadow: var(--glow);
-      backdrop-filter: blur(16px);
-    }
-
-    .metric {
-      min-height: 132px;
-      padding: 20px;
-      overflow: hidden;
-      position: relative;
-      transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
-      animation: slideUp .35s ease both;
-    }
-
-    .metric::after {
-      content: "";
-      position: absolute;
-      inset: auto -18px -24px auto;
-      width: 92px;
-      height: 92px;
-      border-radius: 50%;
-      background: rgba(139, 92, 246, .10);
-      filter: blur(18px);
-    }
-
-    .metric:hover, .item-card:hover, .panel:hover {
-      border-color: rgba(139, 92, 246, .32);
-    }
-
-    .metric b {
-      color: var(--text-strong);
-      font-size: 31px;
-      font-weight: 900;
-    }
-
-    .panel {
-      padding: 18px;
-      border-radius: 8px;
-    }
-
-    .item-card {
-      background: rgba(255, 255, 255, .045);
-      border-radius: 8px;
-      transition: transform .18s ease, border-color .18s ease, background .18s ease;
-    }
-
-    .item-card:hover {
-      background: rgba(255, 255, 255, .062);
-      transform: translateY(-1px);
-    }
-
-    button {
-      background: rgba(255, 255, 255, .055);
-      border-color: var(--line);
-      color: #e5e7eb;
-      transition: transform .16s ease, border-color .16s ease, background .16s ease;
-    }
-
-    button:hover {
-      border-color: rgba(139, 92, 246, .38);
-      background: rgba(255, 255, 255, .08);
-      transform: translateY(-1px);
-    }
-
-    button.primary, button.blue {
-      border: 0;
-      color: white;
-      box-shadow: 0 16px 38px rgba(139, 92, 246, .18);
-    }
-
-    button.primary {
-      background: linear-gradient(135deg, #8b5cf6, #14b8a6);
-    }
-
-    button.blue {
-      background: linear-gradient(135deg, #2563eb, #06b6d4);
-    }
-
-    button.danger {
-      background: rgba(248, 113, 113, .10);
-      border-color: rgba(248, 113, 113, .28);
-      color: #fecaca;
-    }
-
-    input, select, textarea {
-      background: rgba(2, 6, 23, .42);
-      border-color: var(--line);
-      color: #f8fafc;
-      outline: none;
-    }
-
-    input:focus, select:focus, textarea:focus {
-      border-color: rgba(139, 92, 246, .56);
-      box-shadow: 0 0 0 3px rgba(139, 92, 246, .12);
-    }
-
-    label {
-      color: #cbd5e1;
-    }
-
-    .chip {
-      background: rgba(255, 255, 255, .06);
-      border-color: rgba(255, 255, 255, .10);
-      color: #cbd5e1;
-    }
-
-    .chip.ok {
-      background: rgba(52, 211, 153, .12);
-      border-color: rgba(52, 211, 153, .26);
-      color: #86efac;
-    }
-
-    .chip.warn {
-      background: rgba(245, 158, 11, .12);
-      border-color: rgba(245, 158, 11, .26);
-      color: #fcd34d;
-    }
-
-    .chip.danger {
-      background: rgba(248, 113, 113, .12);
-      border-color: rgba(248, 113, 113, .26);
-      color: #fecaca;
-    }
-
-    .chip.blue {
-      background: rgba(6, 182, 212, .12);
-      border-color: rgba(6, 182, 212, .28);
-      color: #67e8f9;
-    }
-
-    .ai-box {
-      background: rgba(2, 6, 23, .30);
-      border-color: rgba(139, 92, 246, .25);
-      border-style: solid;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04);
-    }
-
-    pre {
-      background: rgba(2, 6, 23, .78);
-      border: 1px solid rgba(148, 163, 184, .16);
-      color: #dbeafe;
-    }
-
-    th {
-      background: rgba(15, 23, 42, .92);
-      color: #cbd5e1;
-    }
-
-    td {
-      color: #e2e8f0;
-    }
-
-    table {
-      background: transparent;
-    }
-
-    th, td {
-      border-bottom-color: var(--line);
-    }
-
-    .toast {
-      background: rgba(15, 23, 42, .94);
-      border: 1px solid rgba(139, 92, 246, .28);
-      color: #fff;
-      backdrop-filter: blur(14px);
-    }
-
-    .calendar-shell {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 14px;
-      align-items: start;
-    }
-
-    .calendar-toolbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .calendar-title {
-      display: grid;
-      gap: 4px;
-    }
-
-    .calendar-title strong {
-      color: #fff;
-      font-size: 22px;
-      font-weight: 900;
-    }
-
-    .calendar-controls {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      margin: 14px 0;
-    }
-
-    .calendar-picker {
-      display: flex;
-      gap: 8px;
-      align-items: end;
-      flex-wrap: wrap;
-      padding: 10px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: rgba(255, 255, 255, .035);
-    }
-
-    .calendar-picker label {
-      min-width: 86px;
-      margin: 0;
-    }
-
-    .calendar-picker input {
-      height: 38px;
-      padding: 0 10px;
-    }
-
-    .calendar-grid {
-      display: grid;
-      grid-template-columns: repeat(7, minmax(96px, 1fr));
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      overflow: auto;
-      background: rgba(2, 6, 23, .34);
-      min-width: 0;
-    }
-
-    .calendar-weekday {
-      min-height: 42px;
-      display: grid;
-      place-items: center;
-      color: #a5b4fc;
-      font-weight: 800;
-      font-size: 12px;
-      border-left: 1px solid var(--line);
-      background: rgba(255, 255, 255, .045);
-    }
-
-    .calendar-day {
-      min-height: 128px;
-      padding: 10px;
-      border-top: 1px solid var(--line);
-      border-left: 1px solid var(--line);
-      display: grid;
-      align-content: start;
-      gap: 8px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .calendar-day.dim {
-      opacity: .45;
-      background: rgba(255, 255, 255, .02);
-    }
-
-    .calendar-day.today {
-      background: linear-gradient(180deg, rgba(139, 92, 246, .14), rgba(6, 182, 212, .045));
-      box-shadow: inset 0 0 0 1px rgba(139, 92, 246, .35);
-    }
-
-    .day-number {
-      display: inline-grid;
-      place-items: center;
-      width: 28px;
-      height: 28px;
-      border-radius: 8px;
-      color: #f8fafc;
-      font-weight: 800;
-      background: rgba(255, 255, 255, .055);
-      font-size: 12px;
-    }
-
-    .calendar-day.today .day-number {
-      background: linear-gradient(135deg, var(--brand), var(--brand-2));
-      color: #fff;
-    }
-
-    .event-pill {
-      border: 1px solid rgba(6, 182, 212, .28);
-      background: rgba(6, 182, 212, .12);
-      color: #cffafe;
-      border-radius: 8px;
-      padding: 6px 7px;
-      font-size: 11px;
-      line-height: 1.55;
-      overflow: hidden;
-      min-width: 0;
-      cursor: grab;
-      user-select: none;
-    }
-
-    .event-pill:active {
-      cursor: grabbing;
-    }
-
-    .event-pill strong {
-      display: block;
-      color: #fff;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .calendar-agenda {
-      display: grid;
-      gap: 10px;
-      max-height: 360px;
-      overflow: auto;
-    }
-
-    .agenda-row {
-      display: grid;
-      grid-template-columns: 76px minmax(0, 1fr);
-      gap: 10px;
-      align-items: start;
-      padding: 12px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: rgba(255, 255, 255, .045);
-    }
-
-    .agenda-time {
-      color: #67e8f9;
-      font-weight: 800;
-      font-size: 12px;
-      direction: ltr;
-      text-align: right;
-    }
-
-    .calendar-week-view {
-      display: grid;
-      grid-template-columns: 76px repeat(7, minmax(128px, 1fr));
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      overflow: auto;
-      background: rgba(2, 6, 23, .32);
-    }
-
-    .week-column {
-      display: grid;
-      grid-template-rows: 54px repeat(14, minmax(54px, auto));
-      min-width: 128px;
-      border-left: 1px solid var(--line);
-    }
-
-    .week-column header {
-      display: grid;
-      gap: 4px;
-      padding: 8px;
-      border-bottom: 1px solid var(--line);
-      color: #fff;
-      font-weight: 800;
-      background: rgba(255, 255, 255, .045);
-    }
-
-    .week-hour-rail {
-      display: grid;
-      grid-template-rows: 54px repeat(14, minmax(54px, auto));
-      min-width: 76px;
-      background: rgba(255, 255, 255, .035);
-    }
-
-    .week-hour-rail span,
-    .week-hour-cell {
-      min-height: 54px;
-      border-bottom: 1px solid var(--line);
-      padding: 8px;
-    }
-
-    .week-hour-rail span {
-      color: #67e8f9;
-      font-weight: 800;
-      direction: ltr;
-      text-align: center;
-      font-size: 12px;
-    }
-
-    .week-hour-cell,
-    .hour-cell {
-      min-height: 54px;
-      transition: background .15s ease, box-shadow .15s ease;
-    }
-
-    .drop-hover {
-      background: rgba(20, 184, 166, .16) !important;
-      box-shadow: inset 0 0 0 1px rgba(45, 212, 191, .45);
-    }
-
-    .calendar-day-view {
-      display: grid;
-      grid-template-columns: 92px minmax(0, 1fr);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      overflow: hidden;
-      background: rgba(2, 6, 23, .32);
-    }
-
-    .hour-row {
-      display: contents;
-    }
-
-    .hour-label, .hour-cell {
-      min-height: 58px;
-      border-bottom: 1px solid var(--line);
-      padding: 9px;
-    }
-
-    .hour-label {
-      color: #67e8f9;
-      font-weight: 800;
-      direction: ltr;
-      text-align: center;
-      background: rgba(255, 255, 255, .04);
-    }
-
-    .hour-cell {
-      display: grid;
-      gap: 6px;
-      align-content: start;
-    }
-
-    .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      z-index: 60;
-      display: grid;
-      place-items: center;
-      padding: 18px;
-      background: rgba(2, 6, 23, .72);
-      backdrop-filter: blur(16px);
-    }
-
-    .modal-card {
-      width: min(720px, 100%);
-      max-height: min(86vh, 780px);
-      overflow: auto;
-      border: 1px solid rgba(139, 92, 246, .32);
-      border-radius: 8px;
-      background: rgba(15, 23, 42, .98);
-      box-shadow: 0 28px 90px rgba(0, 0, 0, .45);
-      padding: 18px;
-    }
-
-    .modal-card .panel-head {
-      margin-bottom: 12px;
-    }
-
-    .backend-warning {
-      border: 1px solid rgba(245, 158, 11, .32);
-      background: rgba(245, 158, 11, .10);
-      color: #fde68a;
-      border-radius: 8px;
-      padding: 12px;
-      line-height: 1.9;
-    }
-
-    .user-management {
-      display: grid;
-      grid-template-columns: minmax(0, 1.1fr) minmax(340px, .9fr);
-      gap: 14px;
-      align-items: start;
-    }
-
-    .user-card-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 10px;
-    }
-
-    .user-meta {
-      display: grid;
-      gap: 6px;
-      color: #cbd5e1;
-      font-size: 12px;
-    }
-
-    .bale-link {
-      color: #67e8f9;
-      text-decoration: none;
-      border-bottom: 1px dashed rgba(103, 232, 249, .45);
-      direction: ltr;
-      unicode-bidi: isolate;
-    }
-
-    .user-toolbar {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 180px;
-      gap: 10px;
-      align-items: end;
-    }
-
-    .page-actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: flex-end;
-    }
-
-    .inline-form-panel {
-      margin-top: 12px;
-      border-top: 1px solid var(--line);
-      padding-top: 14px;
-    }
-
-    @media (max-width: 1100px) {
-      .user-management, .user-toolbar {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .ai-workspace {
-      display: grid;
-      grid-template-columns: minmax(0, .95fr) minmax(360px, 1.05fr);
-      gap: 14px;
-      align-items: start;
-    }
-
-    .ai-composer {
-      min-height: 430px;
-      background:
-        linear-gradient(145deg, rgba(139, 92, 246, .16), rgba(6, 182, 212, .06)),
-        rgba(2, 6, 23, .36);
-      border: 1px solid rgba(139, 92, 246, .26);
-      border-radius: 8px;
-      padding: 16px;
-      display: grid;
-      gap: 14px;
-    }
-
-    .ai-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .ai-orb {
-      width: 48px;
-      height: 48px;
-      border-radius: 8px;
-      display: grid;
-      place-items: center;
-      background: linear-gradient(135deg, var(--brand), var(--brand-2));
-      color: #fff;
-      font-weight: 900;
-      box-shadow: 0 18px 42px rgba(139, 92, 246, .28);
-    }
-
-    .prompt-row {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 10px;
-      align-items: end;
-    }
-
-    .intent-preview {
-      min-height: 210px;
-    }
-
-    .message-timeline {
-      display: grid;
-      gap: 10px;
-      max-height: 610px;
-      overflow: auto;
-      padding-left: 4px;
-    }
-
-    @media (max-width: 1100px) {
-      .calendar-shell, .ai-workspace {
-        grid-template-columns: 1fr;
-      }
-      .calendar-grid {
-        grid-template-columns: repeat(7, minmax(92px, 1fr));
-        overflow-x: auto;
-      }
-      .calendar-day {
-        min-height: 112px;
-      }
-    }
-
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @media (max-width: 980px) {
-      .app { grid-template-columns: 1fr; }
-      aside { height: auto; }
-      main { padding: 18px; }
+    .chip.blue { background: #eff6ff; border-color: #bfdbfe; color: var(--blue); }
+    .page { display: none; gap: 18px; }
+    .page.active { display: grid; }
+    .notice { padding: 12px 14px; border: 1px dashed #b8dfda; background: #f0fdfa; border-radius: 12px; color: #0f5f58; }
+    .messages { min-height: 300px; max-height: 460px; overflow: auto; display: grid; gap: 10px; align-content: start; border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: #fbfcfd; }
+    .msg { padding: 10px 12px; border-radius: 12px; max-width: 88%; white-space: pre-wrap; line-height: 1.7; }
+    .msg.user { background: #e7f5f3; justify-self: end; }
+    .msg.ai { background: #fff; border: 1px solid var(--line); justify-self: start; }
+    .jalali-picker { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .jalali-picker .caption { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
+    .empty { color: var(--muted); padding: 12px; border: 1px dashed var(--line); border-radius: 12px; }
+    @media (max-width: 950px) {
+      .layout { grid-template-columns: 1fr; }
+      aside { position: static; height: auto; }
+      .grid, .metrics, .form-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-  <div class="app">
-    <aside>
-      <div class="brand">
-        <strong>CEO Office AI Coordinator</strong>
-        <span>هماهنگ‌کننده هوشمند دفتر مدیرعامل؛ نسخه MVP متنی، فارسی، راست‌چین و مبتنی بر قوانین محرمانگی.</span>
-      </div>
-      <nav id="nav"></nav>
-      <div class="session">
-        <label>کاربر فعال
-          <select id="currentUser"></select>
-        </label>
-        <button class="ghost" id="resetData" title="بازگردانی داده‌های نمونه">بازنشانی داده‌ها</button>
-      </div>
-    </aside>
+<div class="layout">
+  <aside>
+    <div class="brand">
+      <b>CEO Office AI Coordinator</b>
+      <span class="muted small">هماهنگ‌کننده هوشمند دفتر مدیرعامل</span>
+    </div>
+    <div class="nav" id="nav"></div>
+    <div class="session">
+      <label>کاربر فعال
+        <select id="actorSelect"></select>
+      </label>
+      <button class="btn" id="refreshBtn">به‌روزرسانی داده‌ها</button>
+      <span class="muted small">برای اجرای کامل پیام‌رسان و AI، بک‌اند را اجرا کنید.</span>
+    </div>
+  </aside>
 
-    <main>
+  <main>
+    <section class="page active" id="dashboardPage">
       <div class="topbar">
         <div>
-          <h1 id="pageTitle">داشبورد</h1>
-          <p class="muted" id="pageSubtitle">نمای عملیاتی تسک‌ها، جلسات و درخواست‌های مدیرعامل</p>
-        </div>
-        <div class="chips">
-          <span class="chip blue" id="todayChip"></span>
-          <span class="chip" id="roleChip"></span>
+          <h1>داشبورد</h1>
+          <p class="muted">نمای عملیاتی تسک‌ها، جلسات و درخواست‌های دفتر مدیرعامل</p>
         </div>
       </div>
-
-      <section id="view-dashboard"></section>
-      <section id="view-tasks" class="hidden"></section>
-      <section id="view-requests" class="hidden"></section>
-      <section id="view-meetings" class="hidden"></section>
-      <section id="view-messenger" class="hidden"></section>
-      <section id="view-bale" class="hidden"></section>
-      <section id="view-analytics" class="hidden"></section>
-      <section id="view-deploy" class="hidden"></section>
-      <section id="view-offline" class="hidden"></section>
-      <section id="view-users" class="hidden"></section>
-      <section id="view-rules" class="hidden"></section>
-    </main>
-  </div>
-  <div class="toast" id="toast"></div>
-
-  <script>
-    const $ = (id) => document.getElementById(id);
-    const storageKey = "ceo-office-ai-coordinator-v1";
-    const nf = new Intl.NumberFormat("fa-IR");
-    const df = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { dateStyle: "medium", timeStyle: "short" });
-
-    const icons = {
-      dashboard: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M3 13h8V3H3z"/><path d="M13 21h8V11h-8z"/><path d="M13 3h8v4h-8z"/><path d="M3 17h8v4H3z"/></svg>',
-      tasks: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
-      requests: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 3l7 4v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7z"/><path d="M9 12l2 2 4-5"/></svg>',
-      meetings: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/><path d="M5 4h14a2 2 0 0 1 2 2v15H3V6a2 2 0 0 1 2-2z"/></svg>',
-      messenger: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path d="M8 10h8"/><path d="M8 14h5"/></svg>',
-      bale: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3.2-6.9"/><path d="M8 12h8"/><path d="M12 8v8"/><path d="M16 4h5v5"/></svg>',
-      analytics: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 16l4-5 4 3 5-8"/></svg>',
-      deploy: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><path d="M5 21h14"/></svg>',
-      offline: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 18h.01"/><path d="M8.5 14.5a5 5 0 0 1 7 0"/><path d="M5 11a10 10 0 0 1 14 0"/><path d="M2 8a15 15 0 0 1 20 0"/><path d="M3 3l18 18"/></svg>',
-      users: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
-      approveUser: '<svg class="svg-icon" viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21a6 6 0 0 1 12 0"/><path d="M16 11l2 2 4-5"/></svg>',
-      rules: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-5"/></svg>',
-      clock: '<svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
-      done: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>',
-      alert: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M10.3 3.9L2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>',
-      bot: '<svg class="svg-icon" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 4v4"/><path d="M8 14h.01"/><path d="M16 14h.01"/><path d="M9 18h6"/></svg>',
-      user: '<svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>',
-      lock: '<svg class="svg-icon" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
-      spark: '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 2l1.7 6.3L20 10l-6.3 1.7L12 18l-1.7-6.3L4 10l6.3-1.7z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></svg>'
-    };
-
-    const pages = [
-      ["dashboard", "داشبورد", "نمای خلاصه عملیات", "dashboard"],
-      ["tasks", "تسک‌ها", "چرخه چندمسئوله قبول، رد و Done", "tasks"],
-      ["requests", "درخواست از مدیرعامل", "مسیر مجاز برای درخواست‌های خصوصی CEO", "requests"],
-      ["meetings", "جلسات", "تقویم شمسی و یادآوری", "meetings"],
-      ["bale", "تنظیمات بله", "اتصال بازوی بله، webhook و پیام تایید فارسی", "bale"],
-      ["analytics", "تحلیل و هشدارها", "پیشنهادهای هوشمند، KPI و کارهای عقب‌افتاده", "analytics"],
-      ["offline", "فاز آفلاین", "AI محلی، سرور داخلی و IP ثابت", "offline"],
-      ["users", "افراد", "کاربران، تایید بله و افزودن دستی", "users"]
-    ];
-
-    const seed = {
-      currentUserId: "u2",
-      users: [
-        { id: "u1", fullName: "مریم رضایی", jobTitle: "مدیرعامل", role: "CEO", group: "مدیریت", telegram: "1001", bale: "2001", active: true, isCeo: true },
-        { id: "u2", fullName: "علی کریمی", jobTitle: "هماهنگ‌کننده دفتر", role: "Admin", group: "دفتر مدیرعامل", telegram: "1002", bale: "2002", active: true, isCeo: false },
-        { id: "u3", fullName: "سارا احمدی", jobTitle: "مدیر فروش", role: "Employee", group: "فروش", telegram: "1003", bale: "2003", active: true, isCeo: false },
-        { id: "u4", fullName: "حسین نوری", jobTitle: "مسئول عملیات", role: "Employee", group: "عملیات", telegram: "1004", bale: "2004", active: true, isCeo: false }
-      ],
-      tasks: [
-        { id: "T-1001", title: "آماده‌سازی گزارش فروش هفتگی", description: "خلاصه فروش، ریسک‌ها و اقدامات پیشنهادی برای جلسه صبح شنبه.", creatorId: "u2", group: "فروش", type: "task", dueAt: "2026-06-06T07:30:00.000Z", visibility: "group", assignees: [
-          { userId: "u3", status: "accepted", rejectReason: "", doneAt: "" },
-          { userId: "u4", status: "pending", rejectReason: "", doneAt: "" }
-        ]},
-        { id: "T-1002", title: "مرور برنامه روزانه مدیرعامل", description: "چک‌لیست تماس‌ها، جلسات و اولویت‌های امروز.", creatorId: "u1", group: "مدیریت", type: "ceo_private", dueAt: "2026-06-05T12:30:00.000Z", visibility: "ceo_private", assignees: [
-          { userId: "u1", status: "accepted", rejectReason: "", doneAt: "" }
-        ]}
-      ],
-      requests: [
-        { id: "R-2201", title: "درخواست تایید بودجه رویداد مشتریان", description: "بودجه اولیه برای رویداد تیرماه نیاز به تایید دارد.", requesterId: "u3", ceoId: "u1", status: "pending", decisionReason: "", delegatedTaskId: "" }
-      ],
-      meetings: [
-        { id: "M-3001", title: "جلسه هماهنگی فروش و عملیات", description: "بررسی تعهدات باز و تصمیم برای هفته آینده.", startAt: "2026-06-06T08:00:00.000Z", endAt: "2026-06-06T09:00:00.000Z", location: "اتاق جلسات اصلی", creatorId: "u2", status: "scheduled", members: ["u2", "u3", "u4"] }
-      ],
-      messages: [
-        { id: "MSG-1", source: "telegram", sender: "1002", text: "برای سارا و حسین تسک گزارش فروش تا شنبه بساز", status: "parsed", parsedIntent: { intent: "create_task", title: "گزارش فروش", assignees: ["سارا احمدی", "حسین نوری"], needsConfirmation: true } }
-      ],
-      notifications: []
-    };
-
-    const MOCK_DATA_ENABLED = false;
-    let state = loadState();
-    let activePage = "dashboard";
-    let calendarView = "month";
-    let calendarFocusDate = new Date();
-    let backendOnline = false;
-    let backendChecked = false;
-    let backendBaseUrl = localStorage.getItem("ceo-office-backend-url") || "";
-
-    function loadState() {
-      const saved = localStorage.getItem(storageKey);
-      if (!saved) return structuredClone(seed);
-      try { return JSON.parse(saved); } catch { return structuredClone(seed); }
-    }
-
-    function saveState() {
-      localStorage.setItem(storageKey, JSON.stringify(state));
-    }
-
-    function user(id) {
-      return state.users.find((u) => u.id === id);
-    }
-
-    async function loadBackendState() {
-      const [users, groups, tasks, requests, meetings, messages] = await Promise.all([
-        backendFetch("/api/users"),
-        backendFetch("/api/groups"),
-        backendFetch("/api/tasks"),
-        backendFetch("/api/ceo-requests"),
-        backendFetch("/api/meetings"),
-        backendFetch("/api/messages")
-      ]);
-      const groupTitle = (groupId) => groups.find((group) => group.id === groupId)?.title || groupId || "";
-      state.users = users.map((item) => ({
-        id: item.id,
-        fullName: item.fullName,
-        jobTitle: item.jobTitle,
-        role: item.role,
-        group: groupTitle(item.groups?.[0]),
-        groupIds: item.groups || [],
-        telegram: item.telegramChatId || "",
-        bale: item.baleChatId || "",
-        baleUsername: item.baleUsername || "",
-        baleProfileUrl: item.baleProfileUrl || "",
-        active: item.active,
-        isCeo: item.isCeo
-      }));
-      state.groups = groups;
-      state.tasks = tasks.map((item) => ({
-        id: item.id,
-        title: item.title,
-        description: item.description,
-        creatorId: item.creatorId,
-        group: groupTitle(item.groupId),
-        groupId: item.groupId,
-        type: item.visibility === "ceo_private" ? "ceo_private" : "task",
-        dueAt: item.dueAt,
-        visibility: item.visibility,
-        assignees: (item.assignments || []).map((assignment) => ({
-          userId: assignment.userId,
-          status: assignment.status,
-          rejectReason: assignment.rejectReason || "",
-          doneAt: assignment.doneAt || ""
-        }))
-      }));
-      state.requests = requests.map((item) => ({
-        id: item.id,
-        title: item.title,
-        description: item.description,
-        requesterId: item.requesterId,
-        ceoId: item.ceoId,
-        status: item.status,
-        decisionReason: item.decisionReason || "",
-        delegatedTaskId: item.delegatedTaskId || ""
-      }));
-      state.meetings = meetings;
-      state.messages = messages.map((item) => ({
-        id: item.id,
-        source: item.source,
-        sender: item.senderMessengerId,
-        text: item.text,
-        status: item.status,
-        parsedIntent: item.parsedIntent || {}
-      }));
-    }
-
-    function currentUser() {
-      return user(state.currentUserId) || state.users[0];
-    }
-
-    function isPrivileged() {
-      const u = currentUser();
-      return u.role === "Admin" || u.role === "CEO";
-    }
-
-    function fa(value) {
-      return nf.format(value);
-    }
-
-    function dateFa(value) {
-      return df.format(new Date(value));
-    }
-
-    function uid(prefix) {
-      return `${prefix}-${Math.floor(Date.now() / 10).toString().slice(-6)}`;
-    }
-
-    function toast(text) {
-      const box = $("toast");
-      box.textContent = text;
-      box.classList.add("show");
-      setTimeout(() => box.classList.remove("show"), 2600);
-    }
-
-    function visibleTasks() {
-      const u = currentUser();
-      return state.tasks.filter((task) => {
-        const hasMe = task.creatorId === u.id || task.assignees.some((a) => a.userId === u.id);
-        if (task.visibility === "ceo_private") return u.role === "CEO" || task.creatorId === u.id || task.assignees.some((a) => a.userId === u.id);
-        if (isPrivileged()) return true;
-        return hasMe || task.group === u.group;
-      });
-    }
-
-    function visibleRequests() {
-      const u = currentUser();
-      return state.requests.filter((r) => u.role === "CEO" || r.requesterId === u.id || u.role === "Admin");
-    }
-
-    function canAssignTo(assigneeIds) {
-      const actor = currentUser();
-      const ceo = state.users.find((u) => u.isCeo);
-      if (!ceo) return true;
-      if (!assigneeIds.includes(ceo.id)) return true;
-      return actor.role === "CEO" && assigneeIds.every((id) => id === ceo.id);
-    }
-
-    function statusChip(status) {
-      const labels = { pending: "در انتظار", accepted: "قبول شده", rejected: "رد شده", done: "انجام شد", scheduled: "برنامه‌ریزی‌شده", cancelled: "لغو شده", approved: "تایید شده", delegated: "ارجاع شده" };
-      const cls = status === "done" || status === "approved" ? "ok" : status === "rejected" || status === "cancelled" ? "danger" : status === "accepted" || status === "delegated" ? "blue" : "warn";
-      return `<span class="chip ${cls}">${labels[status] || status}</span>`;
-    }
-
-    function renderShell() {
-      $("nav").innerHTML = pages.map(([id, title, , icon]) => `<button class="nav-button ${id === activePage ? "active" : ""}" data-page="${id}"><span class="nav-main"><span class="nav-arrow">›</span><span class="nav-icon">${icons[icon]}</span><span class="nav-label">${title}</span></span></button>`).join("");
-      $("nav").querySelectorAll("button").forEach((btn) => btn.addEventListener("click", () => {
-        activePage = btn.dataset.page;
-        render();
-      }));
-
-      $("currentUser").innerHTML = state.users.map((u) => `<option value="${u.id}" ${u.id === state.currentUserId ? "selected" : ""}>${u.fullName} - ${u.role}</option>`).join("");
-      $("currentUser").onchange = (event) => {
-        state.currentUserId = event.target.value;
-        saveState();
-        render();
-      };
-      $("resetData").onclick = () => {
-        state = structuredClone(seed);
-        saveState();
-        render();
-        toast("داده‌های نمونه بازنشانی شد.");
-      };
-      $("todayChip").textContent = dateFa(new Date().toISOString());
-      $("roleChip").textContent = `${currentUser().fullName} | ${currentUser().role}`;
-    }
-
-    function render() {
-      renderShell();
-      pages.forEach(([id]) => $(`view-${id}`).classList.toggle("hidden", id !== activePage));
-      const page = pages.find(([id]) => id === activePage);
-      $("pageTitle").textContent = page[1];
-      $("pageSubtitle").textContent = page[2];
-      ({
-        dashboard: renderDashboard,
-        tasks: renderTasks,
-        requests: renderRequests,
-        meetings: renderMeetings,
-        messenger: renderMessenger,
-        bale: renderBaleSettings,
-        analytics: renderAnalytics,
-        deploy: renderDeploy,
-        offline: renderOffline,
-        users: renderUsers,
-        rules: renderRules
-      }[activePage])();
-    }
-
-    function renderDashboard() {
-      if (!backendOnline && !MOCK_DATA_ENABLED) {
-        $("view-dashboard").innerHTML = backendRequired("داشبورد واقعی", "داشبورد واقعی باید از APIهای tasks, meetings, CEO requests و analytics بخواند. GitHub Pages به تنهایی backend ندارد.");
-        bindBackendGate();
-        return;
-      }
-      const tasks = visibleTasks();
-      const mine = tasks.filter((t) => t.assignees.some((a) => a.userId === currentUser().id));
-      const pending = tasks.flatMap((t) => t.assignees).filter((a) => a.status === "pending").length;
-      const done = tasks.filter((t) => t.assignees.every((a) => a.status === "done")).length;
-      $("view-dashboard").innerHTML = `
-        <div class="metrics">
-          <div class="metric"><span class="metric-icon">${icons.dashboard}</span><span class="muted">تسک‌های قابل مشاهده</span><b>${fa(tasks.length)}</b></div>
-          <div class="metric"><span class="metric-icon">${icons.tasks}</span><span class="muted">تسک‌های من</span><b>${fa(mine.length)}</b></div>
-          <div class="metric"><span class="metric-icon">${icons.clock}</span><span class="muted">در انتظار قبول</span><b>${fa(pending)}</b></div>
-          <div class="metric"><span class="metric-icon">${icons.done}</span><span class="muted">تکمیل‌شده</span><b>${fa(done)}</b></div>
-        </div>
-        <div class="grid">
-          <div class="panel">
-            <div class="panel-head"><h2>آخرین تسک‌ها</h2><button class="blue" data-go="tasks">مدیریت تسک</button></div>
-            <div class="list">${tasks.slice(0, 4).map(taskCard).join("") || empty("تسکی برای نمایش وجود ندارد.")}</div>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>درخواست‌های مدیرعامل</h2><button class="primary" data-go="requests">ثبت درخواست</button></div>
-            <div class="list">${visibleRequests().slice(0, 4).map(requestCard).join("") || empty("درخواستی برای نمایش وجود ندارد.")}</div>
-          </div>
-        </div>`;
-      bindGoButtons();
-    }
-
-    function renderTasks() {
-      if (!backendOnline && !MOCK_DATA_ENABLED) {
-        $("view-tasks").innerHTML = backendRequired("تسک‌ها", "تسک واقعی باید در backend ذخیره شود، قوانین CEO را از API بگیرد، و notification بسازد.");
-        bindBackendGate();
-        return;
-      }
-      $("view-tasks").innerHTML = `
-        <div class="grid">
-          <div class="panel">
-            <div class="panel-head"><h2>فهرست تسک‌ها</h2><span class="chip">${fa(visibleTasks().length)} مورد</span></div>
-            <div class="list">${visibleTasks().map(taskCard).join("") || empty("تسکی مطابق دسترسی شما وجود ندارد.")}</div>
-          </div>
-          <form class="panel" id="taskForm">
-            <h2>تسک جدید</h2>
-            <div class="form-grid">
-              <label class="full">عنوان<input name="title" required placeholder="مثلاً پیگیری قرارداد مشتری"></label>
-              <label class="full">توضیح<textarea name="description" placeholder="جزئیات کار"></textarea></label>
-              <label>گروه<input name="group" value="${currentUser().group}"></label>
-              <label>تاریخ انجام<input name="dueDateLabel" id="taskDueDateLabel" readonly value="${quickDateLabel(1)}"><input name="dueAt" id="taskDueAt" type="hidden" value="${quickDateIso(1)}"></label>
-              <div class="full segmented" data-date-target="task">
-                <button type="button" data-date-offset="0">امروز</button>
-                <button type="button" data-date-offset="1" class="active">فردا</button>
-                <button type="button" data-date-offset="2">پس‌فردا</button>
-                <button type="button" data-date-offset="7">هفته بعد</button>
-              </div>
-              <label class="full">مسئولان<select name="assignees" multiple size="5">${state.users.filter((u) => u.active).map((u) => `<option value="${u.id}">${u.fullName} - ${u.group}</option>`).join("")}</select></label>
-            </div>
-            <button class="primary">ثبت تسک</button>
-            <p class="muted small">اگر مسئول مدیرعامل باشد، قانون R-CEO-02 اجرا می‌شود و کاربران غیر CEO باید درخواست مدیرعامل ثبت کنند.</p>
-          </form>
-        </div>`;
-      $("taskForm").onsubmit = createTask;
-      bindDatePresets("task");
-      bindTaskActions();
-    }
-
-    function taskCard(task) {
-      const creator = user(task.creatorId);
-      const progress = Math.round(task.assignees.filter((a) => a.status === "done").length / task.assignees.length * 100);
-      const ceo = task.visibility === "ceo_private" ? `<span class="chip danger">خصوصی CEO</span>` : "";
-      return `
-        <article class="item-card">
-          <div class="item-top">
-            <div style="display:flex; gap:10px; align-items:flex-start;">
-              <span class="card-icon">${task.visibility === "ceo_private" ? icons.lock : icons.tasks}</span>
-              <div>
-              <h3>${task.title}</h3>
-              <p class="muted small">${task.description || "بدون توضیح"}</p>
-              </div>
-            </div>
-            <div class="chips">${ceo}<span class="chip">${fa(progress)}٪ پیشرفت</span></div>
-          </div>
-          <div class="chips">
-            <span class="chip">سازنده: ${creator ? creator.fullName : "نامشخص"}</span>
-            <span class="chip">گروه: ${task.group}</span>
-            <span class="chip blue">سررسید: ${dateFa(task.dueAt)}</span>
-          </div>
-          <div class="chips">${task.assignees.map((a) => `<span class="chip">${user(a.userId)?.fullName || "کاربر"} ${statusChip(a.status)}</span>`).join("")}</div>
-          ${task.assignees.some((a) => a.userId === currentUser().id && a.status !== "done") ? `
-            <div class="item-actions">
-              <button class="primary" data-task-action="accepted" data-task="${task.id}">قبول</button>
-              <button class="blue" data-task-action="done" data-task="${task.id}">Done</button>
-              <button class="danger" data-task-action="rejected" data-task="${task.id}">رد</button>
-            </div>` : ""}
-        </article>`;
-    }
-
-    function createTask(event) {
-      event.preventDefault();
-      const form = new FormData(event.target);
-      const assignees = Array.from(event.target.assignees.selectedOptions).map((o) => o.value);
-      if (!assignees.length) return toast("حداقل یک مسئول انتخاب کنید.");
-      if (backendOnline) {
-        const groupName = form.get("group").trim() || currentUser().group;
-        const groupId = state.groups?.find((group) => group.title === groupName)?.id || currentUser().groupIds?.[0] || "g3";
-        backendFetch("/api/tasks", {
-          method: "POST",
-          body: JSON.stringify({
-            title: form.get("title").trim(),
-            description: form.get("description").trim(),
-            groupId,
-            dueAt: new Date(form.get("dueAt")).toISOString(),
-            assigneeIds: assignees
-          })
-        }).then(async () => {
-          await loadBackendState();
-          renderTasks();
-          toast("تسک در backend ثبت شد.");
-        }).catch((error) => toast(error.message));
-        return;
-      }
-      if (!canAssignTo(assignees)) return toast("تعریف مستقیم تسک برای مدیرعامل مجاز نیست. از بخش درخواست از مدیرعامل استفاده کنید.");
-      const task = {
-        id: uid("T"),
-        title: form.get("title").trim(),
-        description: form.get("description").trim(),
-        creatorId: currentUser().id,
-        group: form.get("group").trim() || currentUser().group,
-        type: assignees.some((id) => user(id)?.isCeo) ? "ceo_private" : "task",
-        dueAt: new Date(form.get("dueAt")).toISOString(),
-        visibility: assignees.some((id) => user(id)?.isCeo) ? "ceo_private" : "group",
-        assignees: assignees.map((id) => ({ userId: id, status: "pending", rejectReason: "", doneAt: "" }))
-      };
-      state.tasks.unshift(task);
-      saveState();
-      renderTasks();
-      toast("تسک ثبت شد و نوتیف assign ساخته شد.");
-    }
-
-    function bindTaskActions() {
-      document.querySelectorAll("[data-task-action]").forEach((btn) => {
-        btn.onclick = () => {
-          const task = state.tasks.find((t) => t.id === btn.dataset.task);
-          const mine = task?.assignees.find((a) => a.userId === currentUser().id);
-          if (!mine) return;
-          if (backendOnline) {
-            backendFetch("/api/tasks/assignment", {
-              method: "PATCH",
-              body: JSON.stringify({ taskId: task.id, status: btn.dataset.taskAction, rejectReason: btn.dataset.taskAction === "rejected" ? "رد شده از UI" : "" })
-            }).then(async () => {
-              await loadBackendState();
-              render();
-              toast("وضعیت تسک در backend ثبت شد.");
-            }).catch((error) => toast(error.message));
-            return;
-          }
-          mine.status = btn.dataset.taskAction;
-          mine.doneAt = mine.status === "done" ? new Date().toISOString() : "";
-          if (mine.status === "rejected") mine.rejectReason = "رد شده در MVP";
-          saveState();
-          render();
-          toast(mine.status === "done" ? "سهم شما Done شد." : "وضعیت تسک ثبت شد.");
-        };
-      });
-    }
-
-    function renderRequests() {
-      if (!backendOnline && !MOCK_DATA_ENABLED) {
-        $("view-requests").innerHTML = backendRequired("درخواست از مدیرعامل", "درخواست واقعی باید در backend ذخیره شود و فقط درخواست‌کننده/CEO به آن دسترسی داشته باشند.");
-        bindBackendGate();
-        return;
-      }
-      $("view-requests").innerHTML = `
-        <div class="grid">
-          <div class="panel">
-            <div class="panel-head"><h2>Inbox درخواست‌ها</h2><span class="chip">${fa(visibleRequests().length)} مورد</span></div>
-            <div class="list">${visibleRequests().map(requestCard).join("") || empty("درخواستی برای نمایش وجود ندارد.")}</div>
-          </div>
-          <form class="panel" id="requestForm">
-            <h2>ثبت درخواست از مدیرعامل</h2>
-            <label>عنوان<input name="title" required placeholder="مثلاً تایید بودجه"></label>
-            <label>شرح<textarea name="description" required placeholder="درخواست فقط برای شما و مدیرعامل قابل مشاهده خواهد بود."></textarea></label>
-            <button class="primary">ارسال درخواست</button>
-          </form>
-        </div>`;
-      $("requestForm").onsubmit = (event) => {
-        event.preventDefault();
-        const form = new FormData(event.target);
-        if (backendOnline) {
-          backendFetch("/api/ceo-requests", {
-            method: "POST",
-            body: JSON.stringify({ title: form.get("title").trim(), description: form.get("description").trim() })
-          }).then(async () => {
-            await loadBackendState();
-            renderRequests();
-            toast("درخواست در backend ثبت شد.");
-          }).catch((error) => toast(error.message));
-          return;
-        }
-        const ceo = state.users.find((u) => u.isCeo);
-        state.requests.unshift({ id: uid("R"), title: form.get("title").trim(), description: form.get("description").trim(), requesterId: currentUser().id, ceoId: ceo.id, status: "pending", decisionReason: "", delegatedTaskId: "" });
-        saveState();
-        renderRequests();
-        toast("درخواست خصوصی برای مدیرعامل ثبت شد.");
-      };
-      bindRequestActions();
-    }
-
-    function requestCard(req) {
-      const canDecide = currentUser().role === "CEO" && req.status === "pending";
-      return `
-        <article class="item-card">
-          <div class="item-top"><div style="display:flex; gap:10px; align-items:flex-start;"><span class="card-icon">${icons.requests}</span><div><h3>${req.title}</h3><p class="muted small">${req.description}</p></div></div>${statusChip(req.status)}</div>
-          <div class="chips"><span class="chip">درخواست‌کننده: ${user(req.requesterId)?.fullName || "نامشخص"}</span><span class="chip danger">خصوصی</span></div>
-          ${canDecide ? `<div class="item-actions"><button class="primary" data-request-action="approved" data-request="${req.id}">تایید</button><button class="blue" data-request-action="delegated" data-request="${req.id}">ارجاع به عملیات</button><button class="danger" data-request-action="rejected" data-request="${req.id}">رد</button></div>` : ""}
-        </article>`;
-    }
-
-    function bindRequestActions() {
-      document.querySelectorAll("[data-request-action]").forEach((btn) => {
-        btn.onclick = () => {
-          const req = state.requests.find((r) => r.id === btn.dataset.request);
-          if (!req) return;
-          req.status = btn.dataset.requestAction;
-          req.decisionReason = req.status === "rejected" ? "رد شده در MVP" : "";
-          if (req.status === "delegated") {
-            const target = state.users.find((u) => u.group === "عملیات" && !u.isCeo) || state.users.find((u) => !u.isCeo);
-            const taskId = uid("T");
-            req.delegatedTaskId = taskId;
-            state.tasks.unshift({ id: taskId, title: req.title, description: req.description, creatorId: currentUser().id, group: target.group, type: "task", dueAt: new Date(Date.now() + 86400000).toISOString(), visibility: "group", assignees: [{ userId: target.id, status: "pending", rejectReason: "", doneAt: "" }] });
-          }
-          saveState();
-          renderRequests();
-          toast("تصمیم مدیرعامل ثبت شد.");
-        };
-      });
-    }
-
-    function renderMeetings() {
-      if (!backendOnline && !MOCK_DATA_ENABLED) {
-        $("view-meetings").innerHTML = backendRequired("تقویم و جلسات", "تقویم واقعی باید جلسات را از backend بخواند. بدون backend فقط shell صفحه قابل نمایش است، نه داده واقعی.");
-        bindBackendGate();
-        return;
-      }
-      const title = calendarViewTitle();
-      $("view-meetings").innerHTML = `
-        <div class="calendar-shell">
-          <div class="panel">
-            <div class="calendar-toolbar">
-              <div class="calendar-title">
-                <strong>${title}</strong>
-                <span class="muted small">تقویم کاری شمسی با نمای روز، هفته، ماه و جابه‌جایی جلسه با کشیدن</span>
-              </div>
-              <div class="page-actions">
-                <button class="primary" id="openMeetingModal">جلسه جدید</button>
-                <div class="segmented">
-                  <button data-calendar-view="month" class="${calendarView === "month" ? "active" : ""}">ماه</button>
-                  <button data-calendar-view="week" class="${calendarView === "week" ? "active" : ""}">هفته</button>
-                  <button data-calendar-view="day" class="${calendarView === "day" ? "active" : ""}">روز</button>
-                </div>
-              </div>
-            </div>
-            ${calendarNavigation("top")}
-            <div id="calendarCanvas">${renderCalendarView()}</div>
-            ${calendarView === "day" ? calendarNavigation("bottom") : ""}
-            <div class="panel-head">
-              <h2>برنامه پیش رو</h2>
-              <span class="chip">${fa(state.meetings.length)} جلسه</span>
-            </div>
-            <div class="calendar-agenda">${state.meetings.map(agendaRow).join("") || empty("جلسه‌ای برای نمایش وجود ندارد.")}</div>
-          </div>
-          <div class="modal-backdrop hidden" id="meetingModal">
-            <form class="modal-card" id="meetingForm">
-              <div class="panel-head">
-                <h2>جلسه جدید</h2>
-                <button type="button" class="ghost" id="closeMeetingModal">بستن</button>
-              </div>
-              <div class="form-grid">
-                <label class="full">عنوان<input name="title" required></label>
-                <label class="full">توضیح<textarea name="description"></textarea></label>
-                <label class="full">تاریخ جلسه<input id="meetingDateLabel" readonly value="${quickDateLabel(1)}"><input name="meetingDateIso" id="meetingDateIso" type="hidden" value="${quickDateIso(1)}"></label>
-                <div class="full segmented" data-date-target="meeting">
-                  <button type="button" data-date-offset="0">امروز</button>
-                  <button type="button" data-date-offset="1" class="active">فردا</button>
-                  <button type="button" data-date-offset="2">پس‌فردا</button>
-                  <button type="button" data-date-offset="7">هفته بعد</button>
-                </div>
-                <div class="full calendar-picker">
-                  ${jalaliDateFields("meeting", quickDate(1))}
-                  <button type="button" class="blue" id="applyMeetingDate">انتخاب تاریخ</button>
-                </div>
-                <label>ساعت شروع<input name="startTime" type="time" value="09:00" required></label>
-                <label>ساعت پایان<input name="endTime" type="time" value="10:00" required></label>
-                <label class="full">مکان یا لینک<input name="location" placeholder="اتاق جلسه یا لینک"></label>
-                <label class="full">اعضا<select name="members" multiple size="5">${state.users.filter((u) => u.active).map((u) => `<option value="${u.id}">${u.fullName}</option>`).join("")}</select></label>
-              </div>
-              <button class="primary">ثبت جلسه</button>
-            </form>
-          </div>
-        </div>`;
-      $("openMeetingModal").onclick = () => $("meetingModal").classList.remove("hidden");
-      $("closeMeetingModal").onclick = () => $("meetingModal").classList.add("hidden");
-      $("meetingModal").onclick = (event) => {
-        if (event.target.id === "meetingModal") $("meetingModal").classList.add("hidden");
-      };
-      $("meetingForm").onsubmit = submitMeetingForm;
-      document.querySelectorAll("[data-calendar-view]").forEach((btn) => {
-        btn.onclick = (event) => {
-          event.preventDefault();
-          calendarView = btn.dataset.calendarView;
-          renderMeetings();
-        };
-      });
-      bindCalendarNavigation();
-      bindDatePresets("meeting");
-      bindJalaliPicker("meeting");
-      bindCalendarDrag();
-    }
-
-    function renderCalendarView() {
-      if (calendarView === "week") return calendarWeek();
-      if (calendarView === "day") return calendarDay();
-      return calendarMonth();
-    }
-
-    function calendarMonth() {
-      const base = new Date(calendarFocusDate);
-      const year = base.getFullYear();
-      const month = base.getMonth();
-      const first = new Date(year, month, 1);
-      const startOffset = (first.getDay() + 1) % 7;
-      const start = new Date(year, month, 1 - startOffset);
-      const weekdays = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
-      const cells = [];
-      for (let i = 0; i < 42; i++) {
-        const day = new Date(start);
-        day.setDate(start.getDate() + i);
-        const dayMeetings = state.meetings.filter((meeting) => sameLocalDay(new Date(meeting.startAt), day));
-        const dim = day.getMonth() !== month ? "dim" : "";
-        const today = sameLocalDay(day, new Date()) ? "today" : "";
-        cells.push(`
-          <div class="calendar-day ${dim} ${today}" data-drop-date="${localDateValue(day)}">
-            <span class="day-number">${fa(new Intl.DateTimeFormat("fa-IR-u-ca-persian", { day: "numeric" }).format(day).replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)))}</span>
-            ${dayMeetings.slice(0, 3).map((meeting) => eventPill(meeting)).join("")}
-          </div>`);
-      }
-      return `<div class="calendar-grid">${weekdays.map((day) => `<div class="calendar-weekday">${day}</div>`).join("")}${cells.join("")}</div>`;
-    }
-
-    function startOfPersianWeek(date) {
-      const start = new Date(date);
-      const offset = (start.getDay() + 1) % 7;
-      start.setDate(start.getDate() - offset);
-      start.setHours(0, 0, 0, 0);
-      return start;
-    }
-
-    function calendarWeek() {
-      const weekdays = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
-      const start = startOfPersianWeek(calendarFocusDate);
-      const hours = Array.from({ length: 14 }, (_, index) => index + 7);
-      const columns = [];
-      for (let i = 0; i < 7; i++) {
-        const day = new Date(start);
-        day.setDate(start.getDate() + i);
-        const cells = hours.map((hour) => {
-          const meetings = state.meetings.filter((meeting) => sameLocalDay(new Date(meeting.startAt), day) && new Date(meeting.startAt).getHours() === hour);
-          return `<div class="week-hour-cell" data-drop-date="${localDateValue(day)}" data-drop-hour="${hour}">${meetings.map((meeting) => eventPill(meeting)).join("")}</div>`;
-        }).join("");
-        columns.push(`
-          <div class="week-column">
-            <header><span>${weekdays[i]}</span><span class="muted small">${new Intl.DateTimeFormat("fa-IR-u-ca-persian", { day: "numeric", month: "short" }).format(day)}</span></header>
-            ${cells}
-          </div>`);
-      }
-      return `<div class="calendar-week-view"><div class="week-hour-rail"><span></span>${hours.map((hour) => `<span>${fa(hour)}:۰۰</span>`).join("")}</div>${columns.join("")}</div>`;
-    }
-
-    function calendarDay() {
-      const today = new Date(calendarFocusDate);
-      const rows = [];
-      for (let hour = 7; hour <= 20; hour++) {
-        const meetings = state.meetings.filter((meeting) => sameLocalDay(new Date(meeting.startAt), today) && new Date(meeting.startAt).getHours() === hour);
-        rows.push(`
-          <div class="hour-row">
-            <div class="hour-label">${fa(hour)}:۰۰</div>
-            <div class="hour-cell" data-drop-date="${localDateValue(today)}" data-drop-hour="${hour}">${meetings.map((meeting) => eventPill(meeting)).join("")}</div>
-          </div>`);
-      }
-      return `<div class="panel-head"><h2>برنامه روزانه</h2><span class="chip blue">${new Intl.DateTimeFormat("fa-IR-u-ca-persian", { dateStyle: "full" }).format(today)}</span></div><div class="calendar-day-view">${rows.join("")}</div>`;
-    }
-
-    function eventPill(meeting) {
-      return `<div class="event-pill" draggable="true" data-meeting-id="${meeting.id}"><strong>${meeting.title}</strong><span>${timeFa(meeting.startAt)} · ${meeting.location || "بدون مکان"}</span></div>`;
-    }
-
-    function calendarViewTitle() {
-      if (calendarView === "day") return new Intl.DateTimeFormat("fa-IR-u-ca-persian", { dateStyle: "full" }).format(calendarFocusDate);
-      if (calendarView === "week") {
-        const start = startOfPersianWeek(calendarFocusDate);
-        const end = new Date(start);
-        end.setDate(start.getDate() + 6);
-        return `${new Intl.DateTimeFormat("fa-IR-u-ca-persian", { day: "numeric", month: "short" }).format(start)} تا ${new Intl.DateTimeFormat("fa-IR-u-ca-persian", { day: "numeric", month: "short", year: "numeric" }).format(end)}`;
-      }
-      return new Intl.DateTimeFormat("fa-IR-u-ca-persian", { month: "long", year: "numeric" }).format(calendarFocusDate);
-    }
-
-    function calendarNavigation(position) {
-      const j = gregorianToJalali(calendarFocusDate);
-      const prevLabel = calendarView === "month" ? "ماه قبل" : calendarView === "week" ? "هفته قبل" : "روز قبل";
-      const nextLabel = calendarView === "month" ? "ماه بعد" : calendarView === "week" ? "هفته بعد" : "روز بعد";
-      return `
-        <div class="calendar-controls" data-calendar-nav="${position}">
-          <div class="segmented">
-            <button type="button" data-calendar-shift="-1">${prevLabel}</button>
-            <button type="button" data-calendar-today="1">امروز</button>
-            <button type="button" data-calendar-shift="1">${nextLabel}</button>
-          </div>
-          <div class="calendar-picker">
-            <label>سال<input id="calendar${capitalize(position)}Year" inputmode="numeric" value="${fa(j.jy)}"></label>
-            <label>ماه<input id="calendar${capitalize(position)}Month" inputmode="numeric" value="${fa(j.jm)}"></label>
-            <label>روز<input id="calendar${capitalize(position)}Day" inputmode="numeric" value="${fa(j.jd)}"></label>
-            <button type="button" class="blue" data-calendar-apply="${position}">انتخاب تاریخ</button>
-          </div>
-        </div>`;
-    }
-
-    function bindCalendarNavigation() {
-      document.querySelectorAll("[data-calendar-shift]").forEach((btn) => {
-        btn.onclick = () => {
-          const step = Number(btn.dataset.calendarShift);
-          const next = new Date(calendarFocusDate);
-          if (calendarView === "month") next.setMonth(next.getMonth() + step);
-          if (calendarView === "week") next.setDate(next.getDate() + step * 7);
-          if (calendarView === "day") next.setDate(next.getDate() + step);
-          calendarFocusDate = next;
-          renderMeetings();
-        };
-      });
-      document.querySelectorAll("[data-calendar-today]").forEach((btn) => {
-        btn.onclick = () => {
-          calendarFocusDate = new Date();
-          renderMeetings();
-        };
-      });
-      document.querySelectorAll("[data-calendar-apply]").forEach((btn) => {
-        btn.onclick = () => {
-          const key = btn.dataset.calendarApply;
-          const next = readJalaliFields(`calendar${capitalize(key)}`);
-          if (!next) return toast("تاریخ شمسی وارد شده معتبر نیست.");
-          calendarFocusDate = next;
-          renderMeetings();
-        };
-      });
-    }
-
-    async function submitMeetingForm(event) {
-      event.preventDefault();
-      const form = new FormData(event.target);
-      const members = Array.from(event.target.members.selectedOptions).map((o) => o.value);
-      const meetingDate = new Date(form.get("meetingDateIso"));
-      const [startHour, startMinute] = String(form.get("startTime")).split(":").map(Number);
-      const [endHour, endMinute] = String(form.get("endTime")).split(":").map(Number);
-      const startAt = new Date(meetingDate);
-      startAt.setHours(startHour, startMinute, 0, 0);
-      const endAt = new Date(meetingDate);
-      endAt.setHours(endHour, endMinute, 0, 0);
-      if (endAt <= startAt) return toast("ساعت پایان باید بعد از ساعت شروع باشد.");
-      if (backendOnline) {
-        try {
-          await backendFetch("/api/meetings", {
-            method: "POST",
-            body: JSON.stringify({
-              title: form.get("title").trim(),
-              description: form.get("description").trim(),
-              startAt: startAt.toISOString(),
-              endAt: endAt.toISOString(),
-              location: form.get("location").trim(),
-              members
-            })
-          });
-          await loadBackendState();
-          calendarFocusDate = startAt;
-          renderMeetings();
-          toast("جلسه در سیستم ثبت شد.");
-        } catch (error) {
-          toast(error.message);
-        }
-        return;
-      }
-      if (!members.includes(currentUser().id)) members.push(currentUser().id);
-      state.meetings.unshift({ id: uid("M"), title: form.get("title").trim(), description: form.get("description").trim(), startAt: startAt.toISOString(), endAt: endAt.toISOString(), location: form.get("location").trim(), creatorId: currentUser().id, status: "scheduled", members });
-      saveState();
-      calendarFocusDate = startAt;
-      renderMeetings();
-      toast("جلسه ثبت شد.");
-    }
-
-    function bindCalendarDrag() {
-      document.querySelectorAll(".event-pill[draggable='true']").forEach((pill) => {
-        pill.ondragstart = (event) => {
-          event.dataTransfer.setData("text/plain", pill.dataset.meetingId);
-        };
-      });
-      document.querySelectorAll("[data-drop-date], [data-drop-hour]").forEach((target) => {
-        target.ondragover = (event) => {
-          event.preventDefault();
-          target.classList.add("drop-hover");
-        };
-        target.ondragleave = () => target.classList.remove("drop-hover");
-        target.ondrop = async (event) => {
-          event.preventDefault();
-          target.classList.remove("drop-hover");
-          const meetingId = event.dataTransfer.getData("text/plain");
-          await moveMeeting(meetingId, target.dataset.dropDate, target.dataset.dropHour);
-        };
-      });
-    }
-
-    async function moveMeeting(meetingId, dropDate, dropHour) {
-      const meeting = state.meetings.find((item) => item.id === meetingId);
-      if (!meeting || !dropDate) return;
-      const oldStart = new Date(meeting.startAt);
-      const oldEnd = new Date(meeting.endAt);
-      const duration = Math.max(30 * 60000, oldEnd - oldStart);
-      const nextStart = dateFromLocalValue(dropDate);
-      nextStart.setHours(dropHour !== undefined ? Number(dropHour) : oldStart.getHours(), oldStart.getMinutes(), 0, 0);
-      const nextEnd = new Date(nextStart.getTime() + duration);
-      if (backendOnline) {
-        try {
-          await backendFetch("/api/meetings/reschedule", {
-            method: "PATCH",
-            body: JSON.stringify({ meetingId, startAt: nextStart.toISOString(), endAt: nextEnd.toISOString() })
-          });
-          await loadBackendState();
-          calendarFocusDate = nextStart;
-          renderMeetings();
-          toast("زمان جلسه جابه‌جا شد.");
-        } catch (error) {
-          toast(error.message);
-        }
-        return;
-      }
-      meeting.startAt = nextStart.toISOString();
-      meeting.endAt = nextEnd.toISOString();
-      saveState();
-      calendarFocusDate = nextStart;
-      renderMeetings();
-      toast("زمان جلسه جابه‌جا شد.");
-    }
-
-    function sameLocalDay(a, b) {
-      return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-    }
-
-    function timeFa(value) {
-      return new Intl.DateTimeFormat("fa-IR", { hour: "2-digit", minute: "2-digit" }).format(new Date(value));
-    }
-
-    function localDateValue(date) {
-      const d = new Date(date);
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    }
-
-    function dateFromLocalValue(value) {
-      const [year, month, day] = String(value).split("-").map(Number);
-      return new Date(year, month - 1, day, 9, 0, 0, 0);
-    }
-
-    function digitsToLatin(value) {
-      return String(value || "")
-        .replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))
-        .replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
-    }
-
-    function capitalize(value) {
-      return String(value).charAt(0).toUpperCase() + String(value).slice(1);
-    }
-
-    function jalaliDateFields(prefix, date) {
-      const j = gregorianToJalali(date);
-      return `
-        <label>سال<input id="${prefix}Year" inputmode="numeric" value="${fa(j.jy)}"></label>
-        <label>ماه<input id="${prefix}Month" inputmode="numeric" value="${fa(j.jm)}"></label>
-        <label>روز<input id="${prefix}Day" inputmode="numeric" value="${fa(j.jd)}"></label>`;
-    }
-
-    function setJalaliFields(prefix, date) {
-      const j = gregorianToJalali(date);
-      if ($(`${prefix}Year`)) $(`${prefix}Year`).value = fa(j.jy);
-      if ($(`${prefix}Month`)) $(`${prefix}Month`).value = fa(j.jm);
-      if ($(`${prefix}Day`)) $(`${prefix}Day`).value = fa(j.jd);
-    }
-
-    function readJalaliFields(prefix) {
-      const year = Number(digitsToLatin($(`${prefix}Year`)?.value));
-      const month = Number(digitsToLatin($(`${prefix}Month`)?.value));
-      const day = Number(digitsToLatin($(`${prefix}Day`)?.value));
-      if (!year || !month || !day || month < 1 || month > 12 || day < 1 || day > 31) return null;
-      const g = jalaliToGregorian(year, month, day);
-      const date = new Date(g.gy, g.gm - 1, g.gd, 9, 0, 0, 0);
-      const check = gregorianToJalali(date);
-      if (check.jy !== year || check.jm !== month || check.jd !== day) return null;
-      return date;
-    }
-
-    function bindJalaliPicker(prefix) {
-      const btn = $(`apply${capitalize(prefix)}Date`);
-      if (!btn) return;
-      btn.onclick = () => {
-        const date = readJalaliFields(prefix);
-        if (!date) return toast("تاریخ شمسی وارد شده معتبر نیست.");
-        $(`${prefix}DateIso`).value = date.toISOString();
-        $(`${prefix}DateLabel`).value = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { dateStyle: "full" }).format(date);
-        document.querySelectorAll(`[data-date-target="${prefix}"] button`).forEach((item) => item.classList.remove("active"));
-      };
-    }
-
-    function div(a, b) {
-      return ~~(a / b);
-    }
-
-    function gregorianToJalali(date) {
-      const gy = date.getFullYear();
-      const gm = date.getMonth() + 1;
-      const gd = date.getDate();
-      const gdm = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
-      let jy = gy <= 1600 ? 0 : 979;
-      let gy2 = gy <= 1600 ? gy - 621 : gy - 1600;
-      const gy3 = gm > 2 ? gy2 + 1 : gy2;
-      let days = 365 * gy2 + div(gy3 + 3, 4) - div(gy3 + 99, 100) + div(gy3 + 399, 400) - 80 + gd + gdm[gm - 1];
-      jy += 33 * div(days, 12053);
-      days %= 12053;
-      jy += 4 * div(days, 1461);
-      days %= 1461;
-      if (days > 365) {
-        jy += div(days - 1, 365);
-        days = (days - 1) % 365;
-      }
-      const jm = days < 186 ? 1 + div(days, 31) : 7 + div(days - 186, 30);
-      const jd = 1 + (days < 186 ? days % 31 : (days - 186) % 30);
-      return { jy, jm, jd };
-    }
-
-    function jalaliToGregorian(jy, jm, jd) {
-      jy += jy > 979 ? -979 : 0;
-      let days = 365 * jy + div(jy, 33) * 8 + div((jy % 33) + 3, 4) + 78 + jd + (jm < 7 ? (jm - 1) * 31 : (jm - 7) * 30 + 186);
-      let gy = 1600 + 400 * div(days, 146097);
-      days %= 146097;
-      if (days > 36524) {
-        gy += 100 * div(--days, 36524);
-        days %= 36524;
-        if (days >= 365) days++;
-      }
-      gy += 4 * div(days, 1461);
-      days %= 1461;
-      if (days > 365) {
-        gy += div(days - 1, 365);
-        days = (days - 1) % 365;
-      }
-      let gd = days + 1;
-      const leap = (gy % 4 === 0 && gy % 100 !== 0) || gy % 400 === 0;
-      const salA = [0, 31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-      let gm = 1;
-      while (gm <= 12 && gd > salA[gm]) gd -= salA[gm++];
-      return { gy, gm, gd };
-    }
-
-    function quickDate(offsetDays) {
-      const date = new Date();
-      date.setDate(date.getDate() + Number(offsetDays));
-      date.setHours(9, 0, 0, 0);
-      return date;
-    }
-
-    function quickDateIso(offsetDays) {
-      return quickDate(offsetDays).toISOString();
-    }
-
-    function quickDateLabel(offsetDays) {
-      return new Intl.DateTimeFormat("fa-IR-u-ca-persian", { dateStyle: "full" }).format(quickDate(offsetDays));
-    }
-
-    function bindDatePresets(target) {
-      document.querySelectorAll(`[data-date-target="${target}"] [data-date-offset]`).forEach((btn) => {
-        btn.onclick = () => {
-          const offset = btn.dataset.dateOffset;
-          document.querySelectorAll(`[data-date-target="${target}"] button`).forEach((item) => item.classList.remove("active"));
-          btn.classList.add("active");
-          if (target === "task") {
-            $("taskDueAt").value = quickDateIso(offset);
-            $("taskDueDateLabel").value = quickDateLabel(offset);
-          }
-          if (target === "meeting") {
-            $("meetingDateIso").value = quickDateIso(offset);
-            $("meetingDateLabel").value = quickDateLabel(offset);
-            setJalaliFields("meeting", quickDate(offset));
-          }
-        };
-      });
-    }
-
-    function agendaRow(meeting) {
-      return `
-        <article class="agenda-row">
-          <div class="agenda-time">${timeFa(meeting.startAt)}</div>
-          <div>
-            <div style="display:flex; gap:10px; align-items:flex-start;">
-            <span class="card-icon">${icons.meetings}</span>
-            <div>
-            <h3>${meeting.title}</h3>
-            <p class="muted small">${dateFa(meeting.startAt)} · ${meeting.location || "بدون مکان"}</p>
-            </div>
-            </div>
-            <div class="chips">${meeting.members.map((id) => `<span class="chip">${user(id)?.fullName || "کاربر"}</span>`).join("")}</div>
-          </div>
-        </article>`;
-    }
-
-    function meetingCard(meeting) {
-      return `
-        <article class="item-card">
-          <div class="item-top"><div style="display:flex; gap:10px; align-items:flex-start;"><span class="card-icon">${icons.meetings}</span><div><h3>${meeting.title}</h3><p class="muted small">${meeting.description || "بدون توضیح"}</p></div></div>${statusChip(meeting.status)}</div>
-          <div class="chips"><span class="chip blue">شروع: ${dateFa(meeting.startAt)}</span><span class="chip">مکان: ${meeting.location || "ثبت نشده"}</span></div>
-          <div class="chips">${meeting.members.map((id) => `<span class="chip">${user(id)?.fullName || "کاربر"}</span>`).join("")}</div>
-        </article>`;
-    }
-
-    function renderMessenger() {
-      if (!backendOnline && !MOCK_DATA_ENABLED) {
-        $("view-messenger").innerHTML = backendRequired("پیام‌رسان و AI", "AI واقعی و جریان تایید باید از backend و provider آنلاین یا parser backend عبور کند. در GitHub Pages به تنهایی اجرا نمی‌شود.");
-        bindBackendGate();
-        return;
-      }
-      $("view-messenger").innerHTML = `
-        <div class="ai-workspace">
-          <div class="ai-composer">
-            <div class="ai-header">
-              <div style="display:flex; align-items:center; gap:12px;">
-                <div class="ai-orb">${icons.spark}</div>
-                <div>
-                  <h2>دستیار هوشمند دفتر مدیرعامل</h2>
-                  <p class="muted small">متن فارسی را به عملیات قابل تایید تبدیل می‌کند.</p>
-                </div>
-              </div>
-              <div class="segmented">
-                <button class="active" data-source="telegram">تلگرام</button>
-                <button data-source="bale">بله</button>
-              </div>
-            </div>
-            <div class="ai-box">
-              <label>پیام کاربر
-                <textarea id="messageText">برای سارا و حسین تسک آماده‌سازی گزارش فروش تا فردا بساز</textarea>
-              </label>
-              <div class="prompt-row">
-                <label>نمونه سریع
-                  <select id="promptPreset">
-                    <option value="برای سارا و حسین تسک آماده‌سازی گزارش فروش تا فردا بساز">ساخت تسک چندمسئوله</option>
-                    <option value="برای فردا ساعت ۱۰ جلسه هماهنگی فروش و عملیات با سارا و حسین ثبت کن">ساخت جلسه</option>
-                    <option value="درخواست تایید بودجه رویداد مشتریان را برای مدیرعامل ثبت کن">درخواست از مدیرعامل</option>
-                  </select>
-                </label>
-                <button class="primary" id="parseMessage">تحلیل پیام</button>
-              </div>
-              <pre class="intent-preview" id="aiOutput">{
-  "intent": "در انتظار تحلیل",
-  "needsConfirmation": true
-}</pre>
-              <button class="blue" id="confirmIntent">تایید و ثبت عملیات</button>
-            </div>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>جریان پیام‌ها</h2><span class="chip">${fa(state.messages.length)} پیام</span></div>
-            <div class="message-timeline">${state.messages.map((m) => `<article class="item-card"><div class="item-top"><div style="display:flex; gap:10px; align-items:flex-start;"><span class="card-icon">${icons.messenger}</span><div><div class="chips"><span class="chip blue">${m.source}</span><span class="chip">${m.status}</span></div><h3>${m.text}</h3></div></div></div><pre>${JSON.stringify(m.parsedIntent, null, 2)}</pre></article>`).join("")}</div>
-          </div>
-        </div>`;
-      let source = "telegram";
-      document.querySelectorAll("[data-source]").forEach((btn) => {
-        btn.onclick = (event) => {
-          event.preventDefault();
-          document.querySelectorAll("[data-source]").forEach((b) => b.classList.remove("active"));
-          btn.classList.add("active");
-          source = btn.dataset.source;
-        };
-      });
-      $("parseMessage").onclick = () => {
-        const text = $("messageText").value;
-        if (backendOnline) {
-          backendFetch("/api/messages/parse", {
-            method: "POST",
-            body: JSON.stringify({ text })
-          }).then((intent) => {
-            $("aiOutput").textContent = JSON.stringify(intent, null, 2);
-            $("aiOutput").dataset.intent = JSON.stringify({ source, intent, text });
-          }).catch((error) => toast(error.message));
-          return;
-        }
-        const intent = parsePersianMessage(text);
-        $("aiOutput").textContent = JSON.stringify(intent, null, 2);
-        $("aiOutput").dataset.intent = JSON.stringify({ source, intent, text });
-      };
-      $("promptPreset").onchange = (event) => {
-        $("messageText").value = event.target.value;
-      };
-      $("confirmIntent").onclick = () => {
-        if (!$("aiOutput").dataset.intent) return toast("اول پیام را Parse کنید.");
-        confirmIntent(JSON.parse($("aiOutput").dataset.intent));
-      };
-    }
-
-    function parsePersianMessage(text) {
-      const names = state.users.filter((u) => !u.isCeo).filter((u) => text.includes(u.fullName.split(" ")[0])).map((u) => u.id);
-      if (text.includes("جلسه")) return { intent: "create_meeting", title: cleanupTitle(text, "جلسه"), members: names.length ? names : [currentUser().id], startText: text.includes("فردا") ? "فردا" : "امروز", confidence: .76, needsConfirmation: true };
-      if (text.includes("مدیرعامل") || text.includes("بودجه") || text.includes("تایید")) return { intent: "create_manager_request", title: cleanupTitle(text, "درخواست"), confidence: .72, needsConfirmation: true };
-      if (text.includes("تسک") || text.includes("کار")) return { intent: "create_task", title: cleanupTitle(text, "تسک"), assignees: names, dueText: text.includes("فردا") ? "فردا" : "امروز", confidence: .81, needsConfirmation: true };
-      if (text.includes("تسک‌های من")) return { intent: "list_my_tasks", confidence: .93, needsConfirmation: false };
-      return { intent: "unknown", confidence: .3, needsConfirmation: false, question: "لطفاً بفرمایید تسک، جلسه یا درخواست مدیرعامل می‌خواهید؟" };
-    }
-
-    function cleanupTitle(text, fallback) {
-      return text.replace(/برای|بساز|ثبت کن|تا فردا|تا امروز|تسک|جلسه/g, "").trim().slice(0, 70) || fallback;
-    }
-
-    function confirmIntent(payload) {
-      const { intent } = payload;
-      if (backendOnline) {
-        const createFromIntent = async () => {
-          if (intent.intent === "create_task") {
-            await backendFetch("/api/tasks", {
-              method: "POST",
-              body: JSON.stringify({
-                title: intent.title,
-                description: payload.text,
-                groupId: currentUser().groupIds?.[0] || "g3",
-                dueAt: new Date(Date.now() + 86400000).toISOString(),
-                assigneeIds: intent.assignees?.length ? intent.assignees : [currentUser().id]
-              })
-            });
-          }
-          if (intent.intent === "create_ceo_request" || intent.intent === "create_manager_request") {
-            await backendFetch("/api/ceo-requests", {
-              method: "POST",
-              body: JSON.stringify({ title: intent.title, description: payload.text })
-            });
-          }
-          if (intent.intent === "create_meeting") {
-            await backendFetch("/api/meetings", {
-              method: "POST",
-              body: JSON.stringify({
-                title: intent.title,
-                description: payload.text,
-                startAt: new Date(Date.now() + 86400000).toISOString(),
-                endAt: new Date(Date.now() + 90000000).toISOString(),
-                location: "ثبت نشده",
-                members: intent.members || []
-              })
-            });
-          }
-          await loadBackendState();
-          renderMessenger();
-          toast("عملیات در backend ثبت شد.");
-        };
-        createFromIntent().catch((error) => toast(error.message));
-        return;
-      }
-      state.messages.unshift({ id: uid("MSG"), source: payload.source, sender: currentUser().telegram, text: payload.text, status: "confirmed", parsedIntent: intent });
-      if (intent.intent === "create_task") {
-        const assignees = intent.assignees.length ? intent.assignees : [currentUser().id];
-        if (!canAssignTo(assignees)) return toast("قانون CEO اجازه ثبت مستقیم این تسک را نمی‌دهد.");
-        state.tasks.unshift({ id: uid("T"), title: intent.title, description: payload.text, creatorId: currentUser().id, group: currentUser().group, type: "task", dueAt: new Date(Date.now() + 86400000).toISOString(), visibility: "group", assignees: assignees.map((id) => ({ userId: id, status: "pending", rejectReason: "", doneAt: "" })) });
-      }
-      if (intent.intent === "create_manager_request") {
-        const ceo = state.users.find((u) => u.isCeo);
-        state.requests.unshift({ id: uid("R"), title: intent.title, description: payload.text, requesterId: currentUser().id, ceoId: ceo.id, status: "pending", decisionReason: "", delegatedTaskId: "" });
-      }
-      if (intent.intent === "create_meeting") {
-        state.meetings.unshift({ id: uid("M"), title: intent.title, description: payload.text, startAt: new Date(Date.now() + 86400000).toISOString(), endAt: new Date(Date.now() + 90000000).toISOString(), location: "ثبت نشده", creatorId: currentUser().id, status: "scheduled", members: [...new Set([currentUser().id, ...intent.members])] });
-      }
-      saveState();
-      renderMessenger();
-      toast("عملیات بعد از تایید کاربر ثبت شد.");
-    }
-
-    async function backendFetch(path, options = {}) {
-      const base = backendBaseUrl || (location.protocol === "file:" ? "http://127.0.0.1:4188" : location.origin);
-      const response = await fetch(`${base}${path}`, {
-        ...options,
-        headers: {
-          "Content-Type": "application/json",
-          "X-Actor-Id": state.currentUserId,
-          ...(options.headers || {})
-        }
-      });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "خطای ارتباط با backend");
-      return body;
-    }
-
-    async function renderBaleSettings() {
-      if (!backendOnline && !MOCK_DATA_ENABLED) {
-        $("view-bale").innerHTML = backendRequired("بازوی بله", "بازوی بله واقعی فقط با backend عمومی HTTPS کار می‌کند. GitHub Pages نمی‌تواند webhook یا bot را اجرا کند.");
-        bindBackendGate();
-        return;
-      }
-      $("view-bale").innerHTML = `
-        <div class="grid">
-          <form class="panel" id="baleForm">
-            <div class="panel-head">
-              <div style="display:flex; gap:10px; align-items:center;">
-                <span class="card-icon">${icons.bale}</span>
-                <div>
-                  <h2>تنظیمات بازوی بله</h2>
-                  <p class="muted small">Webhook، token، secret و قالب پاسخ فارسی</p>
-                </div>
-              </div>
-              <span class="chip warn" id="baleBackendStatus">در حال بررسی backend</span>
-            </div>
-            <div class="backend-warning">
-              این صفحه روی GitHub Pages فقط تنظیمات را نمایش می‌دهد. بازوی واقعی بله فقط وقتی کار می‌کند که backend Node روی یک سرور عمومی HTTPS مثل Render اجرا شود و webhook بله به همان آدرس وصل شود.
-            </div>
-            <div class="form-grid">
-              <label>فعال‌سازی
-                <select name="enabled">
-                  <option value="true">فعال</option>
-                  <option value="false">غیرفعال</option>
-                </select>
-              </label>
-              <label>حالت پاسخ
-                <select name="defaultReplyMode">
-                  <option value="persian-confirmation">تایید فارسی قبل از ثبت</option>
-                  <option value="persian-command-only">فقط دستورهای متنی فارسی</option>
-                </select>
-              </label>
-              <label class="full">Bot Token
-                <input name="botToken" placeholder="توکن بازوی بله">
-              </label>
-              <label class="full">Webhook URL
-                <input name="webhookUrl" value="http://127.0.0.1:4188/api/webhooks/bale">
-              </label>
-              <label class="full">Secret Header
-                <input name="secret" placeholder="اختیاری: X-Bale-Secret">
-              </label>
-            </div>
-            <div class="item-actions">
-              <button class="primary">ذخیره تنظیمات</button>
-              <button class="blue" type="button" id="registerBaleWebhook">ثبت webhook در بله</button>
-              <button class="blue" type="button" id="sendBaleTest">ارسال پیام تست واقعی</button>
-              <button class="blue" type="button" id="testBaleWebhook">تست پیام بله</button>
-            </div>
-            <div class="list" id="baleActionResult">
-              ${empty("هنوز تستی اجرا نشده است.")}
-            </div>
-          </form>
-          <div class="panel">
-            <h2>راهنمای اتصال بله</h2>
-            <div class="list">
-              <article class="item-card"><div class="item-top"><div style="display:flex; gap:10px;"><span class="card-icon">${icons.bale}</span><div><h3>Webhook Endpoint</h3><p class="muted small">در محیط production این آدرس باید HTTPS عمومی باشد. برای تست محلی از endpoint backend استفاده می‌شود.</p></div></div></div><pre>POST /api/webhooks/bale</pre></article>
-              <article class="item-card"><div class="item-top"><div style="display:flex; gap:10px;"><span class="card-icon">${icons.deploy}</span><div><h3>Backend Required</h3><p class="muted small">GitHub Pages backend ندارد. برای bot واقعی باید backend را روی Render/Node host منتشر کنیم.</p></div></div></div><pre>https://YOUR-SERVICE.onrender.com/api/webhooks/bale</pre></article>
-              <article class="item-card"><div class="item-top"><div style="display:flex; gap:10px;"><span class="card-icon">${icons.lock}</span><div><h3>Security</h3><p class="muted small">اگر secret تنظیم شود، درخواست webhook باید header زیر را بفرستد.</p></div></div></div><pre>X-Bale-Secret: your-secret</pre></article>
-              <article class="item-card"><div class="item-top"><div style="display:flex; gap:10px;"><span class="card-icon">${icons.messenger}</span><div><h3>Persian Reply</h3><p class="muted small">پاسخ bot فارسی است و برای متن‌های AI-created مرحله تایید می‌سازد.</p></div></div></div></article>
-            </div>
-          </div>
-        </div>`;
-
-      try {
-        const settings = await backendFetch("/api/settings/bale");
-        $("baleBackendStatus").textContent = "backend متصل";
-        $("baleBackendStatus").className = "chip ok";
-        const form = $("baleForm");
-        form.enabled.value = String(settings.enabled);
-        form.botToken.value = settings.botToken || "";
-        form.webhookUrl.value = settings.webhookUrl || "http://127.0.0.1:4188/api/webhooks/bale";
-        form.secret.value = settings.secret ? "********" : "";
-        form.defaultReplyMode.value = settings.defaultReplyMode || "persian-confirmation";
-      } catch (error) {
-        $("baleBackendStatus").textContent = "backend اجرا نیست";
-        $("baleBackendStatus").className = "chip danger";
-      }
-
-      $("baleForm").onsubmit = async (event) => {
-        event.preventDefault();
-        const form = new FormData(event.target);
-        try {
-          const result = await backendFetch("/api/settings/bale", {
-            method: "PUT",
-            body: JSON.stringify({
-              enabled: form.get("enabled") === "true",
-              botToken: form.get("botToken"),
-              webhookUrl: form.get("webhookUrl"),
-              secret: form.get("secret"),
-              defaultReplyMode: form.get("defaultReplyMode")
-            })
-          });
-          showBaleResult("ذخیره تنظیمات", true, result);
-          toast("تنظیمات بله ذخیره شد.");
-        } catch (error) {
-          showBaleResult("ذخیره تنظیمات", false, { error: error.message });
-          toast(error.message);
-        }
-      };
-
-      $("testBaleWebhook").onclick = async () => {
-        try {
-          const result = await backendFetch("/api/webhooks/bale", {
-            method: "POST",
-            body: JSON.stringify({ message: { chat: { id: currentUser().bale }, text: "برای سارا تسک پیگیری گزارش تا فردا بساز" } })
-          });
-          showBaleResult("تست دریافت webhook", true, result);
-          toast(result.reply);
-        } catch (error) {
-          showBaleResult("تست دریافت webhook", false, { error: error.message });
-          toast(error.message);
-        }
-      };
-      $("registerBaleWebhook").onclick = async () => {
-        try {
-          const result = await backendFetch("/api/settings/bale/register-webhook", {
-            method: "POST",
-            body: JSON.stringify({})
-          });
-          showBaleResult("ثبت webhook در بله", Boolean(result.ok), result);
-          toast(result.ok ? "webhook در بله ثبت شد." : "ثبت webhook ناموفق بود.");
-        } catch (error) {
-          showBaleResult("ثبت webhook در بله", false, { error: error.message });
-          toast(error.message);
-        }
-      };
-      $("sendBaleTest").onclick = async () => {
-        try {
-          const result = await backendFetch("/api/settings/bale/test-send", {
-            method: "POST",
-            body: JSON.stringify({ text: "پیام تست از سیستم دفتر مدیرعامل" })
-          });
-          showBaleResult("ارسال پیام تست واقعی", Boolean(result.ok), result);
-          toast(result.ok ? "پیام تست به بله ارسال شد." : "ارسال پیام تست ناموفق بود.");
-        } catch (error) {
-          showBaleResult("ارسال پیام تست واقعی", false, { error: error.message });
-          toast(error.message);
-        }
-      };
-    }
-
-    function showBaleResult(title, ok, result) {
-      const box = $("baleActionResult");
-      if (!box) return;
-      box.innerHTML = `
-        <article class="item-card">
-          <div class="item-top">
-            <div style="display:flex; gap:10px; align-items:flex-start;">
-              <span class="card-icon">${ok ? icons.done : icons.alert}</span>
-              <div>
-                <h3>${title}</h3>
-                <p class="muted small">${ok ? "موفق" : "ناموفق"} · ${dateFa(new Date().toISOString())}</p>
-              </div>
-            </div>
-            <span class="chip ${ok ? "ok" : "danger"}">${ok ? "موفق" : "خطا"}</span>
-          </div>
-          <pre>${JSON.stringify(result, null, 2)}</pre>
-        </article>`;
-    }
-
-    async function renderAnalytics() {
-      if (!backendOnline && !MOCK_DATA_ENABLED) {
-        $("view-analytics").innerHTML = backendRequired("تحلیل و هشدارهای هوشمند", "تحلیل واقعی باید از endpointهای analytics و smart-notifications خوانده شود.");
-        bindBackendGate();
-        return;
-      }
-      $("view-analytics").innerHTML = `
-        <div class="grid">
-          <div class="panel">
-            <div class="panel-head"><h2>تحلیل عملکرد</h2><span class="chip warn" id="analyticsStatus">در حال دریافت</span></div>
-            <div class="metrics" id="analyticsMetrics"></div>
-            <div class="table-wrap"><table><thead><tr><th>کاربر</th><th>نقش</th><th>Assign</th><th>Done</th><th>رد</th><th>در انتظار</th><th>نرخ تکمیل</th></tr></thead><tbody id="analyticsRows"></tbody></table></div>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>پیشنهادهای هوشمند</h2><button class="primary" id="runSmartRules">اجرای قوانین</button></div>
-            <div class="list" id="smartSuggestions">${empty("در حال بررسی پیشنهادها...")}</div>
-          </div>
-        </div>`;
-      try {
-        const overview = await backendFetch("/api/analytics/overview");
-        const suggestions = await backendFetch("/api/smart-notifications/suggestions");
-        $("analyticsStatus").textContent = "backend متصل";
-        $("analyticsStatus").className = "chip ok";
-        $("analyticsMetrics").innerHTML = `
-          <div class="metric"><span class="metric-icon">${icons.tasks}</span><span class="muted">تسک‌ها</span><b>${fa(overview.totals.tasks)}</b></div>
-          <div class="metric"><span class="metric-icon">${icons.done}</span><span class="muted">تکمیل‌شده</span><b>${fa(overview.totals.doneTasks)}</b></div>
-          <div class="metric"><span class="metric-icon">${icons.meetings}</span><span class="muted">جلسات</span><b>${fa(overview.totals.meetings)}</b></div>
-          <div class="metric"><span class="metric-icon">${icons.alert}</span><span class="muted">هشدارها</span><b>${fa(suggestions.suggestions.length)}</b></div>`;
-        $("analyticsRows").innerHTML = overview.byUser.map((row) => `<tr><td>${row.fullName}</td><td>${row.role}</td><td>${fa(row.assigned)}</td><td>${fa(row.done)}</td><td>${fa(row.rejected)}</td><td>${fa(row.pending)}</td><td>${fa(row.completionRate)}٪</td></tr>`).join("");
-        $("smartSuggestions").innerHTML = suggestions.suggestions.length
-          ? suggestions.suggestions.map((s) => `<article class="item-card"><div class="item-top"><div style="display:flex; gap:10px;"><span class="card-icon">${icons.alert}</span><div><h3>${s.title}</h3><p class="muted small">${s.body}</p></div></div><span class="chip warn">${s.severity}</span></div></article>`).join("")
-          : empty("پیشنهاد هوشمند فعالی وجود ندارد.");
-      } catch (error) {
-        $("analyticsStatus").textContent = "backend اجرا نیست";
-        $("analyticsStatus").className = "chip danger";
-        $("smartSuggestions").innerHTML = empty(error.message);
-      }
-      $("runSmartRules").onclick = async () => {
-        try {
-          const result = await backendFetch("/api/smart-notifications/run", { method: "POST", body: JSON.stringify({}) });
-          toast(`${fa(result.created)} هشدار ساخته شد.`);
-          renderAnalytics();
-        } catch (error) {
-          toast(error.message);
-        }
-      };
-    }
-
-    async function renderDeploy() {
-      if (!backendOnline && !MOCK_DATA_ENABLED) {
-        $("view-deploy").innerHTML = backendRequired("استقرار", "برای تنظیمات استقرار واقعی باید backend متصل باشد. راهنمای deploy در فایل‌های خروجی وجود دارد.");
-        bindBackendGate();
-        return;
-      }
-      $("view-deploy").innerHTML = `
-        <div class="grid">
-          <form class="panel" id="deployForm">
-            <div class="panel-head"><h2>استقرار رایگان / Preview آنلاین</h2><span class="chip warn" id="deployStatus">در حال دریافت</span></div>
-            <div class="form-grid">
-              <label>هدف استقرار<select name="target"><option value="local">Local</option><option value="render">Render Free</option><option value="github-pages">GitHub Pages UI</option><option value="vercel">Vercel UI</option></select></label>
-              <label>Database Mode<select name="databaseMode"><option value="json-file">JSON File MVP</option><option value="postgres-free">PostgreSQL Free</option></select></label>
-              <label>Provider رایگان<select name="freeHostingProvider"><option value="render">Render</option><option value="github-pages">GitHub Pages</option><option value="vercel">Vercel</option></select></label>
-              <label class="full">Public Base URL<input name="publicBaseUrl" placeholder="https://your-preview.onrender.com"></label>
-            </div>
-            <button class="primary">ذخیره تنظیمات استقرار</button>
-          </form>
-          <div class="panel">
-            <h2>چک‌لیست Preview</h2>
-            <div class="list">
-              <article class="item-card"><div class="item-top"><div style="display:flex;gap:10px;"><span class="card-icon">${icons.deploy}</span><div><h3>Frontend-only</h3><p class="muted small">برای نمایش سریع UI: GitHub Pages یا Vercel.</p></div></div></div></article>
-              <article class="item-card"><div class="item-top"><div style="display:flex;gap:10px;"><span class="card-icon">${icons.deploy}</span><div><h3>Full backend preview</h3><p class="muted small">برای API و Bale settings: Render Free با Node backend.</p></div></div></div></article>
-              <article class="item-card"><div class="item-top"><div style="display:flex;gap:10px;"><span class="card-icon">${icons.bale}</span><div><h3>Bale webhook</h3><p class="muted small">بعد از deploy، webhook باید HTTPS عمومی داشته باشد.</p></div></div></div></article>
-            </div>
-          </div>
-        </div>`;
-      try {
-        const deployment = await backendFetch("/api/settings/deployment");
-        $("deployStatus").textContent = "backend متصل";
-        $("deployStatus").className = "chip ok";
-        const form = $("deployForm");
-        form.target.value = deployment.target || "local";
-        form.databaseMode.value = deployment.databaseMode || "json-file";
-        form.freeHostingProvider.value = deployment.freeHostingProvider || "render";
-        form.publicBaseUrl.value = deployment.publicBaseUrl || "";
-      } catch (error) {
-        $("deployStatus").textContent = "backend اجرا نیست";
-        $("deployStatus").className = "chip danger";
-      }
-      $("deployForm").onsubmit = async (event) => {
-        event.preventDefault();
-        const form = new FormData(event.target);
-        try {
-          await backendFetch("/api/settings/deployment", { method: "PUT", body: JSON.stringify(Object.fromEntries(form.entries())) });
-          toast("تنظیمات استقرار ذخیره شد.");
-          renderDeploy();
-        } catch (error) {
-          toast(error.message);
-        }
-      };
-    }
-
-    async function renderOffline() {
-      if (!backendOnline && !MOCK_DATA_ENABLED) {
-        $("view-offline").innerHTML = backendRequired("فاز آفلاین", "وضعیت AI آفلاین باید از backend خوانده شود. بدون backend این صفحه mock نشان نمی‌دهد.");
-        bindBackendGate();
-        return;
-      }
-      $("view-offline").innerHTML = `
-        <div class="grid">
-          <form class="panel" id="offlineForm">
-            <div class="panel-head"><h2>AI آفلاین و استقرار داخلی</h2><span class="chip warn" id="offlineStatus">در حال دریافت</span></div>
-            <div class="form-grid">
-              <label>AI Mode<select name="mode"><option value="online">Online MVP</option><option value="offline">Offline/Internal</option></select></label>
-              <label>Fallback Parser<select name="fallbackParserEnabled"><option value="true">فعال</option><option value="false">غیرفعال</option></select></label>
-              <label class="full">Online Provider<input name="onlineProvider" placeholder="OpenAI / other provider"></label>
-              <label class="full">Offline Model Path<input name="offlineModelPath" placeholder="/models/local-persian-intent"></label>
-            </div>
-            <button class="primary">ذخیره تنظیمات AI</button>
-          </form>
-          <div class="panel">
-            <h2>وضعیت فاز آخر</h2>
-            <div class="list" id="offlineInfo">${empty("در حال دریافت وضعیت...")}</div>
-          </div>
-        </div>`;
-      try {
-        const ai = await backendFetch("/api/settings/ai");
-        const status = await backendFetch("/api/offline/status");
-        $("offlineStatus").textContent = status.offlineReady ? "آماده داخلی" : "نیازمند مدل/سرور";
-        $("offlineStatus").className = status.offlineReady ? "chip ok" : "chip warn";
-        const form = $("offlineForm");
-        form.mode.value = ai.mode || "online";
-        form.fallbackParserEnabled.value = String(ai.fallbackParserEnabled !== false);
-        form.onlineProvider.value = ai.onlineProvider || "";
-        form.offlineModelPath.value = ai.offlineModelPath || "";
-        $("offlineInfo").innerHTML = `
-          <article class="item-card"><div class="item-top"><div style="display:flex;gap:10px;"><span class="card-icon">${icons.offline}</span><div><h3>${status.mode}</h3><p class="muted small">${status.message}</p></div></div></div></article>
-          <article class="item-card"><div class="item-top"><div style="display:flex;gap:10px;"><span class="card-icon">${icons.lock}</span><div><h3>Internal static IP</h3><p class="muted small">برای production داخلی باید reverse proxy، HTTPS، backup، و static IP سازمانی تنظیم شود.</p></div></div></div></article>`;
-      } catch (error) {
-        $("offlineStatus").textContent = "backend اجرا نیست";
-        $("offlineStatus").className = "chip danger";
-      }
-      $("offlineForm").onsubmit = async (event) => {
-        event.preventDefault();
-        const form = new FormData(event.target);
-        try {
-          await backendFetch("/api/settings/ai", {
-            method: "PUT",
-            body: JSON.stringify({
-              mode: form.get("mode"),
-              fallbackParserEnabled: form.get("fallbackParserEnabled") === "true",
-              onlineProvider: form.get("onlineProvider"),
-              offlineModelPath: form.get("offlineModelPath")
-            })
-          });
-          toast("تنظیمات AI ذخیره شد.");
-          renderOffline();
-        } catch (error) {
-          toast(error.message);
-        }
-      };
-    }
-
-    async function renderUsers() {
-      if (!backendOnline && !MOCK_DATA_ENABLED) {
-        $("view-users").innerHTML = backendRequired("افراد و نقش‌ها", "مدیریت کاربران واقعی باید از backend و سطح دسترسی Admin خوانده شود.");
-        bindBackendGate();
-        return;
-      }
-      let pendingUsers = [];
-      try {
-        pendingUsers = await backendFetch("/api/pending-users");
-      } catch {
-        pendingUsers = [];
-      }
-      const activePending = pendingUsers.filter((item) => item.status === "pending");
-      $("view-users").innerHTML = `
-        <div class="user-management">
+      <div class="metrics" id="metrics"></div>
+      <div class="grid">
         <div class="panel">
-          <div class="panel-head">
-            <h2>کاربران سازمان</h2>
-            <div class="page-actions">
-              <span class="chip">${fa(state.users.length)} نفر</span>
-              <button class="primary" id="toggleNewUserForm">افزودن کاربر</button>
-            </div>
-          </div>
-          <div class="user-toolbar">
-            <label>جستجو
-              <input id="userSearch" placeholder="نام، جایگاه شغلی، آیدی بله">
-            </label>
-            <label>وضعیت
-              <select id="userStatusFilter">
-                <option value="all">همه</option>
-                <option value="active">فعال</option>
-                <option value="suspended">معلق</option>
-              </select>
-            </label>
-          </div>
-          <div class="user-card-grid" id="userCards">
-            ${state.users.map(userCard).join("")}
-          </div>
-          <div class="modal-backdrop hidden" id="newUserModal">
-            <form class="modal-card" id="newUserForm">
-              <div class="panel-head">
-                <h2>افزودن کاربر جدید</h2>
-                <button type="button" class="ghost" id="closeNewUserModal">بستن</button>
-              </div>
-              <div class="form-grid">
-                <label>نام و نام خانوادگی<input name="fullName" required></label>
-                <label>جایگاه شغلی<input name="jobTitle" required></label>
-                <label>نقش<select name="role"><option value="Employee">Employee</option><option value="Admin">Admin</option></select></label>
-                <label>گروه<select name="groupId">${(state.groups || []).map((g) => `<option value="${g.id}">${g.title}</option>`).join("")}</select></label>
-                <label>شناسه فنی بله<input name="baleChatId" placeholder="اختیاری"></label>
-                <label>آیدی بله<input name="baleUsername" placeholder="@username"></label>
-                <label class="full">لینک پروفایل بله<input name="baleProfileUrl" placeholder="https://ble.ir/username"></label>
-                <label>آیدی تلگرام<input name="telegramChatId" placeholder="اختیاری"></label>
-              </div>
-              <button class="primary">ثبت کاربر</button>
-            </form>
-          </div>
+          <div class="panel-head"><h2>تسک‌های نزدیک</h2><button class="btn" data-go="tasksPage">رفتن به تسک‌ها</button></div>
+          <div class="list" id="dashboardTasks"></div>
         </div>
         <div class="panel">
-          <div class="panel-head">
-            <h2>در انتظار تایید از بله</h2>
-            <span class="chip ${activePending.length ? "warn" : "ok"}">${fa(activePending.length)} درخواست</span>
-          </div>
-          <div class="backend-warning">
-            قالب معرفی کاربر در بله:
-            <pre>نام: محمد امیری
-جایگاه شغلی: مدیر پروژه</pre>
-          </div>
-          <div class="list" id="pendingUsersList">
-            ${activePending.length ? activePending.map((item) => `
-              <article class="item-card">
-                <div class="item-top">
-                  <div style="display:flex; gap:10px; align-items:flex-start;">
-                    <span class="card-icon">${icons.approveUser}</span>
-                    <div>
-                      <h3>${item.fullName}</h3>
-                      <p class="muted small">جایگاه شغلی: ${item.jobTitle}</p>
-                      <p class="muted small">لینک بله: ${item.baleProfileUrl ? `<a class="bale-link" href="${item.baleProfileUrl}" target="_blank" rel="noreferrer">${item.baleProfileUrl}</a>` : item.baleUsername ? `<a class="bale-link" href="${baleProfileLink(item.baleUsername)}" target="_blank" rel="noreferrer">${item.baleUsername}</a>` : "نیازمند بررسی ادمین"}</p>
-                      <p class="muted small">شناسه فنی بله: ${item.baleChatId}</p>
-                      <div class="chips"><span class="chip">${dateFa(item.createdAt)}</span></div>
-                    </div>
-                  </div>
-                  <div class="item-actions">
-                    <button class="primary" data-approve-user="${item.id}">تایید</button>
-                    <button class="danger" data-reject-user="${item.id}">رد</button>
-                  </div>
-                </div>
-              </article>`).join("") : empty("کاربر جدیدی در انتظار تایید نیست.")}
-          </div>
+          <div class="panel-head"><h2>جلسات این هفته</h2><button class="btn" data-go="meetingsPage">رفتن به جلسات</button></div>
+          <div class="list" id="dashboardMeetings"></div>
         </div>
-        </div>`;
-      bindUserManagementActions();
-    }
+      </div>
+    </section>
 
-    function baleProfileLink(baleId) {
-      if (!baleId) return "";
-      return `https://ble.ir/${String(baleId).replace(/^@/, "")}`;
-    }
-
-    function userCard(u) {
-      const bale = u.baleUsername || "";
-      const technicalBale = u.bale || "ثبت نشده";
-      const profileUrl = u.baleProfileUrl || (bale ? baleProfileLink(bale) : "");
-      const baleLink = profileUrl ? `<a class="bale-link" href="${profileUrl}" target="_blank" rel="noreferrer">${bale || profileUrl}</a>` : `<span class="muted">ثبت نشده</span>`;
-      return `
-        <article class="item-card user-card" data-user-name="${u.fullName}" data-user-job="${u.jobTitle}" data-user-bale="${bale} ${technicalBale}" data-user-active="${u.active ? "active" : "suspended"}">
-          <div class="item-top">
-            <div style="display:flex; gap:10px; align-items:flex-start;">
-              <span class="card-icon">${u.isCeo ? icons.lock : icons.user}</span>
-              <div>
-                <h3>${u.fullName}</h3>
-                <div class="user-meta">
-                  <span>جایگاه شغلی: ${u.jobTitle}</span>
-                  <span>نقش: ${u.role}</span>
-                  <span>گروه: ${u.group}</span>
-                  <span>لینک بله برای بررسی هویت: ${baleLink}</span>
-                  <span>شناسه فنی بله: ${technicalBale}</span>
-                  <span>آیدی تلگرام: ${u.telegram || "ثبت نشده"}</span>
-                </div>
-              </div>
-            </div>
-            ${u.active ? statusChip("accepted") : statusChip("cancelled")}
-          </div>
-          <div class="item-actions">
-            ${u.active ? `<button class="danger" data-suspend-user="${u.id}">تعلیق</button>` : `<button class="primary" data-activate-user="${u.id}">فعال‌سازی</button>`}
-            ${u.isCeo ? "" : `<button class="danger" data-delete-user="${u.id}">حذف</button>`}
-          </div>
-        </article>`;
-    }
-
-    function bindUserManagementActions() {
-      document.querySelectorAll("[data-approve-user]").forEach((btn) => {
-        btn.onclick = async () => {
-          try {
-            await backendFetch("/api/pending-users/approve", {
-              method: "POST",
-              body: JSON.stringify({ pendingUserId: btn.dataset.approveUser, role: "Employee", groupId: "g2" })
-            });
-            await loadBackendState();
-            toast("کاربر تایید شد.");
-            renderUsers();
-          } catch (error) {
-            toast(error.message);
-          }
-        };
-      });
-      document.querySelectorAll("[data-reject-user]").forEach((btn) => {
-        btn.onclick = async () => {
-          try {
-            await backendFetch("/api/pending-users/reject", {
-              method: "POST",
-              body: JSON.stringify({ pendingUserId: btn.dataset.rejectUser, reason: "رد شده توسط ادمین" })
-            });
-            toast("درخواست کاربر رد شد.");
-            renderUsers();
-          } catch (error) {
-            toast(error.message);
-          }
-        };
-      });
-      $("newUserForm").onsubmit = async (event) => {
-        event.preventDefault();
-        const form = new FormData(event.target);
-        try {
-          await backendFetch("/api/users", {
-            method: "POST",
-            body: JSON.stringify(Object.fromEntries(form.entries()))
-          });
-          await loadBackendState();
-          toast("کاربر جدید ثبت شد.");
-          renderUsers();
-        } catch (error) {
-          toast(error.message);
-        }
-      };
-      const applyUserFilters = () => {
-        const query = ($("userSearch")?.value || "").trim().toLowerCase();
-        const status = $("userStatusFilter")?.value || "all";
-        document.querySelectorAll(".user-card").forEach((card) => {
-          const haystack = `${card.dataset.userName} ${card.dataset.userJob} ${card.dataset.userBale}`.toLowerCase();
-          const statusOk = status === "all" || card.dataset.userActive === status;
-          card.classList.toggle("hidden", !(haystack.includes(query) && statusOk));
-        });
-      };
-      $("userSearch").oninput = applyUserFilters;
-      $("userStatusFilter").onchange = applyUserFilters;
-      $("toggleNewUserForm").onclick = () => $("newUserModal").classList.remove("hidden");
-      $("closeNewUserModal").onclick = () => $("newUserModal").classList.add("hidden");
-      $("newUserModal").onclick = (event) => {
-        if (event.target.id === "newUserModal") $("newUserModal").classList.add("hidden");
-      };
-      document.querySelectorAll("[data-suspend-user]").forEach((btn) => {
-        btn.onclick = async () => {
-          try {
-            await backendFetch("/api/users/status", {
-              method: "PATCH",
-              body: JSON.stringify({ userId: btn.dataset.suspendUser, active: false })
-            });
-            await loadBackendState();
-            toast("کاربر معلق شد.");
-            renderUsers();
-          } catch (error) {
-            toast(error.message);
-          }
-        };
-      });
-      document.querySelectorAll("[data-activate-user]").forEach((btn) => {
-        btn.onclick = async () => {
-          try {
-            await backendFetch("/api/users/status", {
-              method: "PATCH",
-              body: JSON.stringify({ userId: btn.dataset.activateUser, active: true })
-            });
-            await loadBackendState();
-            toast("کاربر فعال شد.");
-            renderUsers();
-          } catch (error) {
-            toast(error.message);
-          }
-        };
-      });
-      document.querySelectorAll("[data-delete-user]").forEach((btn) => {
-        btn.onclick = async () => {
-          try {
-            await backendFetch("/api/users", {
-              method: "DELETE",
-              body: JSON.stringify({ userId: btn.dataset.deleteUser })
-            });
-            await loadBackendState();
-            toast("کاربر حذف یا معلق شد.");
-            renderUsers();
-          } catch (error) {
-            toast(error.message);
-          }
-        };
-      });
-    }
-
-    function renderRules() {
-      if (!backendOnline && !MOCK_DATA_ENABLED) {
-        $("view-rules").innerHTML = backendRequired("قوانین دسترسی", "قوانین واقعی باید در backend enforce شوند، نه فقط در UI. این صفحه بدون backend mock نشان نمی‌دهد.");
-        bindBackendGate();
-        return;
-      }
-      const rows = [
-        ["R-CEO-01", "هیچ‌کس وظایف مدیرعامل را نمی‌بیند مگر خود CEO یا نقش مجاز."],
-        ["R-CEO-02", "تعریف مستقیم تسک برای CEO فقط توسط خود CEO مجاز است."],
-        ["R-CEO-03", "درخواست از مدیرعامل فقط برای درخواست‌کننده و CEO قابل مشاهده است."],
-        ["R-TASK-02", "هر مسئول تسک می‌تواند قبول، رد یا Done کند."],
-        ["R-NOTIF-01", "در Assign، سررسید و تکمیل نهایی نوتیف ساخته می‌شود."],
-        ["R-UI-01", "تمام رابط فارسی، RTL، شمسی و با اعداد فارسی نمایش داده می‌شود."]
-      ];
-      $("view-rules").innerHTML = `<div class="panel"><h2>قوانین پیاده‌سازی‌شده در MVP</h2><div class="list">${rows.map(([code, text]) => `<article class="item-card"><div class="item-top"><div style="display:flex; gap:10px; align-items:flex-start;"><span class="card-icon">${icons.rules}</span><div><div class="chips"><span class="chip blue">${code}</span></div><p>${text}</p></div></div></div></article>`).join("")}</div></div>`;
-    }
-
-    function bindGoButtons() {
-      document.querySelectorAll("[data-go]").forEach((btn) => {
-        btn.onclick = () => {
-          activePage = btn.dataset.go;
-          render();
-        };
-      });
-      bindTaskActions();
-      bindRequestActions();
-    }
-
-    function empty(text) {
-      return `<div class="item-card"><p class="muted">${text}</p></div>`;
-    }
-
-    function backendRequired(featureName, details = "") {
-      return `
+    <section class="page" id="tasksPage">
+      <div class="topbar"><div><h1>Tasks section</h1><p class="muted">وظایف زمان‌دار و عملیاتی</p></div></div>
+      <div class="notice">داخل هر کارت تسک، دکمه دقیقاً با عنوان <b>Transfer to long-term tasks section</b> اضافه شده است. این دکمه زمان‌بندی تسک را حذف می‌کند و تمام ویژگی‌های دیگر تسک را حفظ می‌کند.</div>
+      <div class="grid">
         <div class="panel">
-          <div class="panel-head">
-            <div style="display:flex; gap:10px; align-items:center;">
-              <span class="card-icon">${icons.lock}</span>
-              <div>
-                <h2>${featureName} هنوز به backend متصل نیست</h2>
-                <p class="muted small">این صفحه دیگر mock data نشان نمی‌دهد. برای استفاده واقعی باید backend Node اجرا یا deploy شود.</p>
-              </div>
-            </div>
-            <span class="chip danger">Backend Required</span>
-          </div>
-          ${details ? `<div class="backend-warning">${details}</div>` : ""}
-          <div class="form-grid">
-            <label class="full">Backend URL
-              <input id="backendUrlInput" value="${backendBaseUrl || ""}" placeholder="مثلاً https://your-service.onrender.com">
-            </label>
-          </div>
-          <div class="item-actions">
-            <button class="primary" id="saveBackendUrl">ذخیره و تست اتصال</button>
-            <button class="blue" id="useLocalBackend">استفاده از backend محلی</button>
-          </div>
-          <pre>Local: http://127.0.0.1:4188
-Online: https://YOUR-SERVICE.onrender.com</pre>
-        </div>`;
-    }
+          <div class="panel-head"><h2>ایجاد تسک زمان‌دار</h2></div>
+          <form id="taskForm" class="form-grid">
+            <label class="full">عنوان<input id="taskTitle" required /></label>
+            <label class="full">شرح<textarea id="taskDescription"></textarea></label>
+            <label>اولویت<select id="taskPriority"><option value="low">کم</option><option value="medium" selected>متوسط</option><option value="high">زیاد</option></select></label>
+            <label>مسئول<select id="taskAssignees" multiple></select></label>
+            <label class="full">تاریخ سررسید جلالی<div class="jalali-picker" id="taskDuePicker"></div><input type="hidden" id="taskDueAt" /></label>
+            <label>ساعت<input id="taskTime" type="time" value="09:00" /></label>
+            <label>گروه<select id="taskGroups" multiple></select></label>
+            <button class="btn primary full" type="submit">ثبت تسک</button>
+          </form>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>فهرست تسک‌ها</h2></div>
+          <div class="list" id="tasksList"></div>
+        </div>
+      </div>
+    </section>
 
-    async function checkBackend() {
-      backendChecked = true;
-      try {
-        await backendFetch("/api/health");
-        backendOnline = true;
-      } catch {
-        backendOnline = false;
-      }
-    }
+    <section class="page" id="longTermPage">
+      <div class="topbar"><div><h1>Long-term tasks section</h1><p class="muted">وظایف بدون زمان‌بندی مشخص، در صفحه مستقل</p></div></div>
+      <div class="grid">
+        <div class="panel">
+          <div class="panel-head"><h2>ایجاد وظیفه بلندمدت</h2></div>
+          <form id="longTermForm" class="form-grid">
+            <label class="full">عنوان<input id="longTitle" required /></label>
+            <label class="full">شرح<textarea id="longDescription"></textarea></label>
+            <label>اولویت<select id="longPriority"><option value="low">کم</option><option value="medium" selected>متوسط</option><option value="high">زیاد</option></select></label>
+            <label>مسئول<select id="longAssignees" multiple></select></label>
+            <label class="full">گروه<select id="longGroups" multiple></select></label>
+            <button class="btn primary full" type="submit">ثبت در بخش بلندمدت</button>
+          </form>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>وظایف بلندمدت</h2></div>
+          <div class="list" id="longTermList"></div>
+        </div>
+      </div>
+    </section>
 
-    function bindBackendGate() {
-      const save = $("saveBackendUrl");
-      const local = $("useLocalBackend");
-      if (save) {
-        save.onclick = async () => {
-          backendBaseUrl = $("backendUrlInput").value.trim().replace(/\/$/, "");
-          localStorage.setItem("ceo-office-backend-url", backendBaseUrl);
-          await checkBackend();
-          render();
-          toast(backendOnline ? "backend متصل شد." : "اتصال backend برقرار نشد.");
-        };
-      }
-      if (local) {
-        local.onclick = async () => {
-          backendBaseUrl = "http://127.0.0.1:4188";
-          localStorage.setItem("ceo-office-backend-url", backendBaseUrl);
-          await checkBackend();
-          render();
-          toast(backendOnline ? "backend محلی متصل شد." : "backend محلی اجرا نیست.");
-        };
-      }
-    }
+    <section class="page" id="recurringPage">
+      <div class="topbar"><div><h1>Recurring tasks section</h1><p class="muted">وظایف قابل ایجاد با چرخه تکرار مشخص، در صفحه مستقل</p></div></div>
+      <div class="grid">
+        <div class="panel">
+          <div class="panel-head"><h2>ایجاد چرخه تکرار</h2></div>
+          <form id="recurringForm" class="form-grid">
+            <label class="full">عنوان<input id="recTitle" required /></label>
+            <label class="full">شرح<textarea id="recDescription"></textarea></label>
+            <label>چرخه تکرار<select id="recCycle"><option value="daily">روزانه</option><option value="weekly" selected>هفتگی</option><option value="monthly">ماهانه</option></select></label>
+            <label>هر چند چرخه؟<input id="recInterval" type="number" min="1" value="1" /></label>
+            <label>روزهای هفته<select id="recDays" multiple><option value="6">شنبه</option><option value="0">یکشنبه</option><option value="1">دوشنبه</option><option value="2">سه‌شنبه</option><option value="3">چهارشنبه</option><option value="4">پنجشنبه</option><option value="5">جمعه</option></select></label>
+            <label>روز ماه<input id="recDayOfMonth" type="number" min="1" max="31" placeholder="برای ماهانه" /></label>
+            <label class="full">تاریخ شروع جلالی<div class="jalali-picker" id="recStartPicker"></div><input type="hidden" id="recStartDate" /></label>
+            <label>ساعت<input id="recTime" type="time" value="09:00" /></label>
+            <label>اولویت<select id="recPriority"><option value="low">کم</option><option value="medium" selected>متوسط</option><option value="high">زیاد</option></select></label>
+            <label>مسئول<select id="recAssignees" multiple></select></label>
+            <label class="full">گروه<select id="recGroups" multiple></select></label>
+            <button class="btn primary full" type="submit">ثبت تسک تکرارشونده</button>
+          </form>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>چرخه‌های ثبت‌شده</h2></div>
+          <div class="list" id="recurringList"></div>
+        </div>
+      </div>
+    </section>
 
-    async function boot() {
-      if (!backendBaseUrl && location.protocol !== "file:") backendBaseUrl = location.origin;
-      await checkBackend();
-      if (backendOnline) {
-        try {
-          await loadBackendState();
-        } catch (error) {
-          backendOnline = false;
-        }
-      }
-      render();
-    }
+    <section class="page" id="meetingsPage">
+      <div class="topbar"><div><h1>جلسات</h1><p class="muted">ثبت و مشاهده جلسات</p></div></div>
+      <div class="grid">
+        <div class="panel">
+          <div class="panel-head"><h2>ثبت جلسه</h2></div>
+          <form id="meetingForm" class="form-grid">
+            <label class="full">عنوان<input id="meetTitle" required /></label>
+            <label class="full">شرح<textarea id="meetDescription"></textarea></label>
+            <label class="full">تاریخ جلالی<div class="jalali-picker" id="meetDatePicker"></div><input type="hidden" id="meetDate" /></label>
+            <label>شروع<input id="meetStartTime" type="time" value="10:00" /></label>
+            <label>پایان<input id="meetEndTime" type="time" value="11:00" /></label>
+            <label>مکان<input id="meetLocation" /></label>
+            <label>اعضا<select id="meetMembers" multiple></select></label>
+            <button class="btn primary full" type="submit">ثبت جلسه</button>
+          </form>
+        </div>
+        <div class="panel"><div class="panel-head"><h2>فهرست جلسات</h2></div><div class="list" id="meetingsList"></div></div>
+      </div>
+    </section>
 
-    boot();
-  </script>
+    <section class="page" id="messengerPage">
+      <div class="topbar"><div><h1>Messenger / Bale AI</h1><p class="muted">پیام‌رسان باید با AI و بر اساس سطح دسترسی کاربر پاسخ بدهد، نه با پاسخ‌های کدنویسی‌شده.</p></div></div>
+      <div class="panel">
+        <div class="messages" id="messageList"></div>
+        <form id="messageForm" class="row">
+          <input id="messageText" placeholder="مثلاً: تسک‌های این هفته من را نشان بده / برای دوشنبه چه جلسه‌ای داریم؟" />
+          <button class="btn primary" type="submit">ارسال به AI</button>
+        </form>
+        <p class="muted small">برای بله، همین منطق از مسیر <span class="ltr">POST /api/webhooks/bale</span> اجرا می‌شود.</p>
+      </div>
+    </section>
+
+    <section class="page" id="settingsPage">
+      <div class="topbar"><div><h1>تنظیمات</h1><p class="muted">AI، بله و اتصال بک‌اند</p></div></div>
+      <div class="grid">
+        <div class="panel">
+          <h2>تنظیمات AI</h2>
+          <form id="aiSettingsForm" class="form-grid">
+            <label>Provider<select id="aiProvider"><option value="disabled">disabled</option><option value="openai">openai responses</option><option value="openai-chat-compatible">openai chat compatible</option><option value="offline">offline adapter</option></select></label>
+            <label>Model<input id="aiModel" class="ltr" placeholder="gpt-5.4-mini" /></label>
+            <label class="full">Base URL<input id="aiBaseUrl" class="ltr" placeholder="https://api.openai.com" /></label>
+            <label class="full">API Key<input id="aiApiKey" class="ltr" type="password" placeholder="در صورت نیاز" /></label>
+            <button class="btn primary full" type="submit">ذخیره تنظیمات AI</button>
+          </form>
+        </div>
+        <div class="panel">
+          <h2>تنظیمات Bale / بله</h2>
+          <form id="baleSettingsForm" class="form-grid">
+            <label>فعال؟<select id="baleEnabled"><option value="false">خیر</option><option value="true">بله</option></select></label>
+            <label>ارسال پاسخ واقعی؟<select id="baleSendReplies"><option value="false">خیر</option><option value="true">بله</option></select></label>
+            <label class="full">Webhook URL<input id="baleWebhookUrl" class="ltr" /></label>
+            <label class="full">Bot Token<input id="baleBotToken" class="ltr" type="password" /></label>
+            <label class="full">Webhook Secret<input id="baleSecret" class="ltr" type="password" /></label>
+            <button class="btn primary full" type="submit">ذخیره تنظیمات بله</button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<script>
+const API = location.pathname.includes('.html') || location.hostname ? '/api' : 'http://127.0.0.1:4188/api';
+const pages = [
+  ['dashboardPage', 'داشبورد'],
+  ['tasksPage', 'Tasks section'],
+  ['longTermPage', 'Long-term tasks'],
+  ['recurringPage', 'Recurring tasks'],
+  ['meetingsPage', 'جلسات'],
+  ['messengerPage', 'Messenger / Bale AI'],
+  ['settingsPage', 'تنظیمات']
+];
+let state = { users: [], groups: [], tasks: [], recurringTasks: [], meetings: [], messages: [], actorId: localStorage.getItem('actorId') || 'u2' };
+
+function $(id) { return document.getElementById(id); }
+function escapeHtml(s) { return String(s ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+function selectedValues(id) { return Array.from($(id).selectedOptions || []).map(o => o.value); }
+function userName(id) { return state.users.find(u => u.id === id)?.name || id || '-'; }
+function groupName(id) { return state.groups.find(g => g.id === id)?.name || id || '-'; }
+function activeActorHeaders() { return { 'Content-Type': 'application/json', 'X-Actor-Id': state.actorId }; }
+async function api(path, options = {}) {
+  const opts = { ...options, headers: { ...(options.headers || {}), ...(options.body ? activeActorHeaders() : { 'X-Actor-Id': state.actorId }) } };
+  const res = await fetch(API + path, opts);
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(data?.error || res.statusText);
+  return data;
+}
+function fmtDate(iso) {
+  if (!iso) return 'بدون زمان';
+  return new Intl.DateTimeFormat('fa-IR-u-ca-persian', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Tehran' }).format(new Date(iso));
+}
+function badgeStatus(status) {
+  const cls = status === 'done' ? 'ok' : status === 'rejected' ? 'danger' : status === 'accepted' ? 'blue' : 'warn';
+  const map = { todo: 'در انتظار', accepted: 'پذیرفته', rejected: 'رد شده', done: 'انجام شده', active: 'فعال', paused: 'متوقف' };
+  return `<span class="chip ${cls}">${map[status] || status}</span>`;
+}
+function badgePriority(priority) {
+  const cls = priority === 'high' ? 'danger' : priority === 'low' ? 'ok' : 'warn';
+  const map = { low: 'کم', medium: 'متوسط', high: 'زیاد' };
+  return `<span class="chip ${cls}">اولویت: ${map[priority] || priority}</span>`;
+}
+function fillMulti(selectId, items, current = []) {
+  const el = $(selectId);
+  el.innerHTML = items.map(i => `<option value="${i.id}" ${current.includes(i.id) ? 'selected' : ''}>${escapeHtml(i.name)}</option>`).join('');
+}
+
+// Jalali date conversion, adapted as a small embedded picker to avoid external dependencies.
+function div(a, b) { return ~~(a / b); }
+function jalCal(jy) {
+  const breaks = [-61,9,38,199,426,686,756,818,1111,1181,1210,1635,2060,2097,2192,2262,2324,2394,2456,3178];
+  let bl = breaks.length, gy = jy + 621, leapJ = -14, jp = breaks[0], jm, jump, leap, n, i;
+  if (jy < jp || jy >= breaks[bl - 1]) throw new Error('Invalid Jalali year');
+  for (i = 1; i < bl; i += 1) { jm = breaks[i]; jump = jm - jp; if (jy < jm) break; leapJ += div(jump, 33) * 8 + div(jump % 33, 4); jp = jm; }
+  n = jy - jp;
+  leapJ += div(n, 33) * 8 + div((n % 33) + 3, 4);
+  if (jump % 33 === 4 && jump - n === 4) leapJ += 1;
+  const leapG = div(gy, 4) - div((div(gy, 100) + 1) * 3, 4) - 150;
+  const march = 20 + leapJ - leapG;
+  if (jump - n < 6) n = n - jump + div(jump + 4, 33) * 33;
+  leap = (((n + 1) % 33) - 1) % 4;
+  if (leap === -1) leap = 4;
+  return { leap, gy, march };
+}
+function g2d(gy, gm, gd) {
+  let d = div((gy + div(gm - 8, 6) + 100100) * 1461, 4) + div(153 * ((gm + 9) % 12) + 2, 5) + gd - 34840408;
+  d = d - div(div(gy + 100100 + div(gm - 8, 6), 100) * 3, 4) + 752;
+  return d;
+}
+function d2g(jdn) {
+  let j = 4 * jdn + 139361631;
+  j = j + div(div(4 * jdn + 183187720, 146097) * 3, 4) * 4 - 3908;
+  const i = div((j % 1461), 4) * 5 + 308;
+  const gd = div((i % 153), 5) + 1;
+  const gm = ((div(i, 153) % 12) + 1);
+  const gy = div(j, 1461) - 100100 + div(8 - gm, 6);
+  return { gy, gm, gd };
+}
+function j2d(jy, jm, jd) {
+  const r = jalCal(jy);
+  return g2d(r.gy, 3, r.march) + (jm - 1) * 31 - div(jm, 7) * (jm - 7) + jd - 1;
+}
+function d2j(jdn) {
+  const gy = d2g(jdn).gy;
+  let jy = gy - 621;
+  const r = jalCal(jy);
+  const jdn1f = g2d(gy, 3, r.march);
+  let k = jdn - jdn1f;
+  if (k >= 0) {
+    if (k <= 185) return { jy, jm: 1 + div(k, 31), jd: (k % 31) + 1 };
+    k -= 186;
+  } else {
+    jy -= 1;
+    k += 179;
+    if (r.leap === 1) k += 1;
+  }
+  return { jy, jm: 7 + div(k, 30), jd: (k % 30) + 1 };
+}
+function toGregorian(jy, jm, jd) { return d2g(j2d(Number(jy), Number(jm), Number(jd))); }
+function toJalaali(gy, gm, gd) { return d2j(g2d(Number(gy), Number(gm), Number(gd))); }
+function isoDateFromJalali(jy, jm, jd) {
+  const g = toGregorian(jy, jm, jd);
+  return `${g.gy}-${String(g.gm).padStart(2, '0')}-${String(g.gd).padStart(2, '0')}`;
+}
+function todayJalali() {
+  const d = new Date();
+  return toJalaali(d.getFullYear(), d.getMonth() + 1, d.getDate());
+}
+function buildJalaliPicker(containerId, hiddenId, initialIsoDate) {
+  const el = $(containerId), hidden = $(hiddenId);
+  const today = initialIsoDate ? (() => { const [gy, gm, gd] = initialIsoDate.split('-').map(Number); return toJalaali(gy, gm, gd); })() : todayJalali();
+  const years = Array.from({ length: 9 }, (_, i) => today.jy - 2 + i);
+  const monthNames = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
+  el.innerHTML = `
+    <select data-part="year">${years.map(y => `<option value="${y}" ${y === today.jy ? 'selected' : ''}>${y}</option>`).join('')}</select>
+    <select data-part="month">${monthNames.map((m, i) => `<option value="${i+1}" ${i+1 === today.jm ? 'selected' : ''}>${m}</option>`).join('')}</select>
+    <select data-part="day"></select>
+    <span class="caption">انتخابگر تاریخ شمسی؛ مقدار نهایی برای بک‌اند به تاریخ میلادی ISO تبدیل می‌شود.</span>`;
+  const y = el.querySelector('[data-part="year"]'), m = el.querySelector('[data-part="month"]'), d = el.querySelector('[data-part="day"]');
+  function daysInMonth(jm) { return jm <= 6 ? 31 : jm <= 11 ? 30 : 29; }
+  function refreshDays() {
+    const max = daysInMonth(Number(m.value));
+    const current = Number(d.value || today.jd);
+    d.innerHTML = Array.from({ length: max }, (_, i) => `<option value="${i+1}" ${i+1 === Math.min(current, max) ? 'selected' : ''}>${i+1}</option>`).join('');
+    sync();
+  }
+  function sync() { hidden.value = isoDateFromJalali(y.value, m.value, d.value || 1); }
+  y.addEventListener('change', refreshDays); m.addEventListener('change', refreshDays); d.addEventListener('change', sync);
+  refreshDays();
+}
+function isoWithTime(dateOnly, time) {
+  if (!dateOnly) return null;
+  return new Date(`${dateOnly}T${time || '09:00'}:00+03:30`).toISOString();
+}
+
+function setupNav() {
+  $('nav').innerHTML = pages.map(([id, title], idx) => `<button class="${idx === 0 ? 'active' : ''}" data-page="${id}">${title}</button>`).join('');
+  document.querySelectorAll('[data-page], [data-go]').forEach(btn => btn.addEventListener('click', () => showPage(btn.dataset.page || btn.dataset.go)));
+}
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === id));
+  document.querySelectorAll('[data-page]').forEach(b => b.classList.toggle('active', b.dataset.page === id));
+}
+
+async function loadAll() {
+  state.users = await api('/users');
+  state.groups = await api('/groups');
+  fillActorSelect();
+  await Promise.all([loadTasks(), loadRecurring(), loadMeetings(), loadSettings()]);
+  renderAll();
+}
+async function loadTasks() { state.tasks = await api('/tasks'); }
+async function loadRecurring() { state.recurringTasks = await api('/recurring-tasks'); }
+async function loadMeetings() { state.meetings = await api('/meetings'); }
+async function loadSettings() {
+  try {
+    const ai = await api('/settings/ai');
+    $('aiProvider').value = ai.provider || 'disabled'; $('aiModel').value = ai.model || ''; $('aiBaseUrl').value = ai.baseUrl || '';
+    const bale = await api('/settings/bale');
+    $('baleEnabled').value = String(!!bale.enabled); $('baleSendReplies').value = String(!!bale.sendReplies); $('baleWebhookUrl').value = bale.webhookUrl || ''; $('baleSecret').value = bale.webhookSecret || '';
+  } catch (e) {}
+}
+function fillActorSelect() {
+  $('actorSelect').innerHTML = state.users.map(u => `<option value="${u.id}" ${u.id === state.actorId ? 'selected' : ''}>${escapeHtml(u.name)} (${escapeHtml(u.role)})</option>`).join('');
+  ['taskAssignees','longAssignees','recAssignees','meetMembers'].forEach(id => fillMulti(id, state.users));
+  ['taskGroups','longGroups','recGroups'].forEach(id => fillMulti(id, state.groups));
+}
+function renderAll() { renderMetrics(); renderTasks(); renderLongTerm(); renderRecurring(); renderMeetings(); renderDashboard(); }
+function renderMetrics() {
+  const scheduled = state.tasks.filter(t => t.type !== 'long_term');
+  const long = state.tasks.filter(t => t.type === 'long_term');
+  const done = state.tasks.filter(t => t.status === 'done');
+  $('metrics').innerHTML = [
+    ['تسک‌های زمان‌دار', scheduled.length], ['وظایف بلندمدت', long.length], ['چرخه‌های تکرار', state.recurringTasks.length], ['انجام‌شده', done.length]
+  ].map(([label, value]) => `<div class="metric"><span class="muted">${label}</span><b>${value}</b></div>`).join('');
+}
+function taskCard(t, includeTransfer) {
+  return `<div class="item-card">
+    <div class="item-top"><div><h3>${escapeHtml(t.title)}</h3><p class="muted small">${escapeHtml(t.description || '')}</p></div><div class="chips">${badgeStatus(t.status)}${badgePriority(t.priority)}</div></div>
+    <div class="chips"><span class="chip blue">${t.type === 'long_term' ? 'بلندمدت' : 'زمان‌دار'}</span><span class="chip">${fmtDate(t.dueAt || t.scheduledAt)}</span><span class="chip">مسئول: ${(t.assigneeIds || []).map(userName).join('، ') || '-'}</span><span class="chip">گروه: ${(t.groupIds || []).map(groupName).join('، ') || '-'}</span></div>
+    <div class="item-actions">
+      <button class="btn blue" data-task-action="accept" data-id="${t.id}">پذیرش</button>
+      <button class="btn warn" data-task-action="reject" data-id="${t.id}">رد</button>
+      <button class="btn primary" data-task-action="done" data-id="${t.id}">انجام شد</button>
+      ${includeTransfer ? `<button class="btn" data-transfer-long="${t.id}">Transfer to long-term tasks section</button>` : ''}
+      <button class="btn danger" data-delete-task="${t.id}">حذف</button>
+    </div>
+  </div>`;
+}
+function bindTaskButtons(root = document) {
+  root.querySelectorAll('[data-task-action]').forEach(btn => btn.addEventListener('click', async () => {
+    await api('/tasks/assignment', { method: 'PATCH', body: JSON.stringify({ taskId: btn.dataset.id, action: btn.dataset.taskAction }) });
+    await loadTasks(); renderAll();
+  }));
+  root.querySelectorAll('[data-transfer-long]').forEach(btn => btn.addEventListener('click', async () => {
+    await api(`/tasks/${btn.dataset.transferLong}/transfer-to-long-term`, { method: 'POST', body: JSON.stringify({}) });
+    await loadTasks(); renderAll(); showPage('longTermPage');
+  }));
+  root.querySelectorAll('[data-delete-task]').forEach(btn => btn.addEventListener('click', async () => {
+    await api(`/tasks/${btn.dataset.deleteTask}`, { method: 'DELETE', body: JSON.stringify({}) });
+    await loadTasks(); renderAll();
+  }));
+}
+function renderTasks() {
+  const tasks = state.tasks.filter(t => t.type !== 'long_term');
+  $('tasksList').innerHTML = tasks.length ? tasks.map(t => taskCard(t, true)).join('') : '<div class="empty">تسک زمان‌دار قابل نمایش وجود ندارد.</div>';
+  bindTaskButtons($('tasksList'));
+}
+function renderLongTerm() {
+  const tasks = state.tasks.filter(t => t.type === 'long_term');
+  $('longTermList').innerHTML = tasks.length ? tasks.map(t => taskCard(t, false)).join('') : '<div class="empty">وظیفه بلندمدت وجود ندارد.</div>';
+  bindTaskButtons($('longTermList'));
+}
+function renderRecurring() {
+  $('recurringList').innerHTML = state.recurringTasks.length ? state.recurringTasks.map(r => `<div class="item-card">
+    <div class="item-top"><div><h3>${escapeHtml(r.title)}</h3><p class="muted small">${escapeHtml(r.description || '')}</p></div><div class="chips">${badgeStatus(r.status)}${badgePriority(r.priority)}</div></div>
+    <div class="chips"><span class="chip blue">${r.cycle} × ${r.interval || 1}</span><span class="chip">اجرای بعدی: ${fmtDate(r.nextRunAt)}</span><span class="chip">مسئول: ${(r.assigneeIds || []).map(userName).join('، ') || '-'}</span></div>
+    <div class="item-actions"><button class="btn primary" data-generate-rec="${r.id}">ایجاد نمونه بعدی</button></div>
+  </div>`).join('') : '<div class="empty">چرخه تکرار ثبت نشده است.</div>';
+  $('recurringList').querySelectorAll('[data-generate-rec]').forEach(btn => btn.addEventListener('click', async () => {
+    await api(`/recurring-tasks/${btn.dataset.generateRec}/generate-next`, { method: 'POST', body: JSON.stringify({}) });
+    await Promise.all([loadTasks(), loadRecurring()]); renderAll();
+  }));
+}
+function renderMeetings() {
+  $('meetingsList').innerHTML = state.meetings.length ? state.meetings.map(m => `<div class="item-card"><div class="item-top"><div><h3>${escapeHtml(m.title)}</h3><p class="muted small">${escapeHtml(m.description || '')}</p></div></div><div class="chips"><span class="chip blue">${fmtDate(m.startAt)}</span><span class="chip">مکان: ${escapeHtml(m.location || '-')}</span><span class="chip">اعضا: ${(m.memberIds || []).map(userName).join('، ') || '-'}</span></div></div>`).join('') : '<div class="empty">جلسه‌ای ثبت نشده است.</div>';
+}
+function renderDashboard() {
+  $('dashboardTasks').innerHTML = state.tasks.slice(0, 5).map(t => taskCard(t, t.type !== 'long_term')).join('') || '<div class="empty">تسکی برای نمایش نیست.</div>';
+  bindTaskButtons($('dashboardTasks'));
+  $('dashboardMeetings').innerHTML = state.meetings.slice(0, 5).map(m => `<div class="item-card"><h3>${escapeHtml(m.title)}</h3><div class="chips"><span class="chip blue">${fmtDate(m.startAt)}</span><span class="chip">${escapeHtml(m.location || '-')}</span></div></div>`).join('') || '<div class="empty">جلسه‌ای نیست.</div>';
+}
+
+function setupForms() {
+  buildJalaliPicker('taskDuePicker', 'taskDueAt');
+  buildJalaliPicker('recStartPicker', 'recStartDate');
+  buildJalaliPicker('meetDatePicker', 'meetDate');
+  $('refreshBtn').addEventListener('click', loadAll);
+  $('actorSelect').addEventListener('change', async e => { state.actorId = e.target.value; localStorage.setItem('actorId', state.actorId); await loadAll(); });
+
+  $('taskForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    await api('/tasks', { method: 'POST', body: JSON.stringify({
+      title: $('taskTitle').value, description: $('taskDescription').value, priority: $('taskPriority').value,
+      type: 'scheduled', dueAt: isoWithTime($('taskDueAt').value, $('taskTime').value), scheduledAt: isoWithTime($('taskDueAt').value, $('taskTime').value),
+      assigneeIds: selectedValues('taskAssignees'), groupIds: selectedValues('taskGroups')
+    })});
+    e.target.reset(); await loadTasks(); renderAll();
+  });
+  $('longTermForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    await api('/tasks', { method: 'POST', body: JSON.stringify({
+      title: $('longTitle').value, description: $('longDescription').value, priority: $('longPriority').value,
+      type: 'long_term', assigneeIds: selectedValues('longAssignees'), groupIds: selectedValues('longGroups')
+    })});
+    e.target.reset(); await loadTasks(); renderAll();
+  });
+  $('recurringForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const startDate = $('recStartDate').value;
+    await api('/recurring-tasks', { method: 'POST', body: JSON.stringify({
+      title: $('recTitle').value, description: $('recDescription').value, priority: $('recPriority').value,
+      cycle: $('recCycle').value, interval: Number($('recInterval').value || 1), daysOfWeek: selectedValues('recDays').map(Number),
+      dayOfMonth: $('recDayOfMonth').value || null, startDate, time: $('recTime').value, nextRunAt: isoWithTime(startDate, $('recTime').value),
+      assigneeIds: selectedValues('recAssignees'), groupIds: selectedValues('recGroups')
+    })});
+    e.target.reset(); await loadRecurring(); renderAll();
+  });
+  $('meetingForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const date = $('meetDate').value;
+    await api('/meetings', { method: 'POST', body: JSON.stringify({
+      title: $('meetTitle').value, description: $('meetDescription').value, location: $('meetLocation').value,
+      startAt: isoWithTime(date, $('meetStartTime').value), endAt: isoWithTime(date, $('meetEndTime').value), memberIds: selectedValues('meetMembers')
+    })});
+    e.target.reset(); await loadMeetings(); renderAll();
+  });
+  $('messageForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const text = $('messageText').value.trim(); if (!text) return;
+    addMsg(text, 'user'); $('messageText').value = '';
+    try {
+      const result = await api('/messages/ask', { method: 'POST', body: JSON.stringify({ text, channel: 'web' }) });
+      addMsg(result.replyText, 'ai'); await Promise.all([loadTasks(), loadRecurring(), loadMeetings()]); renderAll();
+    } catch (err) { addMsg('خطا: ' + err.message, 'ai'); }
+  });
+  $('aiSettingsForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    await api('/settings/ai', { method: 'PUT', body: JSON.stringify({ provider: $('aiProvider').value, model: $('aiModel').value, baseUrl: $('aiBaseUrl').value, apiKey: $('aiApiKey').value }) });
+    alert('تنظیمات AI ذخیره شد.');
+  });
+  $('baleSettingsForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    await api('/settings/bale', { method: 'PUT', body: JSON.stringify({ enabled: $('baleEnabled').value === 'true', sendReplies: $('baleSendReplies').value === 'true', webhookUrl: $('baleWebhookUrl').value, botToken: $('baleBotToken').value, webhookSecret: $('baleSecret').value }) });
+    alert('تنظیمات بله ذخیره شد.');
+  });
+}
+function addMsg(text, cls) {
+  const div = document.createElement('div'); div.className = 'msg ' + cls; div.textContent = text;
+  $('messageList').appendChild(div); $('messageList').scrollTop = $('messageList').scrollHeight;
+}
+
+setupNav(); setupForms(); loadAll().catch(err => {
+  console.error(err);
+  document.querySelector('main').insertAdjacentHTML('afterbegin', `<div class="notice">اتصال به بک‌اند برقرار نشد: ${escapeHtml(err.message)}. لطفاً از پوشه backend دستور <span class="ltr">node server.js</span> را اجرا کنید.</div>`);
+});
+</script>
 </body>
 </html>
