@@ -1,0 +1,284 @@
+{
+  "settings": {
+    "bale": {
+      "enabled": false,
+      "botToken": "",
+      "webhookUrl": "",
+      "secret": "",
+      "defaultReplyMode": "persian-confirmation",
+      "updatedAt": ""
+    }
+  },
+  "users": [
+    {
+      "id": "u1",
+      "fullName": "مریم رضایی",
+      "jobTitle": "مدیرعامل",
+      "role": "CEO",
+      "groups": [
+        "g1"
+      ],
+      "telegramChatId": "1001",
+      "baleChatId": "2001",
+      "active": true,
+      "isCeo": true
+    },
+    {
+      "id": "u2",
+      "fullName": "علی کریمی",
+      "jobTitle": "هماهنگ‌کننده دفتر",
+      "role": "Admin",
+      "groups": [
+        "g2"
+      ],
+      "telegramChatId": "1002",
+      "baleChatId": "2002",
+      "active": true,
+      "isCeo": false
+    },
+    {
+      "id": "u3",
+      "fullName": "سارا احمدی",
+      "jobTitle": "مدیر فروش",
+      "role": "Employee",
+      "groups": [
+        "g3"
+      ],
+      "telegramChatId": "1003",
+      "baleChatId": "2003",
+      "active": true,
+      "isCeo": false
+    },
+    {
+      "id": "u4",
+      "fullName": "حسین نوری",
+      "jobTitle": "مسئول عملیات",
+      "role": "Employee",
+      "groups": [
+        "g4"
+      ],
+      "telegramChatId": "1004",
+      "baleChatId": "2004",
+      "active": true,
+      "isCeo": false
+    }
+  ],
+  "groups": [
+    {
+      "id": "g1",
+      "title": "مدیریت",
+      "type": "management"
+    },
+    {
+      "id": "g2",
+      "title": "دفتر مدیرعامل",
+      "type": "office"
+    },
+    {
+      "id": "g3",
+      "title": "فروش",
+      "type": "normal"
+    },
+    {
+      "id": "g4",
+      "title": "عملیات",
+      "type": "normal"
+    },
+    {
+      "id": "g-ceo-request",
+      "title": "درخواست از مدیرعامل",
+      "type": "ceo_request"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T-mq0xemr6-7bc3",
+      "title": "تست backend task",
+      "description": "تست مسیر P4",
+      "creatorId": "u2",
+      "groupId": "g3",
+      "dueAt": "2026-06-06T12:54:20.826Z",
+      "priority": "medium",
+      "visibility": "group",
+      "status": "open",
+      "createdAt": "2026-06-05T12:54:20.850Z",
+      "assignments": [
+        {
+          "userId": "u3",
+          "status": "pending",
+          "rejectReason": "",
+          "doneAt": ""
+        }
+      ]
+    },
+    {
+      "id": "T-1001",
+      "title": "آماده‌سازی گزارش فروش هفتگی",
+      "description": "خلاصه فروش، ریسک‌ها و اقدامات پیشنهادی برای جلسه صبح شنبه.",
+      "creatorId": "u2",
+      "groupId": "g3",
+      "dueAt": "2026-06-06T07:30:00.000Z",
+      "priority": "high",
+      "visibility": "group",
+      "status": "open",
+      "createdAt": "2026-06-05T12:53:44.474Z",
+      "assignments": [
+        {
+          "userId": "u3",
+          "status": "accepted",
+          "rejectReason": "",
+          "doneAt": ""
+        },
+        {
+          "userId": "u4",
+          "status": "pending",
+          "rejectReason": "",
+          "doneAt": ""
+        }
+      ]
+    }
+  ],
+  "ceoRequests": [
+    {
+      "id": "R-2201",
+      "title": "درخواست تایید بودجه رویداد مشتریان",
+      "description": "بودجه اولیه برای رویداد تیرماه نیاز به تایید دارد.",
+      "requesterId": "u3",
+      "ceoId": "u1",
+      "status": "pending",
+      "decisionReason": "",
+      "delegatedTaskId": "",
+      "createdAt": "2026-06-05T12:53:44.477Z"
+    }
+  ],
+  "meetings": [
+    {
+      "id": "M-3001",
+      "title": "جلسه هماهنگی فروش و عملیات",
+      "description": "بررسی تعهدات باز و تصمیم برای هفته آینده.",
+      "startAt": "2026-06-06T08:00:00.000Z",
+      "endAt": "2026-06-06T09:00:00.000Z",
+      "location": "اتاق جلسات اصلی",
+      "creatorId": "u2",
+      "status": "scheduled",
+      "members": [
+        "u2",
+        "u3",
+        "u4"
+      ],
+      "createdAt": "2026-06-05T12:53:44.477Z"
+    }
+  ],
+  "incomingMessages": [
+    {
+      "id": "MSG-mq0xdv15-11af",
+      "source": "bale",
+      "senderMessengerId": "2002",
+      "text": "برای سارا تسک پیگیری گزارش تا فردا بساز",
+      "rawPayload": {
+        "message": {
+          "chat": {
+            "id": "2002"
+          },
+          "text": "برای سارا تسک پیگیری گزارش تا فردا بساز"
+        }
+      },
+      "receivedAt": "2026-06-05T12:53:44.920Z",
+      "userId": "u2",
+      "parsedIntent": {
+        "intent": "create_task",
+        "title": "سارا  پیگیری گزارش",
+        "assignees": [
+          "u3"
+        ],
+        "dueText": "فردا",
+        "confidence": 0.81,
+        "needsConfirmation": true
+      },
+      "status": "parsed"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "N-mq0xemr7-21a1",
+      "userId": "u3",
+      "channel": "web",
+      "title": "تسک جدید",
+      "body": "تست backend task",
+      "scheduledAt": "2026-06-05T12:54:20.851Z",
+      "sentAt": "",
+      "status": "pending",
+      "relatedEntity": {
+        "type": "task",
+        "id": "T-mq0xemr6-7bc3"
+      }
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": "AUD-mq0xemr7-94f9",
+      "actorId": "u2",
+      "action": "create",
+      "entityType": "task",
+      "entityId": "T-mq0xemr6-7bc3",
+      "beforeData": null,
+      "afterData": {
+        "id": "T-mq0xemr6-7bc3",
+        "title": "تست backend task",
+        "description": "تست مسیر P4",
+        "creatorId": "u2",
+        "groupId": "g3",
+        "dueAt": "2026-06-06T12:54:20.826Z",
+        "priority": "medium",
+        "visibility": "group",
+        "status": "open",
+        "createdAt": "2026-06-05T12:54:20.850Z",
+        "assignments": [
+          {
+            "userId": "u3",
+            "status": "pending",
+            "rejectReason": "",
+            "doneAt": ""
+          }
+        ]
+      },
+      "createdAt": "2026-06-05T12:54:20.851Z"
+    },
+    {
+      "id": "AUD-mq0xdv17-e130",
+      "actorId": "u2",
+      "action": "incoming_bale_message",
+      "entityType": "message",
+      "entityId": "MSG-mq0xdv15-11af",
+      "beforeData": null,
+      "afterData": {
+        "id": "MSG-mq0xdv15-11af",
+        "source": "bale",
+        "senderMessengerId": "2002",
+        "text": "برای سارا تسک پیگیری گزارش تا فردا بساز",
+        "rawPayload": {
+          "message": {
+            "chat": {
+              "id": "2002"
+            },
+            "text": "برای سارا تسک پیگیری گزارش تا فردا بساز"
+          }
+        },
+        "receivedAt": "2026-06-05T12:53:44.920Z",
+        "userId": "u2",
+        "parsedIntent": {
+          "intent": "create_task",
+          "title": "سارا  پیگیری گزارش",
+          "assignees": [
+            "u3"
+          ],
+          "dueText": "فردا",
+          "confidence": 0.81,
+          "needsConfirmation": true
+        },
+        "status": "parsed"
+      },
+      "createdAt": "2026-06-05T12:53:44.923Z"
+    }
+  ]
+}
