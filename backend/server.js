@@ -91,18 +91,27 @@ function writeData(data) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), "utf8");
 }
 
+function cleanPublicUrl(value) {
+  return String(value || "").trim().replace(/^\/+(https?:\/\/)/, "$1").replace(/\/$/, "");
+}
+
+function cleanWebhookUrl(value) {
+  return String(value || "").trim().replace(/^\/+(https?:\/\/)/, "$1");
+}
+
 function applyEnvironmentSettings(data) {
   if (!data.settings) data.settings = {};
   if (!data.settings.bale) data.settings.bale = structuredClone(seed.settings.bale);
   if (!data.settings.deployment) data.settings.deployment = structuredClone(seed.settings.deployment);
 
-  const envWebhookUrl = process.env.BALE_WEBHOOK_URL || (PUBLIC_BASE_URL ? `${PUBLIC_BASE_URL.replace(/\/$/, "")}/api/webhooks/bale` : "");
+  const publicBaseUrl = cleanPublicUrl(PUBLIC_BASE_URL);
+  const envWebhookUrl = process.env.BALE_WEBHOOK_URL || (publicBaseUrl ? `${publicBaseUrl}/api/webhooks/bale` : "");
   if (process.env.BALE_ENABLED) data.settings.bale.enabled = process.env.BALE_ENABLED === "true";
   if (process.env.BALE_BOT_TOKEN) data.settings.bale.botToken = process.env.BALE_BOT_TOKEN;
-  if (envWebhookUrl) data.settings.bale.webhookUrl = envWebhookUrl;
+  if (envWebhookUrl) data.settings.bale.webhookUrl = cleanWebhookUrl(envWebhookUrl);
   if (process.env.BALE_SECRET) data.settings.bale.secret = process.env.BALE_SECRET;
   if (process.env.BALE_REPLY_MODE) data.settings.bale.defaultReplyMode = process.env.BALE_REPLY_MODE;
-  if (PUBLIC_BASE_URL) data.settings.deployment.publicBaseUrl = PUBLIC_BASE_URL;
+  if (publicBaseUrl) data.settings.deployment.publicBaseUrl = publicBaseUrl;
   return data;
 }
 
@@ -304,7 +313,7 @@ const routes = {
       ...before,
       enabled: Boolean(body.enabled),
       botToken: body.botToken === "********" ? before.botToken : String(body.botToken || ""),
-      webhookUrl: String(body.webhookUrl || ""),
+      webhookUrl: cleanWebhookUrl(body.webhookUrl),
       secret: body.secret === "********" ? before.secret : String(body.secret || ""),
       defaultReplyMode: String(body.defaultReplyMode || "persian-confirmation"),
       updatedAt: nowIso()
