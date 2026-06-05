@@ -340,6 +340,16 @@ const routes = {
   "GET /api/users": async ({ data }) => data.users,
   "GET /api/groups": async ({ data }) => data.groups,
 
+  "PATCH /api/users/link-bale": async ({ data, body, currentUser }) => {
+    if (!isPrivileged(currentUser)) return { status: 403, body: { error: "فقط مدیر سیستم می‌تواند شناسه بله کاربران را ثبت کند." } };
+    const target = data.users.find((user) => user.id === body.userId);
+    if (!target) return { status: 404, body: { error: "کاربر پیدا نشد." } };
+    const before = { ...target };
+    target.baleChatId = String(body.baleChatId || "").trim();
+    log(data, currentUser.id, "link_bale_chat", "user", target.id, before, target);
+    return { saved: true, user: { id: target.id, fullName: target.fullName, baleChatId: target.baleChatId } };
+  },
+
   "GET /api/tasks": async ({ data, currentUser }) => data.tasks.filter((task) => canViewTask(currentUser, task)),
 
   "POST /api/tasks": async ({ data, body, currentUser }) => {
