@@ -74,6 +74,7 @@ const seed = {
     { id: "M-3001", title: "جلسه هماهنگی فروش و عملیات", description: "بررسی تعهدات باز و تصمیم برای هفته آینده.", startAt: "2026-06-06T08:00:00.000Z", endAt: "2026-06-06T09:00:00.000Z", location: "اتاق جلسات اصلی", creatorId: "u2", status: "scheduled", members: ["u2", "u3", "u4"], createdAt: nowIso() }
   ],
   incomingMessages: [],
+  pendingUsers: [],
   notifications: [],
   auditLogs: []
 };
@@ -200,6 +201,16 @@ function parsePersianIntent(data, text) {
   }
   if (text.includes("تسک‌های من") || text.includes("/mytasks")) return { intent: "query_tasks", confidence: 0.93, needsConfirmation: false };
   return { intent: "unknown", confidence: 0.3, needsConfirmation: false, question: "لطفاً مشخص کنید تسک، جلسه یا درخواست از مدیرعامل می‌خواهید." };
+}
+
+function parseBaleSelfIntroduction(text) {
+  const nameMatch = text.match(/نام\s*[:：]\s*([^\n\r]+)/i);
+  const jobMatch = text.match(/(?:جایگاه شغلی|سمت|شغل)\s*[:：]\s*([^\n\r]+)/i);
+  if (!nameMatch || !jobMatch) return null;
+  return {
+    fullName: nameMatch[1].trim(),
+    jobTitle: jobMatch[1].trim()
+  };
 }
 
 async function sendBaleText(data, chatId, text) {
@@ -339,6 +350,49 @@ const routes = {
 
   "GET /api/users": async ({ data }) => data.users,
   "GET /api/groups": async ({ data }) => data.groups,
+  "GET /api/pending-users": async ({ data, currentUser }) => {
+    if (!isPrivileged(currentUser)) return { status: 403, body: { error: "دسترسی به کاربران در انتظار تایید مجاز نیست." } };
+    return data.pendingUsers || [];
+  },
+
+  "POST /api/pending-users/approve": async ({ data, body, currentUser }) => {
+    if (!isPrivileged(currentUser)) return { status: 403, body: { error: "فقط مدیر سیستم می‌تواند کاربر جدید را تایید کند." } };
+    const pending = (data.pendingUsers || []).find((item) => item.id === body.pendingUserId);
+    if (!pending) return { status: 404, body: { error: "درخواست تایید کاربر پیدا نشد." } };
+    const groupId = body.groupId || "g2";
+    const user = {
+      id: id("U"),
+      fullName: pending.fullName,
+      jobTitle: pending.jobTitle,
+      role: body.role || "Employee",
+      groups: [groupId],
+      telegramChatId: "",
+      baleChatId: pending.baleChatId,
+      active: true,
+      isCeo: false
+    };
+    data.users.push(user);
+    pending.status = "approved";
+    pending.approvedAt = nowIso();
+    pending.approvedBy = currentUser.id;
+    createNotification(data, currentUser.id, "کاربر جدید تایید شد", user.fullName, { type: "user", id: user.id });
+    await sendBaleText(data, pending.baleChatId, "حساب شما تایید شد. از این به بعد می‌توانید درخواست‌ها و تسک‌ها را از همین گفتگو ارسال کنید.");
+    log(data, currentUser.id, "approve_pending_user", "user", user.id, pending, user);
+    return { saved: true, user };
+  },
+
+  "POST /api/pending-users/reject": async ({ data, body, currentUser }) => {
+    if (!isPrivileged(currentUser)) return { status: 403, body: { error: "فقط مدیر سیستم می‌تواند درخواست کاربر را رد کند." } };
+    const pending = (data.pendingUsers || []).find((item) => item.id === body.pendingUserId);
+    if (!pending) return { status: 404, body: { error: "درخواست تایید کاربر پیدا نشد." } };
+    pending.status = "rejected";
+    pending.rejectedAt = nowIso();
+    pending.rejectedBy = currentUser.id;
+    pending.rejectReason = body.reason || "";
+    await sendBaleText(data, pending.baleChatId, "درخواست معرفی شما تایید نشد. لطفاً با مدیر سیستم تماس بگیرید.");
+    log(data, currentUser.id, "reject_pending_user", "pending_user", pending.id, null, pending);
+    return { saved: true, pending };
+  },
 
   "PATCH /api/users/link-bale": async ({ data, body, currentUser }) => {
     if (!isPrivileged(currentUser)) return { status: 403, body: { error: "فقط مدیر سیستم می‌تواند شناسه بله کاربران را ثبت کند." } };
@@ -435,6 +489,29 @@ const routes = {
     if (configuredSecret && req.headers["x-bale-secret"] !== configuredSecret) return { status: 401, body: { error: "Bale secret is invalid." } };
     const normalized = normalizeBaleMessage(body);
     const linkedUser = data.users.find((user) => user.baleChatId === normalized.senderMessengerId);
+    if (!linkedUser) {
+      const intro = parseBaleSelfIntroduction(normalized.text);
+      if (intro) {
+        const existingPending = (data.pendingUsers || []).find((item) => item.baleChatId === normalized.senderMessengerId && item.status === "pending");
+        const pending = existingPending || {
+          id: id("PU"),
+          baleChatId: normalized.senderMessengerId,
+          fullName: intro.fullName,
+          jobTitle: intro.jobTitle,
+          status: "pending",
+          createdAt: nowIso(),
+          rawText: normalized.text
+        };
+        if (!existingPending) data.pendingUsers.unshift(pending);
+        const record = { id: id("MSG"), ...normalized, userId: "", parsedIntent: { intent: "self_introduction", pendingUserId: pending.id }, status: "pending_user" };
+        data.incomingMessages.unshift(record);
+        createNotification(data, data.users.find((user) => user.role === "Admin")?.id || "u2", "کاربر جدید در انتظار تایید", pending.fullName, { type: "pending_user", id: pending.id });
+        const reply = "معرفی شما ثبت شد و منتظر تایید مدیر سیستم است.";
+        const sendResult = await sendBaleText(data, normalized.senderMessengerId, reply);
+        log(data, "anonymous", "pending_user_registration", "pending_user", pending.id, null, pending);
+        return { ok: true, messageId: record.id, reply, pendingUser: pending, baleSend: sendResult };
+      }
+    }
     const parsedIntent = normalized.text ? parsePersianIntent(data, normalized.text) : { intent: "unknown", question: "لطفاً متن پیام را ارسال کنید." };
     const record = { id: id("MSG"), ...normalized, userId: linkedUser ? linkedUser.id : "", parsedIntent, status: linkedUser ? "parsed" : "unknown_sender" };
     data.incomingMessages.unshift(record);
