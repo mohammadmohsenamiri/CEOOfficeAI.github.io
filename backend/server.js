@@ -36,12 +36,7 @@ const seed = {
       updatedAt: ""
     }
   },
-  users: [
-    { id: "u1", fullName: "مریم رضایی", jobTitle: "مدیرعامل", role: "CEO", groups: ["g1"], telegramChatId: "1001", baleChatId: "2001", baleUsername: "", active: true, isCeo: true },
-    { id: "u2", fullName: "علی کریمی", jobTitle: "هماهنگ‌کننده دفتر", role: "Admin", groups: ["g2"], telegramChatId: "1002", baleChatId: "2002", baleUsername: "", active: true, isCeo: false },
-    { id: "u3", fullName: "سارا احمدی", jobTitle: "مدیر فروش", role: "Employee", groups: ["g3"], telegramChatId: "1003", baleChatId: "2003", baleUsername: "", active: true, isCeo: false },
-    { id: "u4", fullName: "حسین نوری", jobTitle: "مسئول عملیات", role: "Employee", groups: ["g4"], telegramChatId: "1004", baleChatId: "2004", baleUsername: "", active: true, isCeo: false }
-  ],
+  users: [],
   groups: [
     { id: "g1", title: "مدیریت", type: "management" },
     { id: "g2", title: "دفتر مدیرعامل", type: "office" },
@@ -49,30 +44,9 @@ const seed = {
     { id: "g4", title: "عملیات", type: "normal" },
     { id: "g-ceo-request", title: "درخواست از مدیرعامل", type: "ceo_request" }
   ],
-  tasks: [
-    {
-      id: "T-1001",
-      title: "آماده‌سازی گزارش فروش هفتگی",
-      description: "خلاصه فروش، ریسک‌ها و اقدامات پیشنهادی برای جلسه صبح شنبه.",
-      creatorId: "u2",
-      groupId: "g3",
-      dueAt: "2026-06-06T07:30:00.000Z",
-      priority: "high",
-      visibility: "group",
-      status: "open",
-      createdAt: nowIso(),
-      assignments: [
-        { userId: "u3", status: "accepted", rejectReason: "", doneAt: "" },
-        { userId: "u4", status: "pending", rejectReason: "", doneAt: "" }
-      ]
-    }
-  ],
-  ceoRequests: [
-    { id: "R-2201", title: "درخواست تایید بودجه رویداد مشتریان", description: "بودجه اولیه برای رویداد تیرماه نیاز به تایید دارد.", requesterId: "u3", ceoId: "u1", status: "pending", decisionReason: "", delegatedTaskId: "", createdAt: nowIso() }
-  ],
-  meetings: [
-    { id: "M-3001", title: "جلسه هماهنگی فروش و عملیات", description: "بررسی تعهدات باز و تصمیم برای هفته آینده.", startAt: "2026-06-06T08:00:00.000Z", endAt: "2026-06-06T09:00:00.000Z", location: "اتاق جلسات اصلی", creatorId: "u2", status: "scheduled", members: ["u2", "u3", "u4"], createdAt: nowIso() }
-  ],
+  tasks: [],
+  ceoRequests: [],
+  meetings: [],
   incomingMessages: [],
   pendingUsers: [],
   notifications: [],
@@ -113,6 +87,43 @@ function applyEnvironmentSettings(data) {
   if (process.env.BALE_SECRET) data.settings.bale.secret = process.env.BALE_SECRET;
   if (process.env.BALE_REPLY_MODE) data.settings.bale.defaultReplyMode = process.env.BALE_REPLY_MODE;
   if (publicBaseUrl) data.settings.deployment.publicBaseUrl = publicBaseUrl;
+
+  const sampleIds = new Set(["u1", "u2", "u3", "u4"]);
+  if (process.env.RESET_SAMPLE_USERS === "true") {
+    data.users = (data.users || []).filter((user) => !sampleIds.has(user.id));
+    data.tasks = (data.tasks || []).filter((task) => !sampleIds.has(task.creatorId) && !(task.assignments || []).some((assignment) => sampleIds.has(assignment.userId)));
+    data.ceoRequests = (data.ceoRequests || []).filter((request) => !sampleIds.has(request.requesterId) && !sampleIds.has(request.ceoId));
+    data.meetings = (data.meetings || []).filter((meeting) => !sampleIds.has(meeting.creatorId) && !(meeting.members || []).some((member) => sampleIds.has(member)));
+  }
+
+  const adminBaleChatId = process.env.ADMIN_BALE_CHAT_ID || "";
+  const adminBaleUsername = normalizeBaleUsername(process.env.ADMIN_BALE_USERNAME || "");
+  const adminFullName = process.env.ADMIN_FULL_NAME || "مدیر سیستم";
+  const adminJobTitle = process.env.ADMIN_JOB_TITLE || "ادمین";
+  const existingAdmin = (data.users || []).find((user) => user.role === "Admin");
+  if (!existingAdmin) {
+    data.users.unshift({
+      id: "admin",
+      fullName: adminFullName,
+      jobTitle: adminJobTitle,
+      role: "Admin",
+      groups: ["g2"],
+      telegramChatId: "",
+      baleChatId: adminBaleChatId,
+      baleUsername: adminBaleUsername,
+      baleProfileUrl: adminBaleUsername ? `https://ble.ir/${adminBaleUsername.replace(/^@/, "")}` : "",
+      active: true,
+      isCeo: false
+    });
+  } else {
+    if (process.env.ADMIN_FULL_NAME) existingAdmin.fullName = adminFullName;
+    if (process.env.ADMIN_JOB_TITLE) existingAdmin.jobTitle = adminJobTitle;
+    if (adminBaleChatId) existingAdmin.baleChatId = adminBaleChatId;
+    if (adminBaleUsername) {
+      existingAdmin.baleUsername = adminBaleUsername;
+      existingAdmin.baleProfileUrl = `https://ble.ir/${adminBaleUsername.replace(/^@/, "")}`;
+    }
+  }
   return data;
 }
 
@@ -208,12 +219,10 @@ function parsePersianIntent(data, text) {
 function parseBaleSelfIntroduction(text) {
   const nameMatch = text.match(/نام\s*[:：]\s*([^\n\r]+)/i);
   const jobMatch = text.match(/(?:جایگاه شغلی|سمت|شغل)\s*[:：]\s*([^\n\r]+)/i);
-  const usernameMatch = text.match(/(?:آیدی بله|ایدی بله|شناسه بله|بله)\s*[:：]\s*(@?[A-Za-z0-9_\\.]+)/i);
   if (!nameMatch || !jobMatch) return null;
   return {
     fullName: nameMatch[1].trim(),
-    jobTitle: jobMatch[1].trim(),
-    baleUsername: normalizeBaleUsername(usernameMatch ? usernameMatch[1] : "")
+    jobTitle: jobMatch[1].trim()
   };
 }
 
@@ -371,6 +380,7 @@ const routes = {
       telegramChatId: String(body.telegramChatId || "").trim(),
       baleChatId: String(body.baleChatId || "").trim(),
       baleUsername: normalizeBaleUsername(body.baleUsername || ""),
+      baleProfileUrl: cleanPublicUrl(body.baleProfileUrl || ""),
       active: body.active !== false,
       isCeo: false
     };
@@ -425,6 +435,7 @@ const routes = {
       telegramChatId: "",
       baleChatId: pending.baleChatId,
       baleUsername: pending.baleUsername || "",
+      baleProfileUrl: pending.baleProfileUrl || "",
       active: true,
       isCeo: false
     };
@@ -562,7 +573,8 @@ const routes = {
         const pending = existingPending || {
           id: id("PU"),
           baleChatId: normalized.senderMessengerId,
-          baleUsername: intro.baleUsername || normalized.senderUsername || "",
+          baleUsername: normalized.senderUsername || "",
+          baleProfileUrl: normalized.senderUsername ? `https://ble.ir/${normalized.senderUsername.replace(/^@/, "")}` : "",
           fullName: intro.fullName,
           jobTitle: intro.jobTitle,
           status: "pending",
@@ -573,7 +585,7 @@ const routes = {
         const record = { id: id("MSG"), ...normalized, userId: "", parsedIntent: { intent: "self_introduction", pendingUserId: pending.id }, status: "pending_user" };
         data.incomingMessages.unshift(record);
         createNotification(data, data.users.find((user) => user.role === "Admin")?.id || "u2", "کاربر جدید در انتظار تایید", pending.fullName, { type: "pending_user", id: pending.id });
-        const reply = `معرفی شما با موفقیت ثبت شد.\n\nنام: ${pending.fullName}\nجایگاه شغلی: ${pending.jobTitle}\nآیدی بله: ${pending.baleUsername || "ثبت نشده"}\n\nلطفاً منتظر تایید ادمین باشید.`;
+        const reply = `معرفی شما با موفقیت ثبت شد.\n\nنام: ${pending.fullName}\nجایگاه شغلی: ${pending.jobTitle}\n\nلطفاً منتظر تایید ادمین باشید.`;
         const sendResult = await sendBaleText(data, normalized.senderMessengerId, reply);
         log(data, "anonymous", "pending_user_registration", "pending_user", pending.id, null, pending);
         return { ok: true, messageId: record.id, reply, pendingUser: pending, baleSend: sendResult };
@@ -583,7 +595,7 @@ const routes = {
     const record = { id: id("MSG"), ...normalized, userId: linkedUser ? linkedUser.id : "", parsedIntent, status: linkedUser ? "parsed" : "unknown_sender" };
     data.incomingMessages.unshift(record);
     log(data, linkedUser ? linkedUser.id : "anonymous", "incoming_bale_message", "message", record.id, null, record);
-    const reply = linkedUser ? "پیام شما دریافت شد. لطفاً خلاصه برداشت سیستم را تایید یا لغو کنید." : "معرفی شما ثبت نشد.\n\nلطفاً نام، جایگاه شغلی و آیدی بله خود را با قالب زیر ارسال نمایید و منتظر تایید از سوی ادمین باشید.\n\nنام: محمد امیری\nجایگاه شغلی: مدیر پروژه\nآیدی بله: @username";
+    const reply = linkedUser ? "پیام شما دریافت شد. لطفاً خلاصه برداشت سیستم را تایید یا لغو کنید." : "معرفی شما ثبت نشد.\n\nلطفاً نام و جایگاه شغلی خود را با قالب زیر ارسال نمایید و منتظر تایید از سوی ادمین باشید.\n\nنام: محمد امیری\nجایگاه شغلی: مدیر پروژه";
     const sendResult = await sendBaleText(data, normalized.senderMessengerId, reply);
     return {
       ok: true,
