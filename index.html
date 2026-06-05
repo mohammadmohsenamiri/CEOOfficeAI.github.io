@@ -1932,6 +1932,8 @@
             </div>
             <div class="item-actions">
               <button class="primary">ذخیره تنظیمات</button>
+              <button class="blue" type="button" id="registerBaleWebhook">ثبت webhook در بله</button>
+              <button class="blue" type="button" id="sendBaleTest">ارسال پیام تست واقعی</button>
               <button class="blue" type="button" id="testBaleWebhook">تست پیام بله</button>
             </div>
           </form>
@@ -1989,6 +1991,28 @@
             body: JSON.stringify({ message: { chat: { id: currentUser().bale }, text: "برای سارا تسک پیگیری گزارش تا فردا بساز" } })
           });
           toast(result.reply);
+        } catch (error) {
+          toast(error.message);
+        }
+      };
+      $("registerBaleWebhook").onclick = async () => {
+        try {
+          const result = await backendFetch("/api/settings/bale/register-webhook", {
+            method: "POST",
+            body: JSON.stringify({})
+          });
+          toast(result.ok ? "webhook در بله ثبت شد." : "ثبت webhook ناموفق بود.");
+        } catch (error) {
+          toast(error.message);
+        }
+      };
+      $("sendBaleTest").onclick = async () => {
+        try {
+          const result = await backendFetch("/api/settings/bale/test-send", {
+            method: "POST",
+            body: JSON.stringify({ text: "پیام تست از سیستم دفتر مدیرعامل" })
+          });
+          toast(result.ok ? "پیام تست به بله ارسال شد." : "ارسال پیام تست ناموفق بود.");
         } catch (error) {
           toast(error.message);
         }
