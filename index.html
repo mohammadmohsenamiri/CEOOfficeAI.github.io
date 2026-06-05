@@ -785,6 +785,46 @@
       padding: 0 10px;
     }
 
+    .persian-date-picker {
+      display: grid;
+      gap: 10px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .035);
+    }
+
+    .date-picker-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .date-picker-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(34px, 1fr));
+      gap: 6px;
+    }
+
+    .date-picker-grid span,
+    .date-picker-grid button {
+      min-height: 36px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      font-size: 12px;
+    }
+
+    .date-picker-grid span {
+      color: #a5b4fc;
+      font-weight: 800;
+    }
+
+    .date-picker-grid button {
+      padding: 0;
+    }
+
     .calendar-grid {
       display: grid;
       grid-template-columns: repeat(7, minmax(96px, 1fr));
@@ -1191,6 +1231,7 @@
 
       <section id="view-dashboard"></section>
       <section id="view-tasks" class="hidden"></section>
+      <section id="view-longterm" class="hidden"></section>
       <section id="view-requests" class="hidden"></section>
       <section id="view-meetings" class="hidden"></section>
       <section id="view-messenger" class="hidden"></section>
@@ -1235,6 +1276,7 @@
     const pages = [
       ["dashboard", "داشبورد", "نمای خلاصه عملیات", "dashboard"],
       ["tasks", "تسک‌ها", "چرخه چندمسئوله قبول، رد و Done", "tasks"],
+      ["longterm", "وظایف بلندمدت", "کارهای بدون تاریخ با مسئول مشخص", "tasks"],
       ["requests", "درخواست از مدیرعامل", "مسیر مجاز برای درخواست‌های خصوصی CEO", "requests"],
       ["meetings", "جلسات", "تقویم شمسی و یادآوری", "meetings"],
       ["bale", "تنظیمات بله", "اتصال بازوی بله، webhook و پیام تایید فارسی", "bale"],
@@ -1329,6 +1371,7 @@
         groupId: item.groupId,
         type: item.visibility === "ceo_private" ? "ceo_private" : "task",
         dueAt: item.dueAt,
+        longTerm: Boolean(item.longTerm || !item.dueAt),
         visibility: item.visibility,
         assignees: (item.assignments || []).map((assignment) => ({
           userId: assignment.userId,
@@ -1396,6 +1439,14 @@
       });
     }
 
+    function visibleTimedTasks() {
+      return visibleTasks().filter((task) => !task.longTerm);
+    }
+
+    function visibleLongTermTasks() {
+      return visibleTasks().filter((task) => task.longTerm);
+    }
+
     function visibleRequests() {
       const u = currentUser();
       return state.requests.filter((r) => u.role === "CEO" || r.requesterId === u.id || u.role === "Admin");
@@ -1447,6 +1498,7 @@
       ({
         dashboard: renderDashboard,
         tasks: renderTasks,
+        longterm: renderLongTermTasks,
         requests: renderRequests,
         meetings: renderMeetings,
         messenger: renderMessenger,
@@ -1495,40 +1547,102 @@
         bindBackendGate();
         return;
       }
+      const tasks = visibleTimedTasks();
       $("view-tasks").innerHTML = `
-        <div class="grid">
+        <div class="calendar-shell">
           <div class="panel">
-            <div class="panel-head"><h2>فهرست تسک‌ها</h2><span class="chip">${fa(visibleTasks().length)} مورد</span></div>
-            <div class="list">${visibleTasks().map(taskCard).join("") || empty("تسکی مطابق دسترسی شما وجود ندارد.")}</div>
+            <div class="panel-head">
+              <h2>فهرست تسک‌ها</h2>
+              <div class="page-actions">
+                <span class="chip">${fa(tasks.length)} مورد</span>
+                <button class="primary" id="openTaskModal">تسک جدید</button>
+              </div>
+            </div>
+            <div class="list">${tasks.map(taskCard).join("") || empty("تسکی مطابق دسترسی شما وجود ندارد.")}</div>
           </div>
-          <form class="panel" id="taskForm">
-            <h2>تسک جدید</h2>
+          ${taskModal(false)}
+        </div>`;
+      bindTaskModal(false);
+      bindTaskActions();
+    }
+
+    function renderLongTermTasks() {
+      if (!backendOnline && !MOCK_DATA_ENABLED) {
+        $("view-longterm").innerHTML = backendRequired("وظایف بلندمدت", "وظایف بلندمدت باید در backend ذخیره شوند و تاریخ ندارند.");
+        bindBackendGate();
+        return;
+      }
+      const tasks = visibleLongTermTasks();
+      $("view-longterm").innerHTML = `
+        <div class="calendar-shell">
+          <div class="panel">
+            <div class="panel-head">
+              <h2>وظایف بلندمدت</h2>
+              <div class="page-actions">
+                <span class="chip">${fa(tasks.length)} مورد</span>
+                <button class="primary" id="openLongTermTaskModal">وظیفه بلندمدت جدید</button>
+              </div>
+            </div>
+            <div class="list">${tasks.map(taskCard).join("") || empty("وظیفه بلندمدتی مطابق دسترسی شما وجود ندارد.")}</div>
+          </div>
+          ${taskModal(true)}
+        </div>`;
+      bindTaskModal(true);
+      bindTaskActions();
+    }
+
+    function taskModal(longTerm) {
+      const modalId = longTerm ? "longTermTaskModal" : "taskModal";
+      const formId = longTerm ? "longTermTaskForm" : "taskForm";
+      return `
+        <div class="modal-backdrop hidden" id="${modalId}">
+          <form class="modal-card" id="${formId}" data-long-term="${longTerm ? "true" : "false"}">
+            <div class="panel-head">
+              <h2>${longTerm ? "وظیفه بلندمدت جدید" : "تسک جدید"}</h2>
+              <button type="button" class="ghost" data-close-modal="${modalId}">بستن</button>
+            </div>
             <div class="form-grid">
               <label class="full">عنوان<input name="title" required placeholder="مثلاً پیگیری قرارداد مشتری"></label>
               <label class="full">توضیح<textarea name="description" placeholder="جزئیات کار"></textarea></label>
               <label>گروه<input name="group" value="${currentUser().group}"></label>
-              <label>تاریخ انجام<input name="dueDateLabel" id="taskDueDateLabel" readonly value="${quickDateLabel(1)}"><input name="dueAt" id="taskDueAt" type="hidden" value="${quickDateIso(1)}"></label>
-              <div class="full segmented" data-date-target="task">
-                <button type="button" data-date-offset="0">امروز</button>
-                <button type="button" data-date-offset="1" class="active">فردا</button>
-                <button type="button" data-date-offset="2">پس‌فردا</button>
-                <button type="button" data-date-offset="7">هفته بعد</button>
-              </div>
+              ${longTerm ? "" : `
+                <label>تاریخ انجام<input name="dueDateLabel" id="taskDueDateLabel" readonly value="${quickDateLabel(1)}"><input name="dueAt" id="taskDueAt" type="hidden" value="${quickDateIso(1)}"></label>
+                <div class="full segmented" data-date-target="task">
+                  <button type="button" data-date-offset="0">امروز</button>
+                  <button type="button" data-date-offset="1" class="active">فردا</button>
+                  <button type="button" data-date-offset="2">پس‌فردا</button>
+                  <button type="button" data-date-offset="7">هفته بعد</button>
+                </div>
+                ${persianDatePicker("task", quickDate(1))}
+              `}
               <label class="full">مسئولان<select name="assignees" multiple size="5">${state.users.filter((u) => u.active).map((u) => `<option value="${u.id}">${u.fullName} - ${u.group}</option>`).join("")}</select></label>
             </div>
-            <button class="primary">ثبت تسک</button>
-            <p class="muted small">اگر مسئول مدیرعامل باشد، قانون R-CEO-02 اجرا می‌شود و کاربران غیر CEO باید درخواست مدیرعامل ثبت کنند.</p>
+            <button class="primary">${longTerm ? "ثبت وظیفه بلندمدت" : "ثبت تسک"}</button>
           </form>
         </div>`;
-      $("taskForm").onsubmit = createTask;
-      bindDatePresets("task");
-      bindTaskActions();
+    }
+
+    function bindTaskModal(longTerm) {
+      const modalId = longTerm ? "longTermTaskModal" : "taskModal";
+      const openId = longTerm ? "openLongTermTaskModal" : "openTaskModal";
+      const formId = longTerm ? "longTermTaskForm" : "taskForm";
+      $(openId).onclick = () => $(modalId).classList.remove("hidden");
+      document.querySelectorAll(`[data-close-modal="${modalId}"]`).forEach((btn) => btn.onclick = () => $(modalId).classList.add("hidden"));
+      $(modalId).onclick = (event) => {
+        if (event.target.id === modalId) $(modalId).classList.add("hidden");
+      };
+      $(formId).onsubmit = createTask;
+      if (!longTerm) {
+        bindDatePresets("task");
+        bindPersianDatePicker("task");
+      }
     }
 
     function taskCard(task) {
       const creator = user(task.creatorId);
-      const progress = Math.round(task.assignees.filter((a) => a.status === "done").length / task.assignees.length * 100);
+      const progress = task.assignees.length ? Math.round(task.assignees.filter((a) => a.status === "done").length / task.assignees.length * 100) : 0;
       const ceo = task.visibility === "ceo_private" ? `<span class="chip danger">خصوصی CEO</span>` : "";
+      const canDelete = isPrivileged() || task.creatorId === currentUser().id;
       return `
         <article class="item-card">
           <div class="item-top">
@@ -1544,15 +1658,16 @@
           <div class="chips">
             <span class="chip">سازنده: ${creator ? creator.fullName : "نامشخص"}</span>
             <span class="chip">گروه: ${task.group}</span>
-            <span class="chip blue">سررسید: ${dateFa(task.dueAt)}</span>
+            ${task.longTerm ? `<span class="chip blue">بدون تاریخ</span>` : `<span class="chip blue">سررسید: ${dateFa(task.dueAt)}</span>`}
           </div>
           <div class="chips">${task.assignees.map((a) => `<span class="chip">${user(a.userId)?.fullName || "کاربر"} ${statusChip(a.status)}</span>`).join("")}</div>
-          ${task.assignees.some((a) => a.userId === currentUser().id && a.status !== "done") ? `
-            <div class="item-actions">
+          <div class="item-actions">
+            ${task.assignees.some((a) => a.userId === currentUser().id && a.status !== "done") ? `
               <button class="primary" data-task-action="accepted" data-task="${task.id}">قبول</button>
               <button class="blue" data-task-action="done" data-task="${task.id}">Done</button>
-              <button class="danger" data-task-action="rejected" data-task="${task.id}">رد</button>
-            </div>` : ""}
+              <button class="danger" data-task-action="rejected" data-task="${task.id}">رد</button>` : ""}
+            ${canDelete ? `<button class="danger" data-delete-task="${task.id}">حذف</button>` : ""}
+          </div>
         </article>`;
     }
 
@@ -1560,6 +1675,7 @@
       event.preventDefault();
       const form = new FormData(event.target);
       const assignees = Array.from(event.target.assignees.selectedOptions).map((o) => o.value);
+      const longTerm = event.target.dataset.longTerm === "true";
       if (!assignees.length) return toast("حداقل یک مسئول انتخاب کنید.");
       if (backendOnline) {
         const groupName = form.get("group").trim() || currentUser().group;
@@ -1570,13 +1686,14 @@
             title: form.get("title").trim(),
             description: form.get("description").trim(),
             groupId,
-            dueAt: new Date(form.get("dueAt")).toISOString(),
+            dueAt: longTerm ? "" : new Date(form.get("dueAt")).toISOString(),
+            longTerm,
             assigneeIds: assignees
           })
         }).then(async () => {
           await loadBackendState();
-          renderTasks();
-          toast("تسک در backend ثبت شد.");
+          longTerm ? renderLongTermTasks() : renderTasks();
+          toast(longTerm ? "وظیفه بلندمدت در backend ثبت شد." : "تسک در backend ثبت شد.");
         }).catch((error) => toast(error.message));
         return;
       }
@@ -1588,17 +1705,41 @@
         creatorId: currentUser().id,
         group: form.get("group").trim() || currentUser().group,
         type: assignees.some((id) => user(id)?.isCeo) ? "ceo_private" : "task",
-        dueAt: new Date(form.get("dueAt")).toISOString(),
+        dueAt: longTerm ? "" : new Date(form.get("dueAt")).toISOString(),
+        longTerm,
         visibility: assignees.some((id) => user(id)?.isCeo) ? "ceo_private" : "group",
         assignees: assignees.map((id) => ({ userId: id, status: "pending", rejectReason: "", doneAt: "" }))
       };
       state.tasks.unshift(task);
       saveState();
-      renderTasks();
-      toast("تسک ثبت شد و نوتیف assign ساخته شد.");
+      longTerm ? renderLongTermTasks() : renderTasks();
+      toast(longTerm ? "وظیفه بلندمدت ثبت شد." : "تسک ثبت شد و نوتیف assign ساخته شد.");
     }
 
     function bindTaskActions() {
+      document.querySelectorAll("[data-delete-task]").forEach((btn) => {
+        btn.onclick = async () => {
+          const taskId = btn.dataset.deleteTask;
+          if (backendOnline) {
+            try {
+              await backendFetch("/api/tasks", {
+                method: "DELETE",
+                body: JSON.stringify({ taskId })
+              });
+              await loadBackendState();
+              render();
+              toast("تسک حذف شد.");
+            } catch (error) {
+              toast(error.message);
+            }
+            return;
+          }
+          state.tasks = state.tasks.filter((task) => task.id !== taskId);
+          saveState();
+          render();
+          toast("تسک حذف شد.");
+        };
+      });
       document.querySelectorAll("[data-task-action]").forEach((btn) => {
         btn.onclick = () => {
           const task = state.tasks.find((t) => t.id === btn.dataset.task);
@@ -1632,18 +1773,34 @@
         return;
       }
       $("view-requests").innerHTML = `
-        <div class="grid">
+        <div class="calendar-shell">
           <div class="panel">
-            <div class="panel-head"><h2>Inbox درخواست‌ها</h2><span class="chip">${fa(visibleRequests().length)} مورد</span></div>
+            <div class="panel-head">
+              <h2>Inbox درخواست‌ها</h2>
+              <div class="page-actions">
+                <span class="chip">${fa(visibleRequests().length)} مورد</span>
+                <button class="primary" id="openRequestModal">درخواست جدید</button>
+              </div>
+            </div>
             <div class="list">${visibleRequests().map(requestCard).join("") || empty("درخواستی برای نمایش وجود ندارد.")}</div>
           </div>
-          <form class="panel" id="requestForm">
-            <h2>ثبت درخواست از مدیرعامل</h2>
-            <label>عنوان<input name="title" required placeholder="مثلاً تایید بودجه"></label>
-            <label>شرح<textarea name="description" required placeholder="درخواست فقط برای شما و مدیرعامل قابل مشاهده خواهد بود."></textarea></label>
-            <button class="primary">ارسال درخواست</button>
-          </form>
+          <div class="modal-backdrop hidden" id="requestModal">
+            <form class="modal-card" id="requestForm">
+              <div class="panel-head">
+                <h2>ثبت درخواست از مدیرعامل</h2>
+                <button type="button" class="ghost" id="closeRequestModal">بستن</button>
+              </div>
+              <label>عنوان<input name="title" required placeholder="مثلاً تایید بودجه"></label>
+              <label>شرح<textarea name="description" required placeholder="درخواست فقط برای شما و مدیرعامل قابل مشاهده خواهد بود."></textarea></label>
+              <button class="primary">ارسال درخواست</button>
+            </form>
+          </div>
         </div>`;
+      $("openRequestModal").onclick = () => $("requestModal").classList.remove("hidden");
+      $("closeRequestModal").onclick = () => $("requestModal").classList.add("hidden");
+      $("requestModal").onclick = (event) => {
+        if (event.target.id === "requestModal") $("requestModal").classList.add("hidden");
+      };
       $("requestForm").onsubmit = (event) => {
         event.preventDefault();
         const form = new FormData(event.target);
@@ -1746,10 +1903,7 @@
                   <button type="button" data-date-offset="2">پس‌فردا</button>
                   <button type="button" data-date-offset="7">هفته بعد</button>
                 </div>
-                <div class="full calendar-picker">
-                  ${jalaliDateFields("meeting", quickDate(1))}
-                  <button type="button" class="blue" id="applyMeetingDate">انتخاب تاریخ</button>
-                </div>
+                ${persianDatePicker("meeting", quickDate(1))}
                 <label>ساعت شروع<input name="startTime" type="time" value="09:00" required></label>
                 <label>ساعت پایان<input name="endTime" type="time" value="10:00" required></label>
                 <label class="full">مکان یا لینک<input name="location" placeholder="اتاق جلسه یا لینک"></label>
@@ -1774,7 +1928,7 @@
       });
       bindCalendarNavigation();
       bindDatePresets("meeting");
-      bindJalaliPicker("meeting");
+      bindPersianDatePicker("meeting");
       bindCalendarDrag();
     }
 
@@ -2053,6 +2207,75 @@
       if ($(`${prefix}Day`)) $(`${prefix}Day`).value = fa(j.jd);
     }
 
+    function persianDatePicker(prefix, date) {
+      const selected = new Date(date);
+      const j = gregorianToJalali(selected);
+      return `
+        <div class="full persian-date-picker" data-persian-picker="${prefix}" data-picker-year="${j.jy}" data-picker-month="${j.jm}">
+          <div class="date-picker-head">
+            <button type="button" data-picker-prev="${prefix}">ماه قبل</button>
+            <strong id="${prefix}PickerTitle">${new Intl.DateTimeFormat("fa-IR-u-ca-persian", { month: "long", year: "numeric" }).format(selected)}</strong>
+            <button type="button" data-picker-next="${prefix}">ماه بعد</button>
+          </div>
+          <div class="date-picker-grid" id="${prefix}PickerGrid">${persianDatePickerGrid(prefix, j.jy, j.jm, selected)}</div>
+        </div>`;
+    }
+
+    function persianDatePickerGrid(prefix, jy, jm, selectedDate) {
+      const weekdays = ["ش", "ی", "د", "س", "چ", "پ", "ج"];
+      const daysInMonth = jm <= 6 ? 31 : jm <= 11 ? 30 : 29;
+      const first = jalaliToGregorian(jy, jm, 1);
+      const firstDate = new Date(first.gy, first.gm - 1, first.gd);
+      const offset = (firstDate.getDay() + 1) % 7;
+      const selected = gregorianToJalali(selectedDate);
+      const blanks = Array.from({ length: offset }, () => `<span></span>`).join("");
+      const days = Array.from({ length: daysInMonth }, (_, index) => {
+        const jd = index + 1;
+        const g = jalaliToGregorian(jy, jm, jd);
+        const value = localDateValue(new Date(g.gy, g.gm - 1, g.gd));
+        const active = selected.jy === jy && selected.jm === jm && selected.jd === jd ? "primary" : "";
+        return `<button type="button" class="${active}" data-picker-day="${prefix}" data-date-value="${value}">${fa(jd)}</button>`;
+      }).join("");
+      return `${weekdays.map((day) => `<span>${day}</span>`).join("")}${blanks}${days}`;
+    }
+
+    function bindPersianDatePicker(prefix) {
+      const picker = document.querySelector(`[data-persian-picker="${prefix}"]`);
+      if (!picker) return;
+      const renderPicker = () => {
+        const jy = Number(picker.dataset.pickerYear);
+        const jm = Number(picker.dataset.pickerMonth);
+        const selected = new Date($(`${prefix}DateIso`).value);
+        const g = jalaliToGregorian(jy, jm, 1);
+        $(`${prefix}PickerTitle`).textContent = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { month: "long", year: "numeric" }).format(new Date(g.gy, g.gm - 1, g.gd));
+        $(`${prefix}PickerGrid`).innerHTML = persianDatePickerGrid(prefix, jy, jm, selected);
+        bindPickerDays();
+      };
+      const shiftMonth = (delta) => {
+        let jy = Number(picker.dataset.pickerYear);
+        let jm = Number(picker.dataset.pickerMonth) + delta;
+        if (jm < 1) { jm = 12; jy--; }
+        if (jm > 12) { jm = 1; jy++; }
+        picker.dataset.pickerYear = jy;
+        picker.dataset.pickerMonth = jm;
+        renderPicker();
+      };
+      const bindPickerDays = () => {
+        document.querySelectorAll(`[data-picker-day="${prefix}"]`).forEach((btn) => {
+          btn.onclick = () => {
+            const date = dateFromLocalValue(btn.dataset.dateValue);
+            $(`${prefix}DateIso`).value = date.toISOString();
+            $(`${prefix}DateLabel`).value = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { dateStyle: "full" }).format(date);
+            document.querySelectorAll(`[data-date-target="${prefix}"] button`).forEach((item) => item.classList.remove("active"));
+            renderPicker();
+          };
+        });
+      };
+      document.querySelectorAll(`[data-picker-prev="${prefix}"]`).forEach((btn) => btn.onclick = () => shiftMonth(-1));
+      document.querySelectorAll(`[data-picker-next="${prefix}"]`).forEach((btn) => btn.onclick = () => shiftMonth(1));
+      bindPickerDays();
+    }
+
     function readJalaliFields(prefix) {
       const year = Number(digitsToLatin($(`${prefix}Year`)?.value));
       const month = Number(digitsToLatin($(`${prefix}Month`)?.value));
@@ -2151,14 +2374,30 @@
           if (target === "task") {
             $("taskDueAt").value = quickDateIso(offset);
             $("taskDueDateLabel").value = quickDateLabel(offset);
+            syncPersianPicker("task", quickDate(offset));
           }
           if (target === "meeting") {
             $("meetingDateIso").value = quickDateIso(offset);
             $("meetingDateLabel").value = quickDateLabel(offset);
             setJalaliFields("meeting", quickDate(offset));
+            syncPersianPicker("meeting", quickDate(offset));
           }
         };
       });
+    }
+
+    function syncPersianPicker(prefix, date) {
+      const picker = document.querySelector(`[data-persian-picker="${prefix}"]`);
+      if (!picker) return;
+      const j = gregorianToJalali(date);
+      picker.dataset.pickerYear = j.jy;
+      picker.dataset.pickerMonth = j.jm;
+      bindPersianDatePicker(prefix);
+      const grid = $(`${prefix}PickerGrid`);
+      if (grid) grid.innerHTML = persianDatePickerGrid(prefix, j.jy, j.jm, date);
+      const title = $(`${prefix}PickerTitle`);
+      if (title) title.textContent = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { month: "long", year: "numeric" }).format(date);
+      bindPersianDatePicker(prefix);
     }
 
     function agendaRow(meeting) {
@@ -2353,7 +2592,7 @@
         }
       });
       const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "خطای ارتباط با backend");
+      if (!response.ok) throw new Error(body.error || body.reason || body.body || "خطای ارتباط با backend");
       return body;
     }
 

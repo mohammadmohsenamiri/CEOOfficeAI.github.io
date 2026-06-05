@@ -89,7 +89,7 @@ function applyEnvironmentSettings(data) {
   if (publicBaseUrl) data.settings.deployment.publicBaseUrl = publicBaseUrl;
 
   const sampleIds = new Set(["u1", "u2", "u3", "u4"]);
-  if (process.env.RESET_SAMPLE_USERS === "true") {
+  if (process.env.KEEP_SAMPLE_USERS !== "true") {
     data.users = (data.users || []).filter((user) => !sampleIds.has(user.id));
     data.tasks = (data.tasks || []).filter((task) => !sampleIds.has(task.creatorId) && !(task.assignments || []).some((assignment) => sampleIds.has(assignment.userId)));
     data.ceoRequests = (data.ceoRequests || []).filter((request) => !sampleIds.has(request.requesterId) && !sampleIds.has(request.ceoId));
@@ -203,17 +203,85 @@ function resolveUsersByPersianText(data, text) {
 function parsePersianIntent(data, text) {
   const assignees = resolveUsersByPersianText(data, text);
   const cleaned = text.replace(/برای|بساز|ثبت کن|تا فردا|تا امروز|تسک|جلسه/g, "").trim().slice(0, 90);
+  if (text.includes("بلندمدت") || text.includes("بلند مدت") || text.includes("بدون تاریخ")) {
+    return { intent: "create_long_term_task", title: cleaned || "وظیفه بلندمدت جدید", assignees, confidence: 0.82, needsConfirmation: false };
+  }
   if (text.includes("جلسه")) {
-    return { intent: "create_meeting", title: cleaned || "جلسه جدید", members: assignees, startText: text.includes("فردا") ? "فردا" : "امروز", confidence: 0.76, needsConfirmation: true };
+    return { intent: "create_meeting", title: cleaned || "جلسه جدید", members: assignees, startText: text.includes("فردا") ? "فردا" : "امروز", confidence: 0.76, needsConfirmation: false };
   }
   if (text.includes("مدیرعامل") || text.includes("بودجه") || text.includes("تایید")) {
-    return { intent: "create_ceo_request", title: cleaned || "درخواست از مدیرعامل", confidence: 0.72, needsConfirmation: true };
+    return { intent: "create_ceo_request", title: cleaned || "درخواست از مدیرعامل", confidence: 0.72, needsConfirmation: false };
   }
   if (text.includes("تسک") || text.includes("کار")) {
-    return { intent: "create_task", title: cleaned || "تسک جدید", assignees, dueText: text.includes("فردا") ? "فردا" : "امروز", confidence: 0.81, needsConfirmation: true };
+    return { intent: "create_task", title: cleaned || "تسک جدید", assignees, dueText: text.includes("فردا") ? "فردا" : "امروز", confidence: 0.81, needsConfirmation: false };
   }
   if (text.includes("تسک‌های من") || text.includes("/mytasks")) return { intent: "query_tasks", confidence: 0.93, needsConfirmation: false };
   return { intent: "unknown", confidence: 0.3, needsConfirmation: false, question: "لطفاً مشخص کنید تسک، جلسه یا درخواست از مدیرعامل می‌خواهید." };
+}
+
+function nextDateFromText(text) {
+  const date = new Date();
+  if (text.includes("پس‌فردا") || text.includes("پس فردا")) date.setDate(date.getDate() + 2);
+  else if (text.includes("فردا")) date.setDate(date.getDate() + 1);
+  else if (text.includes("هفته بعد")) date.setDate(date.getDate() + 7);
+  date.setHours(9, 0, 0, 0);
+  return date;
+}
+
+function createTaskEntity(data, currentUser, intent, text, longTerm = false) {
+  let assigneeIds = Array.isArray(intent.assignees) && intent.assignees.length ? intent.assignees : [currentUser.id];
+  assigneeIds = Array.from(new Set(assigneeIds));
+  if (!canAssignTo(data, currentUser, assigneeIds)) throw new Error("تعریف مستقیم تسک برای مدیرعامل مجاز نیست. از مسیر درخواست از مدیرعامل استفاده کنید.");
+  const ceo = data.users.find((user) => user.isCeo);
+  const task = {
+    id: id("T"),
+    title: intent.title || "تسک جدید",
+    description: text,
+    creatorId: currentUser.id,
+    groupId: currentUser.groups?.[0] || "g2",
+    dueAt: longTerm ? "" : nextDateFromText(text).toISOString(),
+    priority: "medium",
+    longTerm,
+    visibility: assigneeIds.includes(ceo && ceo.id) ? "ceo_private" : "group",
+    status: "open",
+    createdAt: nowIso(),
+    assignments: assigneeIds.map((userId) => ({ userId, status: "pending", rejectReason: "", doneAt: "" }))
+  };
+  data.tasks.unshift(task);
+  task.assignments.forEach((assignment) => createNotification(data, assignment.userId, longTerm ? "وظیفه بلندمدت جدید" : "تسک جدید", task.title, { type: "task", id: task.id }));
+  return task;
+}
+
+function executeBaleIntent(data, currentUser, intent, text) {
+  if (intent.intent === "create_task") {
+    const task = createTaskEntity(data, currentUser, intent, text, false);
+    return { created: true, type: "task", id: task.id, reply: `تسک ثبت شد: ${task.title}` };
+  }
+  if (intent.intent === "create_long_term_task") {
+    const task = createTaskEntity(data, currentUser, intent, text, true);
+    return { created: true, type: "long_term_task", id: task.id, reply: `وظیفه بلندمدت ثبت شد: ${task.title}` };
+  }
+  if (intent.intent === "create_ceo_request") {
+    const ceo = data.users.find((user) => user.isCeo) || data.users.find((user) => user.role === "Admin");
+    const request = { id: id("R"), title: intent.title || "درخواست از مدیرعامل", description: text, requesterId: currentUser.id, ceoId: ceo?.id || currentUser.id, status: "pending", decisionReason: "", delegatedTaskId: "", createdAt: nowIso() };
+    data.ceoRequests.unshift(request);
+    if (ceo) createNotification(data, ceo.id, "درخواست جدید از مدیرعامل", request.title, { type: "ceo_request", id: request.id });
+    return { created: true, type: "ceo_request", id: request.id, reply: `درخواست از مدیرعامل ثبت شد: ${request.title}` };
+  }
+  if (intent.intent === "create_meeting") {
+    const startAt = nextDateFromText(text);
+    const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
+    const members = Array.from(new Set([currentUser.id, ...((intent.members && intent.members.length) ? intent.members : [])]));
+    const meeting = { id: id("M"), title: intent.title || "جلسه جدید", description: text, startAt: startAt.toISOString(), endAt: endAt.toISOString(), location: "", creatorId: currentUser.id, status: "scheduled", members, createdAt: nowIso() };
+    data.meetings.unshift(meeting);
+    members.forEach((userId) => createNotification(data, userId, "جلسه جدید", meeting.title, { type: "meeting", id: meeting.id }));
+    return { created: true, type: "meeting", id: meeting.id, reply: `جلسه ثبت شد: ${meeting.title}` };
+  }
+  if (intent.intent === "query_tasks") {
+    const tasks = data.tasks.filter((task) => canViewTask(currentUser, task)).slice(0, 8);
+    return { created: false, type: "query_tasks", reply: tasks.length ? tasks.map((task) => `- ${task.title}`).join("\n") : "تسکی برای شما ثبت نشده است." };
+  }
+  return { created: false, type: "unknown", reply: intent.question || "پیام دریافت شد، اما دستور قابل ثبت تشخیص داده نشد." };
 }
 
 function parseBaleSelfIntroduction(text) {
@@ -404,13 +472,14 @@ const routes = {
     const target = data.users.find((user) => user.id === body.userId);
     if (!target) return { status: 404, body: { error: "کاربر پیدا نشد." } };
     if (target.isCeo) return { status: 403, body: { error: "حذف مدیرعامل مجاز نیست." } };
-    const hasTasks = data.tasks.some((task) => task.creatorId === target.id || task.assignments.some((assignment) => assignment.userId === target.id));
-    if (hasTasks) {
-      const before = { ...target };
-      target.active = false;
-      log(data, currentUser.id, "soft_delete_user", "user", target.id, before, target);
-      return { saved: true, mode: "soft_delete", message: "کاربر سابقه کاری دارد و به جای حذف، معلق شد.", user: target };
-    }
+    data.tasks = (data.tasks || [])
+      .map((task) => ({ ...task, assignments: (task.assignments || []).filter((assignment) => assignment.userId !== target.id) }))
+      .filter((task) => task.creatorId !== target.id && task.assignments.length);
+    data.ceoRequests = (data.ceoRequests || []).filter((request) => request.requesterId !== target.id && request.ceoId !== target.id);
+    data.meetings = (data.meetings || [])
+      .map((meeting) => ({ ...meeting, members: (meeting.members || []).filter((member) => member !== target.id) }))
+      .filter((meeting) => meeting.creatorId !== target.id);
+    data.notifications = (data.notifications || []).filter((notification) => notification.userId !== target.id);
     data.users = data.users.filter((user) => user.id !== target.id);
     log(data, currentUser.id, "delete_user", "user", target.id, target, null);
     return { saved: true, mode: "delete" };
@@ -486,8 +555,9 @@ const routes = {
       description: String(body.description || "").trim(),
       creatorId: currentUser.id,
       groupId: String(body.groupId || currentUser.groups[0]),
-      dueAt: body.dueAt || nowIso(),
+      dueAt: body.longTerm ? "" : (body.dueAt || nowIso()),
       priority: body.priority || "medium",
+      longTerm: Boolean(body.longTerm),
       visibility: assigneeIds.includes(ceo && ceo.id) ? "ceo_private" : "group",
       status: "open",
       createdAt: nowIso(),
@@ -497,6 +567,15 @@ const routes = {
     task.assignments.forEach((a) => createNotification(data, a.userId, "تسک جدید", task.title, { type: "task", id: task.id }));
     log(data, currentUser.id, "create", "task", task.id, null, task);
     return { status: 201, body: task };
+  },
+
+  "DELETE /api/tasks": async ({ data, body, currentUser }) => {
+    const task = data.tasks.find((item) => item.id === body.taskId);
+    if (!task || !canViewTask(currentUser, task)) return { status: 404, body: { error: "تسک پیدا نشد." } };
+    if (currentUser.role !== "Admin" && task.creatorId !== currentUser.id) return { status: 403, body: { error: "فقط سازنده یا مدیر سیستم می‌تواند تسک را حذف کند." } };
+    data.tasks = data.tasks.filter((item) => item.id !== task.id);
+    log(data, currentUser.id, "delete", "task", task.id, task, null);
+    return { saved: true };
   },
 
   "PATCH /api/tasks/assignment": async ({ data, body, currentUser }) => {
@@ -521,10 +600,10 @@ const routes = {
   "GET /api/ceo-requests": async ({ data, currentUser }) => data.ceoRequests.filter((request) => currentUser.role === "CEO" || currentUser.role === "Admin" || request.requesterId === currentUser.id),
 
   "POST /api/ceo-requests": async ({ data, body, currentUser }) => {
-    const ceo = data.users.find((user) => user.isCeo);
-    const request = { id: id("R"), title: String(body.title || ""), description: String(body.description || ""), requesterId: currentUser.id, ceoId: ceo.id, status: "pending", decisionReason: "", delegatedTaskId: "", createdAt: nowIso() };
+    const ceo = data.users.find((user) => user.isCeo) || data.users.find((user) => user.role === "Admin");
+    const request = { id: id("R"), title: String(body.title || ""), description: String(body.description || ""), requesterId: currentUser.id, ceoId: ceo?.id || currentUser.id, status: "pending", decisionReason: "", delegatedTaskId: "", createdAt: nowIso() };
     data.ceoRequests.unshift(request);
-    createNotification(data, ceo.id, "درخواست جدید از مدیرعامل", request.title, { type: "ceo_request", id: request.id });
+    if (ceo) createNotification(data, ceo.id, "درخواست جدید از مدیرعامل", request.title, { type: "ceo_request", id: request.id });
     log(data, currentUser.id, "create", "ceo_request", request.id, null, request);
     return { status: 201, body: request };
   },
@@ -611,10 +690,18 @@ const routes = {
       }
     }
     const parsedIntent = normalized.text ? parsePersianIntent(data, normalized.text) : { intent: "unknown", question: "لطفاً متن پیام را ارسال کنید." };
-    const record = { id: id("MSG"), ...normalized, userId: linkedUser ? linkedUser.id : "", parsedIntent, status: linkedUser ? "parsed" : "unknown_sender" };
+    let execution = null;
+    if (linkedUser) {
+      try {
+        execution = executeBaleIntent(data, linkedUser, parsedIntent, normalized.text);
+      } catch (error) {
+        execution = { created: false, type: "error", reply: error.message };
+      }
+    }
+    const record = { id: id("MSG"), ...normalized, userId: linkedUser ? linkedUser.id : "", parsedIntent, execution, status: linkedUser ? "executed" : "unknown_sender" };
     data.incomingMessages.unshift(record);
     log(data, linkedUser ? linkedUser.id : "anonymous", "incoming_bale_message", "message", record.id, null, record);
-    const reply = linkedUser ? "پیام شما دریافت شد. لطفاً خلاصه برداشت سیستم را تایید یا لغو کنید." : "معرفی شما ثبت نشد.\n\nلطفاً نام و جایگاه شغلی خود را با قالب زیر ارسال نمایید و منتظر تایید از سوی ادمین باشید.\n\nنام: محمد امیری\nجایگاه شغلی: مدیر پروژه";
+    const reply = linkedUser ? execution.reply : "معرفی شما ثبت نشد.\n\nلطفاً نام و جایگاه شغلی خود را با قالب زیر ارسال نمایید و منتظر تایید از سوی ادمین باشید.\n\nنام: محمد امیری\nجایگاه شغلی: مدیر پروژه";
     const sendResult = await sendBaleText(data, normalized.senderMessengerId, reply);
     return {
       ok: true,
@@ -666,8 +753,8 @@ const routes = {
     const now = Date.now();
     const suggestions = [];
     for (const task of data.tasks) {
-      const due = new Date(task.dueAt).getTime();
-      if (task.status !== "done" && due < now) {
+      const due = task.dueAt ? new Date(task.dueAt).getTime() : null;
+      if (task.status !== "done" && due && due < now) {
         suggestions.push({
           id: id("SUG"),
           type: "overdue_task",
@@ -697,8 +784,8 @@ const routes = {
     const now = Date.now();
     let created = 0;
     for (const task of data.tasks) {
-      const due = new Date(task.dueAt).getTime();
-      if (task.status !== "done" && due < now) {
+      const due = task.dueAt ? new Date(task.dueAt).getTime() : null;
+      if (task.status !== "done" && due && due < now) {
         createNotification(data, task.creatorId, "هشدار تسک عقب‌افتاده", task.title, { type: "task", id: task.id });
         created += 1;
       }
@@ -737,7 +824,7 @@ async function handle(req, res) {
   if (!route) return send(res, 404, { error: "Route not found", route: key });
 
   try {
-    const body = ["POST", "PUT", "PATCH"].includes(req.method) ? await readBody(req) : {};
+    const body = ["POST", "PUT", "PATCH", "DELETE"].includes(req.method) ? await readBody(req) : {};
     const currentUser = actor(data, req);
     const result = await route({ data, body, req, currentUser, url });
     if (req.method !== "GET") writeData(data);
