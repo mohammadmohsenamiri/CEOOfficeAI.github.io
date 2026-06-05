@@ -45,6 +45,7 @@ const seed = {
     { id: "g-ceo-request", title: "درخواست از مدیرعامل", type: "ceo_request" }
   ],
   tasks: [],
+  recurringTasks: [],
   ceoRequests: [],
   meetings: [],
   incomingMessages: [],
@@ -77,7 +78,18 @@ function cleanWebhookUrl(value) {
 function applyEnvironmentSettings(data) {
   if (!data.settings) data.settings = {};
   if (!data.settings.bale) data.settings.bale = structuredClone(seed.settings.bale);
+  if (!data.settings.ai) data.settings.ai = structuredClone(seed.settings.ai);
   if (!data.settings.deployment) data.settings.deployment = structuredClone(seed.settings.deployment);
+  data.users = data.users || [];
+  data.groups = data.groups || structuredClone(seed.groups);
+  data.tasks = data.tasks || [];
+  data.recurringTasks = data.recurringTasks || [];
+  data.ceoRequests = data.ceoRequests || [];
+  data.meetings = data.meetings || [];
+  data.incomingMessages = data.incomingMessages || [];
+  data.pendingUsers = data.pendingUsers || [];
+  data.notifications = data.notifications || [];
+  data.auditLogs = data.auditLogs || [];
 
   const publicBaseUrl = cleanPublicUrl(PUBLIC_BASE_URL);
   const envWebhookUrl = process.env.BALE_WEBHOOK_URL || (publicBaseUrl ? `${publicBaseUrl}/api/webhooks/bale` : "");
@@ -87,6 +99,10 @@ function applyEnvironmentSettings(data) {
   if (process.env.BALE_SECRET) data.settings.bale.secret = process.env.BALE_SECRET;
   if (process.env.BALE_REPLY_MODE) data.settings.bale.defaultReplyMode = process.env.BALE_REPLY_MODE;
   if (publicBaseUrl) data.settings.deployment.publicBaseUrl = publicBaseUrl;
+  if (process.env.AI_PROVIDER) data.settings.ai.onlineProvider = process.env.AI_PROVIDER;
+  if (process.env.AI_BASE_URL) data.settings.ai.baseUrl = cleanPublicUrl(process.env.AI_BASE_URL);
+  if (process.env.AI_MODEL) data.settings.ai.model = process.env.AI_MODEL;
+  if (process.env.AI_API_KEY) data.settings.ai.apiKeyConfigured = true;
 
   const sampleIds = new Set(["u1", "u2", "u3", "u4"]);
   if (process.env.KEEP_SAMPLE_USERS !== "true") {
@@ -173,10 +189,169 @@ function canViewTask(currentUser, task) {
   return currentUser.groups.includes(task.groupId);
 }
 
+function canViewRecurringTask(currentUser, recurringTask) {
+  if (currentUser.role === "Admin") return true;
+  if (recurringTask.creatorId === currentUser.id) return true;
+  if ((recurringTask.assigneeIds || []).includes(currentUser.id)) return true;
+  return (currentUser.groups || []).includes(recurringTask.groupId);
+}
+
 function canAssignTo(data, currentUser, assigneeIds) {
   const ceo = data.users.find((user) => user.isCeo);
   if (!ceo || !assigneeIds.includes(ceo.id)) return true;
   return currentUser.role === "CEO" && assigneeIds.every((userId) => userId === ceo.id);
+}
+
+function buildScopedMessengerData(data, currentUser) {
+  const visibleTaskList = data.tasks.filter((task) => canViewTask(currentUser, task));
+  const visibleMeetingList = data.meetings.filter((meeting) => currentUser.role === "Admin" || meeting.creatorId === currentUser.id || meeting.members.includes(currentUser.id));
+  const visibleRecurringList = data.recurringTasks.filter((item) => canViewRecurringTask(currentUser, item));
+  return {
+    user: { id: currentUser.id, fullName: currentUser.fullName, role: currentUser.role, groups: currentUser.groups },
+    tasks: visibleTaskList.map((task) => ({
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      dueAt: task.dueAt,
+      longTerm: Boolean(task.longTerm),
+      status: task.status,
+      assigneeIds: task.assignments.map((assignment) => assignment.userId)
+    })),
+    meetings: visibleMeetingList.map((meeting) => ({
+      id: meeting.id,
+      title: meeting.title,
+      description: meeting.description,
+      startAt: meeting.startAt,
+      endAt: meeting.endAt,
+      members: meeting.members
+    })),
+    recurringTasks: visibleRecurringList.map((item) => ({
+      id: item.id,
+      title: item.title,
+      description: item.description,
+      cycle: item.cycle,
+      interval: item.interval,
+      nextRunAt: item.nextRunAt,
+      active: item.active,
+      assigneeIds: item.assigneeIds
+    }))
+  };
+}
+
+function aiRuntimeSettings(data) {
+  const ai = data.settings.ai || {};
+  return {
+    provider: process.env.AI_PROVIDER || ai.onlineProvider || "not-configured",
+    baseUrl: cleanPublicUrl(process.env.AI_BASE_URL || ai.baseUrl || ""),
+    apiKey: process.env.AI_API_KEY || ai.apiKey || "",
+    model: process.env.AI_MODEL || ai.model || "gpt-4o-mini"
+  };
+}
+
+async function askMessengerAI(data, currentUser, text) {
+  const settings = aiRuntimeSettings(data);
+  const provider = String(settings.provider || "").toLowerCase();
+  if (!settings.apiKey || !settings.baseUrl || provider === "not-configured" || provider === "disabled") {
+    return {
+      provider: settings.provider,
+      model: settings.model,
+      configured: false,
+      reply: "هوش مصنوعی پیام‌رسان هنوز پیکربندی نشده است. برای پاسخ‌های عمومی باید AI_PROVIDER و AI_BASE_URL و AI_API_KEY و AI_MODEL در Render تنظیم شوند."
+    };
+  }
+  const scopedData = buildScopedMessengerData(data, currentUser);
+  const messages = [
+    {
+      role: "system",
+      content: "تو دستیار فارسی و راست‌چین دفتر مدیرعامل هستی. فقط بر اساس داده‌های مجاز همین کاربر پاسخ بده. اگر داده کافی نیست صریح بگو. پاسخ کوتاه، عملی و فارسی باشد."
+    },
+    {
+      role: "user",
+      content: JSON.stringify({ question: text, scopedData }, null, 2)
+    }
+  ];
+  const response = await fetch(`${settings.baseUrl.replace(/\/$/, "")}/v1/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${settings.apiKey}`
+    },
+    body: JSON.stringify({
+      model: settings.model,
+      messages,
+      temperature: 0.2,
+      max_tokens: 700
+    })
+  });
+  const raw = await response.text();
+  if (!response.ok) {
+    return {
+      provider: settings.provider,
+      model: settings.model,
+      configured: true,
+      reply: `خطای هوش مصنوعی: ${response.status} ${raw.slice(0, 180)}`
+    };
+  }
+  let parsed = {};
+  try { parsed = JSON.parse(raw); } catch {}
+  return {
+    provider: settings.provider,
+    model: settings.model,
+    configured: true,
+    reply: parsed.choices?.[0]?.message?.content?.trim() || "پاسخ معتبری از هوش مصنوعی دریافت نشد."
+  };
+}
+
+function nextRecurringRun(sourceDate, cycle, interval, daysOfWeek, dayOfMonth, time) {
+  const base = sourceDate ? new Date(sourceDate) : new Date();
+  if (Number.isNaN(base.getTime())) base.setTime(Date.now());
+  const step = Math.max(1, Number(interval) || 1);
+  if (cycle === "weekly" && Array.isArray(daysOfWeek) && daysOfWeek.length) {
+    for (let offset = 1; offset <= 14 * step; offset += 1) {
+      const candidate = new Date(base);
+      candidate.setDate(candidate.getDate() + offset);
+      if (daysOfWeek.includes(candidate.getDay())) {
+        const [hour, minute] = String(time || "09:00").split(":").map(Number);
+        candidate.setHours(hour || 9, minute || 0, 0, 0);
+        return candidate.toISOString();
+      }
+    }
+  }
+  const next = new Date(base);
+  if (cycle === "monthly") {
+    next.setMonth(next.getMonth() + step);
+    if (dayOfMonth) next.setDate(Math.min(Number(dayOfMonth), 28));
+  } else if (cycle === "weekly") {
+    next.setDate(next.getDate() + 7 * step);
+  } else {
+    next.setDate(next.getDate() + step);
+  }
+  const [hour, minute] = String(time || "09:00").split(":").map(Number);
+  next.setHours(hour || 9, minute || 0, 0, 0);
+  return next.toISOString();
+}
+
+function createTaskFromRecurring(data, recurringTask) {
+  const task = {
+    id: id("T"),
+    title: recurringTask.title,
+    description: recurringTask.description,
+    creatorId: recurringTask.creatorId,
+    groupId: recurringTask.groupId,
+    dueAt: recurringTask.nextRunAt || nowIso(),
+    priority: recurringTask.priority || "medium",
+    longTerm: false,
+    visibility: recurringTask.visibility || "group",
+    status: "open",
+    createdAt: nowIso(),
+    recurringTaskId: recurringTask.id,
+    assignments: (recurringTask.assigneeIds || []).map((userId) => ({ userId, status: "pending", rejectReason: "", doneAt: "" }))
+  };
+  data.tasks.unshift(task);
+  task.assignments.forEach((assignment) => createNotification(data, assignment.userId, "تسک تکرارشونده جدید", task.title, { type: "task", id: task.id }));
+  recurringTask.lastGeneratedAt = nowIso();
+  recurringTask.nextRunAt = nextRecurringRun(task.dueAt, recurringTask.cycle, recurringTask.interval, recurringTask.daysOfWeek, recurringTask.dayOfMonth, recurringTask.time);
+  return task;
 }
 
 function normalizeBaleMessage(payload) {
@@ -201,6 +376,19 @@ function resolveUsersByPersianText(data, text) {
 }
 
 function parsePersianIntent(data, text) {
+  const normalizedText = String(text || "");
+  if (/تکرارشونده|تکرار شونده|روزانه|هفتگی|ماهانه/.test(normalizedText)) {
+    const assignees = resolveUsersByPersianText(data, normalizedText);
+    const cycle = normalizedText.includes("ماهانه") ? "monthly" : normalizedText.includes("هفتگی") ? "weekly" : "daily";
+    return { intent: "create_recurring_task", title: normalizedText.slice(0, 90) || "تسک تکرارشونده جدید", assignees, cycle, confidence: 0.84, needsConfirmation: false };
+  }
+  if (/انتقال.*بلندمدت|بلندمدت کن|بدون تاریخ کن/.test(normalizedText)) {
+    const visibleTitle = data.tasks.find((item) => item.title && normalizedText.includes(item.title));
+    return { intent: "transfer_task_to_long_term", title: normalizedText.slice(0, 90), taskId: visibleTitle?.id || "", confidence: 0.74, needsConfirmation: false };
+  }
+  if (/نمایش|لیست|گزارش|امروز|فردا|این هفته|جلسات|وظایف|تسک‌ها|تسک ها/.test(normalizedText)) {
+    return { intent: "ask_ai", question: normalizedText, confidence: 0.86, needsConfirmation: false };
+  }
   const assignees = resolveUsersByPersianText(data, text);
   const cleaned = text.replace(/برای|بساز|ثبت کن|تا فردا|تا امروز|تسک|جلسه/g, "").trim().slice(0, 90);
   if (text.includes("بلندمدت") || text.includes("بلند مدت") || text.includes("بدون تاریخ")) {
@@ -252,7 +440,7 @@ function createTaskEntity(data, currentUser, intent, text, longTerm = false) {
   return task;
 }
 
-function executeBaleIntent(data, currentUser, intent, text) {
+async function executeBaleIntent(data, currentUser, intent, text) {
   if (intent.intent === "create_task") {
     const task = createTaskEntity(data, currentUser, intent, text, false);
     return { created: true, type: "task", id: task.id, reply: `تسک ثبت شد: ${task.title}` };
@@ -260,6 +448,43 @@ function executeBaleIntent(data, currentUser, intent, text) {
   if (intent.intent === "create_long_term_task") {
     const task = createTaskEntity(data, currentUser, intent, text, true);
     return { created: true, type: "long_term_task", id: task.id, reply: `وظیفه بلندمدت ثبت شد: ${task.title}` };
+  }
+  if (intent.intent === "create_recurring_task") {
+    const assigneeIds = Array.from(new Set((Array.isArray(intent.assignees) && intent.assignees.length) ? intent.assignees : [currentUser.id]));
+    if (!canAssignTo(data, currentUser, assigneeIds)) throw new Error("تعریف مستقیم تسک برای مدیرعامل مجاز نیست.");
+    const recurringTask = {
+      id: id("RT"),
+      title: intent.title || "تسک تکرارشونده جدید",
+      description: text,
+      creatorId: currentUser.id,
+      groupId: currentUser.groups?.[0] || "g2",
+      assigneeIds,
+      cycle: intent.cycle || "daily",
+      interval: 1,
+      daysOfWeek: [],
+      dayOfMonth: null,
+      time: "09:00",
+      nextRunAt: nextRecurringRun(nowIso(), intent.cycle || "daily", 1, [], null, "09:00"),
+      priority: "medium",
+      visibility: "group",
+      active: true,
+      createdAt: nowIso()
+    };
+    data.recurringTasks.unshift(recurringTask);
+    return { created: true, type: "recurring_task", id: recurringTask.id, reply: `تسک تکرارشونده ثبت شد: ${recurringTask.title}` };
+  }
+  if (intent.intent === "transfer_task_to_long_term") {
+    const task = data.tasks.find((item) => item.id === intent.taskId || (item.title && text.includes(item.title)));
+    if (!task || !canViewTask(currentUser, task)) return { created: false, type: "transfer_task_to_long_term", reply: "تسکی برای انتقال پیدا نشد. لطفاً عنوان دقیق تسک را در پیام بنویسید." };
+    if (currentUser.role !== "Admin" && task.creatorId !== currentUser.id) return { created: false, type: "transfer_task_to_long_term", reply: "فقط سازنده یا ادمین می‌تواند تسک را به بلندمدت منتقل کند." };
+    task.longTerm = true;
+    task.dueAt = "";
+    task.updatedAt = nowIso();
+    return { created: false, type: "transfer_task_to_long_term", id: task.id, reply: `تسک به وظایف بلندمدت منتقل شد: ${task.title}` };
+  }
+  if (intent.intent === "ask_ai") {
+    const ai = await askMessengerAI(data, currentUser, intent.question || text);
+    return { created: false, type: "ai_answer", ai: { provider: ai.provider, model: ai.model, configured: ai.configured }, reply: ai.reply };
   }
   if (intent.intent === "create_ceo_request") {
     const ceo = data.users.find((user) => user.isCeo) || data.users.find((user) => user.role === "Admin");
@@ -343,6 +568,7 @@ const routes = {
   "GET /api/health": async ({ data }) => ({ ok: true, product: "CEO Office AI Coordinator", phases: "P0-P6 backend MVP", time: nowIso(), counts: {
     users: data.users.length,
     tasks: data.tasks.length,
+    recurringTasks: data.recurringTasks.length,
     meetings: data.meetings.length,
     ceoRequests: data.ceoRequests.length
   }}),
@@ -578,6 +804,65 @@ const routes = {
     return { saved: true };
   },
 
+  "PATCH /api/tasks/long-term": async ({ data, body, currentUser }) => {
+    const task = data.tasks.find((item) => item.id === body.taskId);
+    if (!task || !canViewTask(currentUser, task)) return { status: 404, body: { error: "تسک پیدا نشد." } };
+    if (currentUser.role !== "Admin" && task.creatorId !== currentUser.id) return { status: 403, body: { error: "فقط سازنده یا ادمین می‌تواند تسک را به بلندمدت منتقل کند." } };
+    const before = { ...task };
+    task.longTerm = true;
+    task.dueAt = "";
+    task.updatedAt = nowIso();
+    log(data, currentUser.id, "transfer_to_long_term", "task", task.id, before, task);
+    return { saved: true, task };
+  },
+
+  "GET /api/recurring-tasks": async ({ data, currentUser }) => data.recurringTasks.filter((item) => canViewRecurringTask(currentUser, item)),
+
+  "POST /api/recurring-tasks": async ({ data, body, currentUser }) => {
+    const assigneeIds = Array.isArray(body.assigneeIds) ? body.assigneeIds : [];
+    if (!assigneeIds.length) return { status: 400, body: { error: "حداقل یک مسئول انتخاب کنید." } };
+    if (!canAssignTo(data, currentUser, assigneeIds)) return { status: 403, body: { error: "تعریف مستقیم تسک برای مدیرعامل مجاز نیست." } };
+    const recurringTask = {
+      id: id("RT"),
+      title: String(body.title || "").trim(),
+      description: String(body.description || "").trim(),
+      creatorId: currentUser.id,
+      groupId: String(body.groupId || currentUser.groups?.[0] || "g2"),
+      assigneeIds,
+      cycle: ["daily", "weekly", "monthly"].includes(body.cycle) ? body.cycle : "daily",
+      interval: Math.max(1, Number(body.interval) || 1),
+      daysOfWeek: Array.isArray(body.daysOfWeek) ? body.daysOfWeek.map(Number).filter((day) => day >= 0 && day <= 6) : [],
+      dayOfMonth: body.dayOfMonth ? Number(body.dayOfMonth) : null,
+      time: String(body.time || "09:00"),
+      nextRunAt: nextRecurringRun(body.startAt || nowIso(), body.cycle || "daily", body.interval || 1, body.daysOfWeek || [], body.dayOfMonth, body.time || "09:00"),
+      priority: body.priority || "medium",
+      visibility: "group",
+      active: body.active !== false,
+      createdAt: nowIso()
+    };
+    if (!recurringTask.title) return { status: 400, body: { error: "عنوان تسک تکرارشونده الزامی است." } };
+    data.recurringTasks.unshift(recurringTask);
+    log(data, currentUser.id, "create", "recurring_task", recurringTask.id, null, recurringTask);
+    return { status: 201, body: recurringTask };
+  },
+
+  "DELETE /api/recurring-tasks": async ({ data, body, currentUser }) => {
+    const item = data.recurringTasks.find((task) => task.id === body.recurringTaskId);
+    if (!item || !canViewRecurringTask(currentUser, item)) return { status: 404, body: { error: "تسک تکرارشونده پیدا نشد." } };
+    if (currentUser.role !== "Admin" && item.creatorId !== currentUser.id) return { status: 403, body: { error: "فقط سازنده یا ادمین می‌تواند این چرخه را حذف کند." } };
+    data.recurringTasks = data.recurringTasks.filter((task) => task.id !== item.id);
+    log(data, currentUser.id, "delete", "recurring_task", item.id, item, null);
+    return { saved: true };
+  },
+
+  "POST /api/recurring-tasks/generate-next": async ({ data, body, currentUser }) => {
+    const item = data.recurringTasks.find((task) => task.id === body.recurringTaskId);
+    if (!item || !canViewRecurringTask(currentUser, item)) return { status: 404, body: { error: "تسک تکرارشونده پیدا نشد." } };
+    const task = createTaskFromRecurring(data, item);
+    log(data, currentUser.id, "generate_next", "recurring_task", item.id, null, task);
+    return { saved: true, task, recurringTask: item };
+  },
+
   "PATCH /api/tasks/assignment": async ({ data, body, currentUser }) => {
     const task = data.tasks.find((item) => item.id === body.taskId);
     if (!task || !canViewTask(currentUser, task)) return { status: 404, body: { error: "تسک پیدا نشد." } };
@@ -649,6 +934,26 @@ const routes = {
     return { saved: true, meeting };
   },
 
+  "POST /api/messages/ask": async ({ data, body, currentUser }) => {
+    const text = String(body.text || "").trim();
+    if (!text) return { status: 400, body: { error: "متن پرسش الزامی است." } };
+    const ai = await askMessengerAI(data, currentUser, text);
+    const record = {
+      id: id("MSG"),
+      source: body.source || "web",
+      senderMessengerId: currentUser.id,
+      text,
+      userId: currentUser.id,
+      parsedIntent: { intent: "ask_ai" },
+      execution: { type: "ai_answer", ai: { provider: ai.provider, model: ai.model, configured: ai.configured }, reply: ai.reply },
+      status: "answered",
+      receivedAt: nowIso()
+    };
+    data.incomingMessages.unshift(record);
+    log(data, currentUser.id, "ask_ai", "message", record.id, null, record);
+    return { reply: ai.reply, ai: { provider: ai.provider, model: ai.model, configured: ai.configured }, messageId: record.id };
+  },
+
   "POST /api/messages/parse": async ({ data, body }) => parsePersianIntent(data, String(body.text || "")),
 
   "POST /api/webhooks/bale": async ({ data, req, body }) => {
@@ -693,7 +998,7 @@ const routes = {
     let execution = null;
     if (linkedUser) {
       try {
-        execution = executeBaleIntent(data, linkedUser, parsedIntent, normalized.text);
+        execution = await executeBaleIntent(data, linkedUser, parsedIntent, normalized.text);
       } catch (error) {
         execution = { created: false, type: "error", reply: error.message };
       }

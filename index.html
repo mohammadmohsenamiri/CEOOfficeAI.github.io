@@ -1232,6 +1232,7 @@
       <section id="view-dashboard"></section>
       <section id="view-tasks" class="hidden"></section>
       <section id="view-longterm" class="hidden"></section>
+      <section id="view-recurring" class="hidden"></section>
       <section id="view-requests" class="hidden"></section>
       <section id="view-meetings" class="hidden"></section>
       <section id="view-messenger" class="hidden"></section>
@@ -1274,6 +1275,7 @@
     };
 
     const pages = [
+      ["recurring", "تسک‌های تکرارشونده", "چرخه‌های روزانه، هفتگی و ماهانه", "clock"],
       ["dashboard", "داشبورد", "نمای خلاصه عملیات", "dashboard"],
       ["tasks", "تسک‌ها", "چرخه چندمسئوله قبول، رد و Done", "tasks"],
       ["longterm", "وظایف بلندمدت", "کارهای بدون تاریخ با مسئول مشخص", "tasks"],
@@ -1302,6 +1304,7 @@
           { userId: "u1", status: "accepted", rejectReason: "", doneAt: "" }
         ]}
       ],
+      recurringTasks: [],
       requests: [
         { id: "R-2201", title: "درخواست تایید بودجه رویداد مشتریان", description: "بودجه اولیه برای رویداد تیرماه نیاز به تایید دارد.", requesterId: "u3", ceoId: "u1", status: "pending", decisionReason: "", delegatedTaskId: "" }
       ],
@@ -1338,10 +1341,11 @@
     }
 
     async function loadBackendState() {
-      const [users, groups, tasks, requests, meetings, messages] = await Promise.all([
+      const [users, groups, tasks, recurringTasks, requests, meetings, messages] = await Promise.all([
         backendFetch("/api/users"),
         backendFetch("/api/groups"),
         backendFetch("/api/tasks"),
+        backendFetch("/api/recurring-tasks"),
         backendFetch("/api/ceo-requests"),
         backendFetch("/api/meetings"),
         backendFetch("/api/messages")
@@ -1379,6 +1383,22 @@
           rejectReason: assignment.rejectReason || "",
           doneAt: assignment.doneAt || ""
         }))
+      }));
+      state.recurringTasks = recurringTasks.map((item) => ({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        creatorId: item.creatorId,
+        group: groupTitle(item.groupId),
+        groupId: item.groupId,
+        assigneeIds: item.assigneeIds || [],
+        cycle: item.cycle || "daily",
+        interval: item.interval || 1,
+        daysOfWeek: item.daysOfWeek || [],
+        dayOfMonth: item.dayOfMonth || "",
+        time: item.time || "09:00",
+        nextRunAt: item.nextRunAt,
+        active: item.active !== false
       }));
       state.requests = requests.map((item) => ({
         id: item.id,
@@ -1447,6 +1467,16 @@
       return visibleTasks().filter((task) => task.longTerm);
     }
 
+    function visibleRecurringTasks() {
+      const u = currentUser();
+      return (state.recurringTasks || []).filter((task) => {
+        if (isPrivileged()) return true;
+        if (task.creatorId === u.id) return true;
+        if ((task.assigneeIds || []).includes(u.id)) return true;
+        return task.group === u.group || task.groupId && (u.groupIds || []).includes(task.groupId);
+      });
+    }
+
     function visibleRequests() {
       const u = currentUser();
       return state.requests.filter((r) => u.role === "CEO" || r.requesterId === u.id || u.role === "Admin");
@@ -1499,6 +1529,7 @@
         dashboard: renderDashboard,
         tasks: renderTasks,
         longterm: renderLongTermTasks,
+        recurring: renderRecurringTasks,
         requests: renderRequests,
         meetings: renderMeetings,
         messenger: renderMessenger,
@@ -1591,6 +1622,174 @@
       bindTaskActions();
     }
 
+    function renderRecurringTasks() {
+      if (!backendOnline && !MOCK_DATA_ENABLED) {
+        $("view-recurring").innerHTML = backendRequired("تسک‌های تکرارشونده", "تسک‌های تکرارشونده باید در backend ذخیره شوند و بر اساس چرخه، تسک زمان‌دار بسازند.");
+        bindBackendGate();
+        return;
+      }
+      const tasks = visibleRecurringTasks();
+      $("view-recurring").innerHTML = `
+        <div class="calendar-shell">
+          <div class="panel">
+            <div class="panel-head">
+              <h2>تسک‌های تکرارشونده</h2>
+              <div class="page-actions">
+                <span class="chip">${fa(tasks.length)} چرخه</span>
+                <button class="primary" id="openRecurringTaskModal">تسک تکرارشونده جدید</button>
+              </div>
+            </div>
+            <div class="list">${tasks.map(recurringTaskCard).join("") || empty("چرخه‌ی تکراری برای نمایش وجود ندارد.")}</div>
+          </div>
+          ${recurringTaskModal()}
+        </div>`;
+      bindRecurringTaskModal();
+      bindRecurringTaskActions();
+    }
+
+    function recurringTaskCard(task) {
+      const cycleLabel = { daily: "روزانه", weekly: "هفتگی", monthly: "ماهانه" }[task.cycle] || task.cycle;
+      const assignees = (task.assigneeIds || []).map((id) => user(id)?.fullName || "کاربر").join("، ");
+      const canDelete = isPrivileged() || task.creatorId === currentUser().id;
+      return `
+        <article class="item-card">
+          <div class="item-top">
+            <div style="display:flex; gap:10px; align-items:flex-start;">
+              <span class="card-icon">${icons.clock}</span>
+              <div>
+                <h3>${task.title}</h3>
+                <p class="muted small">${task.description || "بدون توضیح"}</p>
+              </div>
+            </div>
+            <div class="chips"><span class="chip blue">${cycleLabel}</span><span class="chip">${task.active ? "فعال" : "غیرفعال"}</span></div>
+          </div>
+          <div class="chips">
+            <span class="chip">تکرار هر ${fa(task.interval || 1)} دوره</span>
+            <span class="chip">ساعت: ${task.time || "09:00"}</span>
+            <span class="chip">اجرای بعدی: ${task.nextRunAt ? dateFa(task.nextRunAt) : "ثبت نشده"}</span>
+          </div>
+          <div class="chips"><span class="chip">مسئولان: ${assignees || "ثبت نشده"}</span></div>
+          <div class="item-actions">
+            <button class="blue" data-generate-recurring="${task.id}">ساخت تسک بعدی</button>
+            ${canDelete ? `<button class="danger" data-delete-recurring="${task.id}">حذف چرخه</button>` : ""}
+          </div>
+        </article>`;
+    }
+
+    function recurringTaskModal() {
+      return `
+        <div class="modal-backdrop hidden" id="recurringTaskModal">
+          <form class="modal-card" id="recurringTaskForm">
+            <div class="panel-head">
+              <h2>تسک تکرارشونده جدید</h2>
+              <button type="button" class="ghost" data-close-modal="recurringTaskModal">بستن</button>
+            </div>
+            <div class="form-grid">
+              <label class="full">عنوان<input name="title" required placeholder="مثلاً ارسال گزارش هفتگی فروش"></label>
+              <label class="full">توضیح<textarea name="description" placeholder="جزئیات چرخه"></textarea></label>
+              <label>گروه<input name="group" value="${currentUser().group}"></label>
+              <label>چرخه
+                <select name="cycle">
+                  <option value="daily">روزانه</option>
+                  <option value="weekly">هفتگی</option>
+                  <option value="monthly">ماهانه</option>
+                </select>
+              </label>
+              <label>فاصله تکرار<input name="interval" type="number" min="1" value="1"></label>
+              <label>ساعت اجرا<input name="time" type="time" value="09:00"></label>
+              <label>شروع چرخه<input name="startDateLabel" id="recurringDateLabel" readonly value="${quickDateLabel(1)}"><input name="startAt" id="recurringDateIso" type="hidden" value="${quickDateIso(1)}"></label>
+              <div class="full segmented" data-date-target="recurring">
+                <button type="button" data-date-offset="0">امروز</button>
+                <button type="button" data-date-offset="1" class="active">فردا</button>
+                <button type="button" data-date-offset="2">پس‌فردا</button>
+                <button type="button" data-date-offset="7">هفته بعد</button>
+              </div>
+              ${persianDatePicker("recurring", quickDate(1))}
+              <label class="full">مسئولان<select name="assignees" multiple size="5">${state.users.filter((u) => u.active).map((u) => `<option value="${u.id}">${u.fullName} - ${u.group}</option>`).join("")}</select></label>
+            </div>
+            <button class="primary">ثبت چرخه تکرار</button>
+          </form>
+        </div>`;
+    }
+
+    function bindRecurringTaskModal() {
+      $("openRecurringTaskModal").onclick = () => $("recurringTaskModal").classList.remove("hidden");
+      document.querySelectorAll(`[data-close-modal="recurringTaskModal"]`).forEach((btn) => btn.onclick = () => $("recurringTaskModal").classList.add("hidden"));
+      $("recurringTaskModal").onclick = (event) => {
+        if (event.target.id === "recurringTaskModal") $("recurringTaskModal").classList.add("hidden");
+      };
+      $("recurringTaskForm").onsubmit = createRecurringTask;
+      bindDatePresets("recurring");
+      bindPersianDatePicker("recurring");
+    }
+
+    function createRecurringTask(event) {
+      event.preventDefault();
+      const form = new FormData(event.target);
+      const assigneeIds = Array.from(event.target.assignees.selectedOptions).map((option) => option.value);
+      if (!assigneeIds.length) return toast("حداقل یک مسئول انتخاب کنید.");
+      const groupName = form.get("group").trim() || currentUser().group;
+      const groupId = state.groups?.find((group) => group.title === groupName)?.id || currentUser().groupIds?.[0] || "g3";
+      const payload = {
+        title: form.get("title").trim(),
+        description: form.get("description").trim(),
+        groupId,
+        assigneeIds,
+        cycle: form.get("cycle"),
+        interval: Number(form.get("interval")) || 1,
+        time: form.get("time") || "09:00",
+        startAt: new Date(form.get("startAt")).toISOString()
+      };
+      if (backendOnline) {
+        backendFetch("/api/recurring-tasks", { method: "POST", body: JSON.stringify(payload) }).then(async () => {
+          await loadBackendState();
+          renderRecurringTasks();
+          toast("چرخه تکرار در backend ثبت شد.");
+        }).catch((error) => toast(error.message));
+        return;
+      }
+      state.recurringTasks.unshift({ id: uid("RT"), creatorId: currentUser().id, group: groupName, groupId, active: true, nextRunAt: payload.startAt, ...payload });
+      saveState();
+      renderRecurringTasks();
+      toast("چرخه تکرار ثبت شد.");
+    }
+
+    function bindRecurringTaskActions() {
+      document.querySelectorAll("[data-delete-recurring]").forEach((btn) => {
+        btn.onclick = async () => {
+          const recurringTaskId = btn.dataset.deleteRecurring;
+          if (backendOnline) {
+            try {
+              await backendFetch("/api/recurring-tasks", { method: "DELETE", body: JSON.stringify({ recurringTaskId }) });
+              await loadBackendState();
+              renderRecurringTasks();
+              toast("چرخه تکرار حذف شد.");
+            } catch (error) { toast(error.message); }
+            return;
+          }
+          state.recurringTasks = (state.recurringTasks || []).filter((task) => task.id !== recurringTaskId);
+          saveState();
+          renderRecurringTasks();
+          toast("چرخه تکرار حذف شد.");
+        };
+      });
+      document.querySelectorAll("[data-generate-recurring]").forEach((btn) => {
+        btn.onclick = async () => {
+          const recurringTaskId = btn.dataset.generateRecurring;
+          if (backendOnline) {
+            try {
+              await backendFetch("/api/recurring-tasks/generate-next", { method: "POST", body: JSON.stringify({ recurringTaskId }) });
+              await loadBackendState();
+              renderRecurringTasks();
+              toast("تسک بعدی از چرخه ساخته شد.");
+            } catch (error) { toast(error.message); }
+            return;
+          }
+          toast("ساخت خودکار تسک در حالت local mock فعال نیست.");
+        };
+      });
+    }
+
     function taskModal(longTerm) {
       const modalId = longTerm ? "longTermTaskModal" : "taskModal";
       const formId = longTerm ? "longTermTaskForm" : "taskForm";
@@ -1606,7 +1805,7 @@
               <label class="full">توضیح<textarea name="description" placeholder="جزئیات کار"></textarea></label>
               <label>گروه<input name="group" value="${currentUser().group}"></label>
               ${longTerm ? "" : `
-                <label>تاریخ انجام<input name="dueDateLabel" id="taskDueDateLabel" readonly value="${quickDateLabel(1)}"><input name="dueAt" id="taskDueAt" type="hidden" value="${quickDateIso(1)}"></label>
+                <label>تاریخ انجام<input name="dueDateLabel" id="taskDateLabel" readonly value="${quickDateLabel(1)}"><input name="dueAt" id="taskDateIso" type="hidden" value="${quickDateIso(1)}"></label>
                 <div class="full segmented" data-date-target="task">
                   <button type="button" data-date-offset="0">امروز</button>
                   <button type="button" data-date-offset="1" class="active">فردا</button>
@@ -1666,6 +1865,7 @@
               <button class="primary" data-task-action="accepted" data-task="${task.id}">قبول</button>
               <button class="blue" data-task-action="done" data-task="${task.id}">Done</button>
               <button class="danger" data-task-action="rejected" data-task="${task.id}">رد</button>` : ""}
+            ${!task.longTerm && canDelete ? `<button class="blue" data-transfer-long="${task.id}">انتقال به بخش تسک‌های بلندمدت</button>` : ""}
             ${canDelete ? `<button class="danger" data-delete-task="${task.id}">حذف</button>` : ""}
           </div>
         </article>`;
@@ -1717,6 +1917,33 @@
     }
 
     function bindTaskActions() {
+      document.querySelectorAll("[data-transfer-long]").forEach((btn) => {
+        btn.onclick = async () => {
+          const taskId = btn.dataset.transferLong;
+          if (backendOnline) {
+            try {
+              await backendFetch("/api/tasks/long-term", {
+                method: "PATCH",
+                body: JSON.stringify({ taskId })
+              });
+              await loadBackendState();
+              render();
+              toast("تسک به بخش وظایف بلندمدت منتقل شد.");
+            } catch (error) {
+              toast(error.message);
+            }
+            return;
+          }
+          const task = state.tasks.find((item) => item.id === taskId);
+          if (task) {
+            task.longTerm = true;
+            task.dueAt = "";
+            saveState();
+            render();
+            toast("تسک به بخش وظایف بلندمدت منتقل شد.");
+          }
+        };
+      });
       document.querySelectorAll("[data-delete-task]").forEach((btn) => {
         btn.onclick = async () => {
           const taskId = btn.dataset.deleteTask;
@@ -2372,9 +2599,14 @@
           document.querySelectorAll(`[data-date-target="${target}"] button`).forEach((item) => item.classList.remove("active"));
           btn.classList.add("active");
           if (target === "task") {
-            $("taskDueAt").value = quickDateIso(offset);
-            $("taskDueDateLabel").value = quickDateLabel(offset);
+            $("taskDateIso").value = quickDateIso(offset);
+            $("taskDateLabel").value = quickDateLabel(offset);
             syncPersianPicker("task", quickDate(offset));
+          }
+          if (target === "recurring") {
+            $("recurringDateIso").value = quickDateIso(offset);
+            $("recurringDateLabel").value = quickDateLabel(offset);
+            syncPersianPicker("recurring", quickDate(offset));
           }
           if (target === "meeting") {
             $("meetingDateIso").value = quickDateIso(offset);
@@ -2461,6 +2693,7 @@
                   </select>
                 </label>
                 <button class="primary" id="parseMessage">تحلیل پیام</button>
+                <button class="blue" id="askAiMessage">پرسش از AI</button>
               </div>
               <pre class="intent-preview" id="aiOutput">{
   "intent": "در انتظار تحلیل",
@@ -2499,6 +2732,20 @@
         $("aiOutput").textContent = JSON.stringify(intent, null, 2);
         $("aiOutput").dataset.intent = JSON.stringify({ source, intent, text });
       };
+      $("askAiMessage").onclick = () => {
+        const text = $("messageText").value.trim();
+        if (!text) return toast("متن پرسش را وارد کنید.");
+        if (!backendOnline) return toast("پرسش AI فقط با backend فعال اجرا می‌شود.");
+        backendFetch("/api/messages/ask", {
+          method: "POST",
+          body: JSON.stringify({ source, text })
+        }).then(async (result) => {
+          $("aiOutput").textContent = result.reply || "";
+          $("aiOutput").dataset.intent = "";
+          await loadBackendState();
+          toast(result.ai?.configured ? "پاسخ AI دریافت شد." : "AI هنوز پیکربندی نشده است.");
+        }).catch((error) => toast(error.message));
+      };
       $("promptPreset").onchange = (event) => {
         $("messageText").value = event.target.value;
       };
@@ -2533,6 +2780,33 @@
                 description: payload.text,
                 groupId: currentUser().groupIds?.[0] || "g3",
                 dueAt: new Date(Date.now() + 86400000).toISOString(),
+                assigneeIds: intent.assignees?.length ? intent.assignees : [currentUser().id]
+              })
+            });
+          }
+          if (intent.intent === "create_long_term_task") {
+            await backendFetch("/api/tasks", {
+              method: "POST",
+              body: JSON.stringify({
+                title: intent.title,
+                description: payload.text,
+                groupId: currentUser().groupIds?.[0] || "g3",
+                longTerm: true,
+                assigneeIds: intent.assignees?.length ? intent.assignees : [currentUser().id]
+              })
+            });
+          }
+          if (intent.intent === "create_recurring_task") {
+            await backendFetch("/api/recurring-tasks", {
+              method: "POST",
+              body: JSON.stringify({
+                title: intent.title,
+                description: payload.text,
+                groupId: currentUser().groupIds?.[0] || "g3",
+                cycle: intent.cycle || "daily",
+                interval: 1,
+                time: "09:00",
+                startAt: new Date(Date.now() + 86400000).toISOString(),
                 assigneeIds: intent.assignees?.length ? intent.assignees : [currentUser().id]
               })
             });
