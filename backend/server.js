@@ -6,6 +6,7 @@ const crypto = require("crypto");
 const PORT = Number(process.env.PORT || 4188);
 const HOST = process.env.HOST || "0.0.0.0";
 const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, "data.json");
+const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || "";
 
 const nowIso = () => new Date().toISOString();
 const id = (prefix) => `${prefix}-${Date.now().toString(36)}-${crypto.randomBytes(2).toString("hex")}`;
@@ -80,14 +81,29 @@ const seed = {
 function readData() {
   if (!fs.existsSync(DATA_FILE)) {
     writeData(seed);
-    return structuredClone(seed);
+    return applyEnvironmentSettings(structuredClone(seed));
   }
-  return JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
+  return applyEnvironmentSettings(JSON.parse(fs.readFileSync(DATA_FILE, "utf8")));
 }
 
 function writeData(data) {
   fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
   fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), "utf8");
+}
+
+function applyEnvironmentSettings(data) {
+  if (!data.settings) data.settings = {};
+  if (!data.settings.bale) data.settings.bale = structuredClone(seed.settings.bale);
+  if (!data.settings.deployment) data.settings.deployment = structuredClone(seed.settings.deployment);
+
+  const envWebhookUrl = process.env.BALE_WEBHOOK_URL || (PUBLIC_BASE_URL ? `${PUBLIC_BASE_URL.replace(/\/$/, "")}/api/webhooks/bale` : "");
+  if (process.env.BALE_ENABLED) data.settings.bale.enabled = process.env.BALE_ENABLED === "true";
+  if (process.env.BALE_BOT_TOKEN) data.settings.bale.botToken = process.env.BALE_BOT_TOKEN;
+  if (envWebhookUrl) data.settings.bale.webhookUrl = envWebhookUrl;
+  if (process.env.BALE_SECRET) data.settings.bale.secret = process.env.BALE_SECRET;
+  if (process.env.BALE_REPLY_MODE) data.settings.bale.defaultReplyMode = process.env.BALE_REPLY_MODE;
+  if (PUBLIC_BASE_URL) data.settings.deployment.publicBaseUrl = PUBLIC_BASE_URL;
+  return data;
 }
 
 function send(res, status, body) {
