@@ -731,7 +731,7 @@
 
     .calendar-shell {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 340px;
+      grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
       gap: 14px;
       align-items: start;
     }
@@ -762,6 +762,7 @@
       border-radius: 8px;
       overflow: auto;
       background: rgba(2, 6, 23, .34);
+      min-width: 0;
     }
 
     .calendar-weekday {
@@ -776,7 +777,7 @@
     }
 
     .calendar-day {
-      min-height: 132px;
+      min-height: 128px;
       padding: 10px;
       border-top: 1px solid var(--line);
       border-left: 1px solid var(--line);
@@ -784,6 +785,7 @@
       align-content: start;
       gap: 8px;
       position: relative;
+      overflow: hidden;
     }
 
     .calendar-day.dim {
@@ -822,6 +824,7 @@
       font-size: 11px;
       line-height: 1.55;
       overflow: hidden;
+      min-width: 0;
     }
 
     .event-pill strong {
@@ -835,6 +838,8 @@
     .calendar-agenda {
       display: grid;
       gap: 10px;
+      max-height: 360px;
+      overflow: auto;
     }
 
     .agenda-row {
@@ -959,6 +964,20 @@
       align-items: end;
     }
 
+    .page-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .inline-form-panel {
+      margin-top: 12px;
+      border-top: 1px solid var(--line);
+      padding-top: 14px;
+    }
+
     @media (max-width: 1100px) {
       .user-management, .user-toolbar {
         grid-template-columns: 1fr;
@@ -1027,7 +1046,8 @@
         grid-template-columns: 1fr;
       }
       .calendar-grid {
-        grid-template-columns: repeat(7, minmax(82px, 1fr));
+        grid-template-columns: repeat(7, minmax(92px, 1fr));
+        overflow-x: auto;
       }
       .calendar-day {
         min-height: 112px;
@@ -1122,13 +1142,10 @@
       ["tasks", "تسک‌ها", "چرخه چندمسئوله قبول، رد و Done", "tasks"],
       ["requests", "درخواست از مدیرعامل", "مسیر مجاز برای درخواست‌های خصوصی CEO", "requests"],
       ["meetings", "جلسات", "تقویم شمسی و یادآوری", "meetings"],
-      ["messenger", "پیام‌رسان و AI", "شبیه‌ساز متن بله/تلگرام و JSON intent", "messenger"],
       ["bale", "تنظیمات بله", "اتصال بازوی بله، webhook و پیام تایید فارسی", "bale"],
       ["analytics", "تحلیل و هشدارها", "پیشنهادهای هوشمند، KPI و کارهای عقب‌افتاده", "analytics"],
-      ["deploy", "استقرار رایگان", "آماده‌سازی preview آنلاین و webhook عمومی", "deploy"],
       ["offline", "فاز آفلاین", "AI محلی، سرور داخلی و IP ثابت", "offline"],
-      ["users", "افراد", "کاربران، تایید بله و افزودن دستی", "users"],
-      ["rules", "قوانین", "قواعد دسترسی و محرمانگی", "rules"]
+      ["users", "افراد", "کاربران، تایید بله و افزودن دستی", "users"]
     ];
 
     const seed = {
@@ -1394,7 +1411,13 @@
               <label class="full">عنوان<input name="title" required placeholder="مثلاً پیگیری قرارداد مشتری"></label>
               <label class="full">توضیح<textarea name="description" placeholder="جزئیات کار"></textarea></label>
               <label>گروه<input name="group" value="${currentUser().group}"></label>
-              <label>سررسید<input name="dueAt" type="datetime-local" required></label>
+              <label>تاریخ انجام<input name="dueDateLabel" id="taskDueDateLabel" readonly value="${quickDateLabel(1)}"><input name="dueAt" id="taskDueAt" type="hidden" value="${quickDateIso(1)}"></label>
+              <div class="full segmented" data-date-target="task">
+                <button type="button" data-date-offset="0">امروز</button>
+                <button type="button" data-date-offset="1" class="active">فردا</button>
+                <button type="button" data-date-offset="2">پس‌فردا</button>
+                <button type="button" data-date-offset="7">هفته بعد</button>
+              </div>
               <label class="full">مسئولان<select name="assignees" multiple size="5">${state.users.filter((u) => u.active).map((u) => `<option value="${u.id}">${u.fullName} - ${u.group}</option>`).join("")}</select></label>
             </div>
             <button class="primary">ثبت تسک</button>
@@ -1402,6 +1425,7 @@
           </form>
         </div>`;
       $("taskForm").onsubmit = createTask;
+      bindDatePresets("task");
       bindTaskActions();
     }
 
@@ -1611,8 +1635,15 @@
             <div class="form-grid">
               <label class="full">عنوان<input name="title" required></label>
               <label class="full">توضیح<textarea name="description"></textarea></label>
-              <label>شروع<input name="startAt" type="datetime-local" required></label>
-              <label>پایان<input name="endAt" type="datetime-local" required></label>
+              <label class="full">تاریخ جلسه<input id="meetingDateLabel" readonly value="${quickDateLabel(1)}"><input name="meetingDateIso" id="meetingDateIso" type="hidden" value="${quickDateIso(1)}"></label>
+              <div class="full segmented" data-date-target="meeting">
+                <button type="button" data-date-offset="0">امروز</button>
+                <button type="button" data-date-offset="1" class="active">فردا</button>
+                <button type="button" data-date-offset="2">پس‌فردا</button>
+                <button type="button" data-date-offset="7">هفته بعد</button>
+              </div>
+              <label>ساعت شروع<input name="startTime" type="time" value="09:00" required></label>
+              <label>ساعت پایان<input name="endTime" type="time" value="10:00" required></label>
               <label class="full">مکان یا لینک<input name="location" placeholder="اتاق جلسه یا لینک"></label>
               <label class="full">اعضا<select name="members" multiple size="5">${state.users.filter((u) => u.active).map((u) => `<option value="${u.id}">${u.fullName}</option>`).join("")}</select></label>
             </div>
@@ -1623,14 +1654,21 @@
         event.preventDefault();
         const form = new FormData(event.target);
         const members = Array.from(event.target.members.selectedOptions).map((o) => o.value);
+        const meetingDate = new Date(form.get("meetingDateIso"));
+        const [startHour, startMinute] = String(form.get("startTime")).split(":").map(Number);
+        const [endHour, endMinute] = String(form.get("endTime")).split(":").map(Number);
+        const startAt = new Date(meetingDate);
+        startAt.setHours(startHour, startMinute, 0, 0);
+        const endAt = new Date(meetingDate);
+        endAt.setHours(endHour, endMinute, 0, 0);
         if (backendOnline) {
           backendFetch("/api/meetings", {
             method: "POST",
             body: JSON.stringify({
               title: form.get("title").trim(),
               description: form.get("description").trim(),
-              startAt: new Date(form.get("startAt")).toISOString(),
-              endAt: new Date(form.get("endAt")).toISOString(),
+              startAt: startAt.toISOString(),
+              endAt: endAt.toISOString(),
               location: form.get("location").trim(),
               members
             })
@@ -1642,7 +1680,7 @@
           return;
         }
         if (!members.includes(currentUser().id)) members.push(currentUser().id);
-        state.meetings.unshift({ id: uid("M"), title: form.get("title").trim(), description: form.get("description").trim(), startAt: new Date(form.get("startAt")).toISOString(), endAt: new Date(form.get("endAt")).toISOString(), location: form.get("location").trim(), creatorId: currentUser().id, status: "scheduled", members });
+        state.meetings.unshift({ id: uid("M"), title: form.get("title").trim(), description: form.get("description").trim(), startAt: startAt.toISOString(), endAt: endAt.toISOString(), location: form.get("location").trim(), creatorId: currentUser().id, status: "scheduled", members });
         saveState();
         renderMeetings();
         toast("جلسه ثبت شد و یادآوری یک ساعت قبل/شروع ساخته شد.");
@@ -1654,6 +1692,7 @@
           renderMeetings();
         };
       });
+      bindDatePresets("meeting");
     }
 
     function renderCalendarView() {
@@ -1731,6 +1770,39 @@
 
     function timeFa(value) {
       return new Intl.DateTimeFormat("fa-IR", { hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+    }
+
+    function quickDate(offsetDays) {
+      const date = new Date();
+      date.setDate(date.getDate() + Number(offsetDays));
+      date.setHours(9, 0, 0, 0);
+      return date;
+    }
+
+    function quickDateIso(offsetDays) {
+      return quickDate(offsetDays).toISOString();
+    }
+
+    function quickDateLabel(offsetDays) {
+      return new Intl.DateTimeFormat("fa-IR-u-ca-persian", { dateStyle: "full" }).format(quickDate(offsetDays));
+    }
+
+    function bindDatePresets(target) {
+      document.querySelectorAll(`[data-date-target="${target}"] [data-date-offset]`).forEach((btn) => {
+        btn.onclick = () => {
+          const offset = btn.dataset.dateOffset;
+          document.querySelectorAll(`[data-date-target="${target}"] button`).forEach((item) => item.classList.remove("active"));
+          btn.classList.add("active");
+          if (target === "task") {
+            $("taskDueAt").value = quickDateIso(offset);
+            $("taskDueDateLabel").value = quickDateLabel(offset);
+          }
+          if (target === "meeting") {
+            $("meetingDateIso").value = quickDateIso(offset);
+            $("meetingDateLabel").value = quickDateLabel(offset);
+          }
+        };
+      });
     }
 
     function agendaRow(meeting) {
@@ -2272,7 +2344,10 @@
         <div class="panel">
           <div class="panel-head">
             <h2>کاربران سازمان</h2>
-            <span class="chip">${fa(state.users.length)} نفر</span>
+            <div class="page-actions">
+              <span class="chip">${fa(state.users.length)} نفر</span>
+              <button class="primary" id="toggleNewUserForm">افزودن کاربر</button>
+            </div>
           </div>
           <div class="user-toolbar">
             <label>جستجو
@@ -2289,6 +2364,20 @@
           <div class="user-card-grid" id="userCards">
             ${state.users.map(userCard).join("")}
           </div>
+          <form class="inline-form-panel hidden" id="newUserForm">
+            <h2>افزودن کاربر جدید</h2>
+            <div class="form-grid">
+              <label>نام و نام خانوادگی<input name="fullName" required></label>
+              <label>جایگاه شغلی<input name="jobTitle" required></label>
+              <label>نقش<select name="role"><option value="Employee">Employee</option><option value="Admin">Admin</option></select></label>
+              <label>گروه<select name="groupId">${(state.groups || []).map((g) => `<option value="${g.id}">${g.title}</option>`).join("")}</select></label>
+              <label>شناسه فنی بله<input name="baleChatId" placeholder="اختیاری"></label>
+              <label>آیدی بله<input name="baleUsername" placeholder="@username"></label>
+              <label class="full">لینک پروفایل بله<input name="baleProfileUrl" placeholder="https://ble.ir/username"></label>
+              <label>آیدی تلگرام<input name="telegramChatId" placeholder="اختیاری"></label>
+            </div>
+            <button class="primary">ثبت کاربر</button>
+          </form>
         </div>
         <div class="panel">
           <div class="panel-head">
@@ -2322,20 +2411,6 @@
               </article>`).join("") : empty("کاربر جدیدی در انتظار تایید نیست.")}
           </div>
         </div>
-        <form class="panel" id="newUserForm">
-          <h2>افزودن کاربر جدید</h2>
-          <div class="form-grid">
-            <label>نام و نام خانوادگی<input name="fullName" required></label>
-            <label>جایگاه شغلی<input name="jobTitle" required></label>
-            <label>نقش<select name="role"><option value="Employee">Employee</option><option value="Admin">Admin</option></select></label>
-            <label>گروه<select name="groupId">${(state.groups || []).map((g) => `<option value="${g.id}">${g.title}</option>`).join("")}</select></label>
-            <label>شناسه فنی بله<input name="baleChatId" placeholder="اختیاری"></label>
-            <label>آیدی بله<input name="baleUsername" placeholder="@username"></label>
-            <label class="full">لینک پروفایل بله<input name="baleProfileUrl" placeholder="https://ble.ir/username"></label>
-            <label>آیدی تلگرام<input name="telegramChatId" placeholder="اختیاری"></label>
-          </div>
-          <button class="primary">ثبت کاربر</button>
-        </form>
         </div>`;
       bindUserManagementActions();
     }
@@ -2432,6 +2507,9 @@
       };
       $("userSearch").oninput = applyUserFilters;
       $("userStatusFilter").onchange = applyUserFilters;
+      $("toggleNewUserForm").onclick = () => {
+        $("newUserForm").classList.toggle("hidden");
+      };
       document.querySelectorAll("[data-suspend-user]").forEach((btn) => {
         btn.onclick = async () => {
           try {
