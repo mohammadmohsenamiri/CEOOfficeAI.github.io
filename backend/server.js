@@ -692,7 +692,9 @@ async function handle(req, res) {
   const url = new URL(req.url, `http://localhost:${PORT}`);
 
   if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
-    const htmlPath = path.join(__dirname, "..", "ceo-office-ai-coordinator-mvp.html");
+    const repoIndexPath = path.join(__dirname, "..", "index.html");
+    const localOutputPath = path.join(__dirname, "..", "ceo-office-ai-coordinator-mvp.html");
+    const htmlPath = fs.existsSync(repoIndexPath) ? repoIndexPath : localOutputPath;
     const html = fs.readFileSync(htmlPath, "utf8").replaceAll("http://127.0.0.1:4188", "");
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     res.end(html);
