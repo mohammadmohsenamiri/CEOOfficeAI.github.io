@@ -131,7 +131,7 @@
 
     <section class="page" id="tasksPage">
       <div class="topbar"><div><h1>Tasks section</h1><p class="muted">وظایف زمان‌دار و عملیاتی</p></div></div>
-      <div class="notice">داخل هر کارت تسک، دکمه دقیقاً با عنوان <b>Transfer to long-term tasks section</b> اضافه شده است. این دکمه زمان‌بندی تسک را حذف می‌کند و تمام ویژگی‌های دیگر تسک را حفظ می‌کند.</div>
+      <div class="notice">داخل هر کارت تسک، دکمه <b>انتقال به بخش وظایف بلندمدت</b> اضافه شده است. این دکمه زمان‌بندی تسک را حذف می‌کند و تمام ویژگی‌های دیگر تسک را حفظ می‌کند.</div>
       <div class="grid">
         <div class="panel">
           <div class="panel-head"><h2>ایجاد تسک زمان‌دار</h2></div>
@@ -175,7 +175,7 @@
     </section>
 
     <section class="page" id="recurringPage">
-      <div class="topbar"><div><h1>Recurring tasks section</h1><p class="muted">وظایف قابل ایجاد با چرخه تکرار مشخص، در صفحه مستقل</p></div></div>
+      <div class="topbar"><div><h1>تسک‌های تکرارشونده</h1><p class="muted">وظایف قابل ایجاد با چرخه تکرار مشخص، در صفحه مستقل</p></div></div>
       <div class="grid">
         <div class="panel">
           <div class="panel-head"><h2>ایجاد چرخه تکرار</h2></div>
@@ -267,7 +267,7 @@ const pages = [
   ['dashboardPage', 'داشبورد'],
   ['tasksPage', 'Tasks section'],
   ['longTermPage', 'Long-term tasks'],
-  ['recurringPage', 'Recurring tasks'],
+  ['recurringPage', 'تسک‌های تکرارشونده'],
   ['meetingsPage', 'جلسات'],
   ['messengerPage', 'Messenger / Bale AI'],
   ['settingsPage', 'تنظیمات']
@@ -443,7 +443,7 @@ function taskCard(t, includeTransfer) {
       <button class="btn blue" data-task-action="accept" data-id="${t.id}">پذیرش</button>
       <button class="btn warn" data-task-action="reject" data-id="${t.id}">رد</button>
       <button class="btn primary" data-task-action="done" data-id="${t.id}">انجام شد</button>
-      ${includeTransfer ? `<button class="btn" data-transfer-long="${t.id}">Transfer to long-term tasks section</button>` : ''}
+      ${includeTransfer ? `<button class="btn" data-transfer-long="${t.id}">انتقال به بخش وظایف بلندمدت</button>` : ''}
       <button class="btn danger" data-delete-task="${t.id}">حذف</button>
     </div>
   </div>`;
