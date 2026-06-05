@@ -508,6 +508,14 @@ const routes = {
     const normalized = normalizeBaleMessage(body);
     const linkedUser = data.users.find((user) => user.baleChatId === normalized.senderMessengerId);
     if (!linkedUser) {
+      const existingPendingBeforeIntro = (data.pendingUsers || []).find((item) => item.baleChatId === normalized.senderMessengerId && item.status === "pending");
+      if (existingPendingBeforeIntro && !parseBaleSelfIntroduction(normalized.text)) {
+        const record = { id: id("MSG"), ...normalized, userId: "", parsedIntent: { intent: "pending_user_waiting", pendingUserId: existingPendingBeforeIntro.id }, status: "pending_user_waiting" };
+        data.incomingMessages.unshift(record);
+        const reply = "معرفی شما قبلاً ثبت شده است. لطفاً منتظر تایید مدیر سیستم باشید.";
+        const sendResult = await sendBaleText(data, normalized.senderMessengerId, reply);
+        return { ok: true, messageId: record.id, reply, pendingUser: existingPendingBeforeIntro, baleSend: sendResult };
+      }
       const intro = parseBaleSelfIntroduction(normalized.text);
       if (intro) {
         const existingPending = (data.pendingUsers || []).find((item) => item.baleChatId === normalized.senderMessengerId && item.status === "pending");
@@ -534,7 +542,7 @@ const routes = {
     const record = { id: id("MSG"), ...normalized, userId: linkedUser ? linkedUser.id : "", parsedIntent, status: linkedUser ? "parsed" : "unknown_sender" };
     data.incomingMessages.unshift(record);
     log(data, linkedUser ? linkedUser.id : "anonymous", "incoming_bale_message", "message", record.id, null, record);
-    const reply = linkedUser ? "پیام شما دریافت شد. لطفاً خلاصه برداشت سیستم را تایید یا لغو کنید." : "شناسه بله شما در سیستم ثبت نشده است. لطفاً با مدیر سیستم تماس بگیرید.";
+    const reply = linkedUser ? "پیام شما دریافت شد. لطفاً خلاصه برداشت سیستم را تایید یا لغو کنید." : "لطفاً نام و جایگاه شغلی خود را معرفی نمایید و منتظر تایید از سوی ادمین باشید.\n\nقالب پیام:\nنام: محمد امیری\nجایگاه شغلی: مدیر پروژه";
     const sendResult = await sendBaleText(data, normalized.senderMessengerId, reply);
     return {
       ok: true,
