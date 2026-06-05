@@ -924,6 +924,47 @@
       line-height: 1.9;
     }
 
+    .user-management {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(340px, .9fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .user-card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 10px;
+    }
+
+    .user-meta {
+      display: grid;
+      gap: 6px;
+      color: #cbd5e1;
+      font-size: 12px;
+    }
+
+    .bale-link {
+      color: #67e8f9;
+      text-decoration: none;
+      border-bottom: 1px dashed rgba(103, 232, 249, .45);
+      direction: ltr;
+      unicode-bidi: isolate;
+    }
+
+    .user-toolbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 180px;
+      gap: 10px;
+      align-items: end;
+    }
+
+    @media (max-width: 1100px) {
+      .user-management, .user-toolbar {
+        grid-template-columns: 1fr;
+      }
+    }
+
     .ai-workspace {
       display: grid;
       grid-template-columns: minmax(0, .95fr) minmax(360px, 1.05fr);
@@ -2196,14 +2237,26 @@
       }
       const activePending = pendingUsers.filter((item) => item.status === "pending");
       $("view-users").innerHTML = `
-        <div class="grid">
+        <div class="user-management">
         <div class="panel">
-          <div class="panel-head"><h2>کاربران سازمان</h2><span class="chip">${fa(state.users.length)} نفر</span></div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>نام</th><th>سمت</th><th>نقش</th><th>گروه</th><th>تلگرام</th><th>بله</th><th>وضعیت</th></tr></thead>
-              <tbody>${state.users.map((u) => `<tr><td><span style="display:inline-flex; gap:8px; align-items:center;"><span class="card-icon" style="width:28px;height:28px;">${u.isCeo ? icons.lock : icons.user}</span>${u.fullName}</span></td><td>${u.jobTitle}</td><td>${u.role}</td><td>${u.group}</td><td>${u.telegram}</td><td>${u.bale}</td><td>${u.active ? statusChip("accepted") : statusChip("cancelled")}</td></tr>`).join("")}</tbody>
-            </table>
+          <div class="panel-head">
+            <h2>کاربران سازمان</h2>
+            <span class="chip">${fa(state.users.length)} نفر</span>
+          </div>
+          <div class="user-toolbar">
+            <label>جستجو
+              <input id="userSearch" placeholder="نام، جایگاه شغلی، آیدی بله">
+            </label>
+            <label>وضعیت
+              <select id="userStatusFilter">
+                <option value="all">همه</option>
+                <option value="active">فعال</option>
+                <option value="suspended">معلق</option>
+              </select>
+            </label>
+          </div>
+          <div class="user-card-grid" id="userCards">
+            ${state.users.map(userCard).join("")}
           </div>
         </div>
         <div class="panel">
@@ -2253,6 +2306,39 @@
       bindUserManagementActions();
     }
 
+    function baleProfileLink(baleId) {
+      if (!baleId) return "";
+      return `https://ble.ir/${baleId}`;
+    }
+
+    function userCard(u) {
+      const bale = u.bale || "";
+      const baleLink = bale ? `<a class="bale-link" href="${baleProfileLink(bale)}" target="_blank" rel="noreferrer">${bale}</a>` : `<span class="muted">ثبت نشده</span>`;
+      return `
+        <article class="item-card user-card" data-user-name="${u.fullName}" data-user-job="${u.jobTitle}" data-user-bale="${bale}" data-user-active="${u.active ? "active" : "suspended"}">
+          <div class="item-top">
+            <div style="display:flex; gap:10px; align-items:flex-start;">
+              <span class="card-icon">${u.isCeo ? icons.lock : icons.user}</span>
+              <div>
+                <h3>${u.fullName}</h3>
+                <div class="user-meta">
+                  <span>جایگاه شغلی: ${u.jobTitle}</span>
+                  <span>نقش: ${u.role}</span>
+                  <span>گروه: ${u.group}</span>
+                  <span>آیدی بله: ${baleLink}</span>
+                  <span>آیدی تلگرام: ${u.telegram || "ثبت نشده"}</span>
+                </div>
+              </div>
+            </div>
+            ${u.active ? statusChip("accepted") : statusChip("cancelled")}
+          </div>
+          <div class="item-actions">
+            ${u.active ? `<button class="danger" data-suspend-user="${u.id}">تعلیق</button>` : `<button class="primary" data-activate-user="${u.id}">فعال‌سازی</button>`}
+            ${u.isCeo ? "" : `<button class="danger" data-delete-user="${u.id}">حذف</button>`}
+          </div>
+        </article>`;
+    }
+
     function bindUserManagementActions() {
       document.querySelectorAll("[data-approve-user]").forEach((btn) => {
         btn.onclick = async () => {
@@ -2298,6 +2384,62 @@
           toast(error.message);
         }
       };
+      const applyUserFilters = () => {
+        const query = ($("userSearch")?.value || "").trim().toLowerCase();
+        const status = $("userStatusFilter")?.value || "all";
+        document.querySelectorAll(".user-card").forEach((card) => {
+          const haystack = `${card.dataset.userName} ${card.dataset.userJob} ${card.dataset.userBale}`.toLowerCase();
+          const statusOk = status === "all" || card.dataset.userActive === status;
+          card.classList.toggle("hidden", !(haystack.includes(query) && statusOk));
+        });
+      };
+      $("userSearch").oninput = applyUserFilters;
+      $("userStatusFilter").onchange = applyUserFilters;
+      document.querySelectorAll("[data-suspend-user]").forEach((btn) => {
+        btn.onclick = async () => {
+          try {
+            await backendFetch("/api/users/status", {
+              method: "PATCH",
+              body: JSON.stringify({ userId: btn.dataset.suspendUser, active: false })
+            });
+            await loadBackendState();
+            toast("کاربر معلق شد.");
+            renderUsers();
+          } catch (error) {
+            toast(error.message);
+          }
+        };
+      });
+      document.querySelectorAll("[data-activate-user]").forEach((btn) => {
+        btn.onclick = async () => {
+          try {
+            await backendFetch("/api/users/status", {
+              method: "PATCH",
+              body: JSON.stringify({ userId: btn.dataset.activateUser, active: true })
+            });
+            await loadBackendState();
+            toast("کاربر فعال شد.");
+            renderUsers();
+          } catch (error) {
+            toast(error.message);
+          }
+        };
+      });
+      document.querySelectorAll("[data-delete-user]").forEach((btn) => {
+        btn.onclick = async () => {
+          try {
+            await backendFetch("/api/users", {
+              method: "DELETE",
+              body: JSON.stringify({ userId: btn.dataset.deleteUser })
+            });
+            await loadBackendState();
+            toast("کاربر حذف یا معلق شد.");
+            renderUsers();
+          } catch (error) {
+            toast(error.message);
+          }
+        };
+      });
     }
 
     function renderRules() {

@@ -367,6 +367,32 @@ const routes = {
     log(data, currentUser.id, "create_user", "user", user.id, null, user);
     return { status: 201, body: user };
   },
+  "PATCH /api/users/status": async ({ data, body, currentUser }) => {
+    if (!isPrivileged(currentUser)) return { status: 403, body: { error: "فقط مدیر سیستم می‌تواند وضعیت کاربر را تغییر دهد." } };
+    const target = data.users.find((user) => user.id === body.userId);
+    if (!target) return { status: 404, body: { error: "کاربر پیدا نشد." } };
+    if (target.isCeo) return { status: 403, body: { error: "تعلیق مدیرعامل از این مسیر مجاز نیست." } };
+    const before = { ...target };
+    target.active = body.active === true;
+    log(data, currentUser.id, target.active ? "activate_user" : "suspend_user", "user", target.id, before, target);
+    return { saved: true, user: target };
+  },
+  "DELETE /api/users": async ({ data, body, currentUser }) => {
+    if (!isPrivileged(currentUser)) return { status: 403, body: { error: "فقط مدیر سیستم می‌تواند کاربر را حذف کند." } };
+    const target = data.users.find((user) => user.id === body.userId);
+    if (!target) return { status: 404, body: { error: "کاربر پیدا نشد." } };
+    if (target.isCeo) return { status: 403, body: { error: "حذف مدیرعامل مجاز نیست." } };
+    const hasTasks = data.tasks.some((task) => task.creatorId === target.id || task.assignments.some((assignment) => assignment.userId === target.id));
+    if (hasTasks) {
+      const before = { ...target };
+      target.active = false;
+      log(data, currentUser.id, "soft_delete_user", "user", target.id, before, target);
+      return { saved: true, mode: "soft_delete", message: "کاربر سابقه کاری دارد و به جای حذف، معلق شد.", user: target };
+    }
+    data.users = data.users.filter((user) => user.id !== target.id);
+    log(data, currentUser.id, "delete_user", "user", target.id, target, null);
+    return { saved: true, mode: "delete" };
+  },
   "GET /api/groups": async ({ data }) => data.groups,
   "GET /api/pending-users": async ({ data, currentUser }) => {
     if (!isPrivileged(currentUser)) return { status: 403, body: { error: "دسترسی به کاربران در انتظار تایید مجاز نیست." } };
@@ -532,7 +558,7 @@ const routes = {
         const record = { id: id("MSG"), ...normalized, userId: "", parsedIntent: { intent: "self_introduction", pendingUserId: pending.id }, status: "pending_user" };
         data.incomingMessages.unshift(record);
         createNotification(data, data.users.find((user) => user.role === "Admin")?.id || "u2", "کاربر جدید در انتظار تایید", pending.fullName, { type: "pending_user", id: pending.id });
-        const reply = "معرفی شما ثبت شد و منتظر تایید مدیر سیستم است.";
+        const reply = `معرفی شما با موفقیت ثبت شد.\n\nنام: ${pending.fullName}\nجایگاه شغلی: ${pending.jobTitle}\n\nلطفاً منتظر تایید ادمین باشید.`;
         const sendResult = await sendBaleText(data, normalized.senderMessengerId, reply);
         log(data, "anonymous", "pending_user_registration", "pending_user", pending.id, null, pending);
         return { ok: true, messageId: record.id, reply, pendingUser: pending, baleSend: sendResult };
@@ -542,7 +568,7 @@ const routes = {
     const record = { id: id("MSG"), ...normalized, userId: linkedUser ? linkedUser.id : "", parsedIntent, status: linkedUser ? "parsed" : "unknown_sender" };
     data.incomingMessages.unshift(record);
     log(data, linkedUser ? linkedUser.id : "anonymous", "incoming_bale_message", "message", record.id, null, record);
-    const reply = linkedUser ? "پیام شما دریافت شد. لطفاً خلاصه برداشت سیستم را تایید یا لغو کنید." : "لطفاً نام و جایگاه شغلی خود را معرفی نمایید و منتظر تایید از سوی ادمین باشید.\n\nقالب پیام:\nنام: محمد امیری\nجایگاه شغلی: مدیر پروژه";
+    const reply = linkedUser ? "پیام شما دریافت شد. لطفاً خلاصه برداشت سیستم را تایید یا لغو کنید." : "معرفی شما ثبت نشد.\n\nلطفاً نام و جایگاه شغلی خود را با قالب زیر ارسال نمایید و منتظر تایید از سوی ادمین باشید.\n\nنام: محمد امیری\nجایگاه شغلی: مدیر پروژه";
     const sendResult = await sendBaleText(data, normalized.senderMessengerId, reply);
     return {
       ok: true,
