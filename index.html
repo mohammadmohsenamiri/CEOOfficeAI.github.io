@@ -856,6 +856,74 @@
       text-align: right;
     }
 
+    .calendar-week-view {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(110px, 1fr));
+      gap: 10px;
+    }
+
+    .week-column {
+      min-height: 360px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(2, 6, 23, .32);
+      padding: 10px;
+      display: grid;
+      align-content: start;
+      gap: 10px;
+    }
+
+    .week-column header {
+      display: grid;
+      gap: 4px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+      color: #fff;
+      font-weight: 800;
+    }
+
+    .calendar-day-view {
+      display: grid;
+      grid-template-columns: 92px minmax(0, 1fr);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: rgba(2, 6, 23, .32);
+    }
+
+    .hour-row {
+      display: contents;
+    }
+
+    .hour-label, .hour-cell {
+      min-height: 58px;
+      border-bottom: 1px solid var(--line);
+      padding: 9px;
+    }
+
+    .hour-label {
+      color: #67e8f9;
+      font-weight: 800;
+      direction: ltr;
+      text-align: center;
+      background: rgba(255, 255, 255, .04);
+    }
+
+    .hour-cell {
+      display: grid;
+      gap: 6px;
+      align-content: start;
+    }
+
+    .backend-warning {
+      border: 1px solid rgba(245, 158, 11, .32);
+      background: rgba(245, 158, 11, .10);
+      color: #fde68a;
+      border-radius: 8px;
+      padding: 12px;
+      line-height: 1.9;
+    }
+
     .ai-workspace {
       display: grid;
       grid-template-columns: minmax(0, .95fr) minmax(360px, 1.05fr);
@@ -1052,6 +1120,7 @@
 
     let state = loadState();
     let activePage = "dashboard";
+    let calendarView = "month";
 
     function loadState() {
       const saved = localStorage.getItem(storageKey);
@@ -1355,12 +1424,12 @@
                 <span class="muted small">تقویم کاری فارسی، راست‌چین و نزدیک به تجربه Google Calendar</span>
               </div>
               <div class="segmented">
-                <button class="active">ماه</button>
-                <button>هفته</button>
-                <button>روز</button>
+                <button data-calendar-view="month" class="${calendarView === "month" ? "active" : ""}">ماه</button>
+                <button data-calendar-view="week" class="${calendarView === "week" ? "active" : ""}">هفته</button>
+                <button data-calendar-view="day" class="${calendarView === "day" ? "active" : ""}">روز</button>
               </div>
             </div>
-            ${calendarMonth()}
+            <div id="calendarCanvas">${renderCalendarView()}</div>
             <div class="panel-head">
               <h2>برنامه پیش رو</h2>
               <span class="chip">${fa(state.meetings.length)} جلسه</span>
@@ -1390,6 +1459,19 @@
         renderMeetings();
         toast("جلسه ثبت شد و یادآوری یک ساعت قبل/شروع ساخته شد.");
       };
+      document.querySelectorAll("[data-calendar-view]").forEach((btn) => {
+        btn.onclick = (event) => {
+          event.preventDefault();
+          calendarView = btn.dataset.calendarView;
+          renderMeetings();
+        };
+      });
+    }
+
+    function renderCalendarView() {
+      if (calendarView === "week") return calendarWeek();
+      if (calendarView === "day") return calendarDay();
+      return calendarMonth();
     }
 
     function calendarMonth() {
@@ -1414,6 +1496,45 @@
           </div>`);
       }
       return `<div class="calendar-grid">${weekdays.map((day) => `<div class="calendar-weekday">${day}</div>`).join("")}${cells.join("")}</div>`;
+    }
+
+    function startOfPersianWeek(date) {
+      const start = new Date(date);
+      const offset = (start.getDay() + 1) % 7;
+      start.setDate(start.getDate() - offset);
+      start.setHours(0, 0, 0, 0);
+      return start;
+    }
+
+    function calendarWeek() {
+      const weekdays = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
+      const start = startOfPersianWeek(new Date());
+      const columns = [];
+      for (let i = 0; i < 7; i++) {
+        const day = new Date(start);
+        day.setDate(start.getDate() + i);
+        const dayMeetings = state.meetings.filter((meeting) => sameLocalDay(new Date(meeting.startAt), day));
+        columns.push(`
+          <div class="week-column">
+            <header><span>${weekdays[i]}</span><span class="muted small">${new Intl.DateTimeFormat("fa-IR-u-ca-persian", { day: "numeric", month: "short" }).format(day)}</span></header>
+            ${dayMeetings.length ? dayMeetings.map((meeting) => `<div class="event-pill"><strong>${meeting.title}</strong><span>${timeFa(meeting.startAt)} · ${meeting.location || "بدون مکان"}</span></div>`).join("") : `<span class="muted small">برنامه‌ای ثبت نشده</span>`}
+          </div>`);
+      }
+      return `<div class="calendar-week-view">${columns.join("")}</div>`;
+    }
+
+    function calendarDay() {
+      const today = new Date();
+      const rows = [];
+      for (let hour = 7; hour <= 20; hour++) {
+        const meetings = state.meetings.filter((meeting) => sameLocalDay(new Date(meeting.startAt), today) && new Date(meeting.startAt).getHours() === hour);
+        rows.push(`
+          <div class="hour-row">
+            <div class="hour-label">${fa(hour)}:۰۰</div>
+            <div class="hour-cell">${meetings.length ? meetings.map((meeting) => `<div class="event-pill"><strong>${meeting.title}</strong><span>${timeFa(meeting.startAt)} · ${meeting.location || "بدون مکان"}</span></div>`).join("") : ""}</div>
+          </div>`);
+      }
+      return `<div class="panel-head"><h2>برنامه امروز</h2><span class="chip blue">${new Intl.DateTimeFormat("fa-IR-u-ca-persian", { dateStyle: "full" }).format(today)}</span></div><div class="calendar-day-view">${rows.join("")}</div>`;
     }
 
     function sameLocalDay(a, b) {
@@ -1577,6 +1698,9 @@
               </div>
               <span class="chip warn" id="baleBackendStatus">در حال بررسی backend</span>
             </div>
+            <div class="backend-warning">
+              این صفحه روی GitHub Pages فقط تنظیمات را نمایش می‌دهد. بازوی واقعی بله فقط وقتی کار می‌کند که backend Node روی یک سرور عمومی HTTPS مثل Render اجرا شود و webhook بله به همان آدرس وصل شود.
+            </div>
             <div class="form-grid">
               <label>فعال‌سازی
                 <select name="enabled">
@@ -1609,6 +1733,7 @@
             <h2>راهنمای اتصال بله</h2>
             <div class="list">
               <article class="item-card"><div class="item-top"><div style="display:flex; gap:10px;"><span class="card-icon">${icons.bale}</span><div><h3>Webhook Endpoint</h3><p class="muted small">در محیط production این آدرس باید HTTPS عمومی باشد. برای تست محلی از endpoint backend استفاده می‌شود.</p></div></div></div><pre>POST /api/webhooks/bale</pre></article>
+              <article class="item-card"><div class="item-top"><div style="display:flex; gap:10px;"><span class="card-icon">${icons.deploy}</span><div><h3>Backend Required</h3><p class="muted small">GitHub Pages backend ندارد. برای bot واقعی باید backend را روی Render/Node host منتشر کنیم.</p></div></div></div><pre>https://YOUR-SERVICE.onrender.com/api/webhooks/bale</pre></article>
               <article class="item-card"><div class="item-top"><div style="display:flex; gap:10px;"><span class="card-icon">${icons.lock}</span><div><h3>Security</h3><p class="muted small">اگر secret تنظیم شود، درخواست webhook باید header زیر را بفرستد.</p></div></div></div><pre>X-Bale-Secret: your-secret</pre></article>
               <article class="item-card"><div class="item-top"><div style="display:flex; gap:10px;"><span class="card-icon">${icons.messenger}</span><div><h3>Persian Reply</h3><p class="muted small">پاسخ bot فارسی است و برای متن‌های AI-created مرحله تایید می‌سازد.</p></div></div></div></article>
             </div>
