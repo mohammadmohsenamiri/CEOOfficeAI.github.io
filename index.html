@@ -1043,7 +1043,6 @@
       <section id="view-deploy" class="hidden"></section>
       <section id="view-offline" class="hidden"></section>
       <section id="view-users" class="hidden"></section>
-      <section id="view-pendingUsers" class="hidden"></section>
       <section id="view-rules" class="hidden"></section>
     </main>
   </div>
@@ -1087,8 +1086,7 @@
       ["analytics", "تحلیل و هشدارها", "پیشنهادهای هوشمند، KPI و کارهای عقب‌افتاده", "analytics"],
       ["deploy", "استقرار رایگان", "آماده‌سازی preview آنلاین و webhook عمومی", "deploy"],
       ["offline", "فاز آفلاین", "AI محلی، سرور داخلی و IP ثابت", "offline"],
-      ["users", "افراد", "کاربران، نقش‌ها و اتصال پیام‌رسان", "users"],
-      ["pendingUsers", "تایید کاربران", "تایید معرفی کاربران جدید از بله", "approveUser"],
+      ["users", "افراد", "کاربران، تایید بله و افزودن دستی", "users"],
       ["rules", "قوانین", "قواعد دسترسی و محرمانگی", "rules"]
     ];
 
@@ -1301,7 +1299,6 @@
         deploy: renderDeploy,
         offline: renderOffline,
         users: renderUsers,
-        pendingUsers: renderPendingUsers,
         rules: renderRules
       }[activePage])();
     }
@@ -2185,13 +2182,21 @@
       };
     }
 
-    function renderUsers() {
+    async function renderUsers() {
       if (!backendOnline && !MOCK_DATA_ENABLED) {
         $("view-users").innerHTML = backendRequired("افراد و نقش‌ها", "مدیریت کاربران واقعی باید از backend و سطح دسترسی Admin خوانده شود.");
         bindBackendGate();
         return;
       }
+      let pendingUsers = [];
+      try {
+        pendingUsers = await backendFetch("/api/pending-users");
+      } catch {
+        pendingUsers = [];
+      }
+      const activePending = pendingUsers.filter((item) => item.status === "pending");
       $("view-users").innerHTML = `
+        <div class="grid">
         <div class="panel">
           <div class="panel-head"><h2>کاربران سازمان</h2><span class="chip">${fa(state.users.length)} نفر</span></div>
           <div class="table-wrap">
@@ -2200,92 +2205,99 @@
               <tbody>${state.users.map((u) => `<tr><td><span style="display:inline-flex; gap:8px; align-items:center;"><span class="card-icon" style="width:28px;height:28px;">${u.isCeo ? icons.lock : icons.user}</span>${u.fullName}</span></td><td>${u.jobTitle}</td><td>${u.role}</td><td>${u.group}</td><td>${u.telegram}</td><td>${u.bale}</td><td>${u.active ? statusChip("accepted") : statusChip("cancelled")}</td></tr>`).join("")}</tbody>
             </table>
           </div>
-        </div>`;
-    }
-
-    async function renderPendingUsers() {
-      if (!backendOnline && !MOCK_DATA_ENABLED) {
-        $("view-pendingUsers").innerHTML = backendRequired("تایید کاربران", "کاربرانی که در بله خودشان را معرفی می‌کنند، باید از backend خوانده و توسط ادمین تایید شوند.");
-        bindBackendGate();
-        return;
-      }
-      $("view-pendingUsers").innerHTML = `
+        </div>
         <div class="panel">
           <div class="panel-head">
-            <div style="display:flex; gap:10px; align-items:center;">
-              <span class="card-icon">${icons.approveUser}</span>
-              <div>
-                <h2>کاربران در انتظار تایید</h2>
-                <p class="muted small">کاربر در بله با قالب «نام» و «جایگاه شغلی» خودش را معرفی می‌کند.</p>
-              </div>
-            </div>
-            <span class="chip warn" id="pendingUsersCount">در حال دریافت</span>
+            <h2>در انتظار تایید از بله</h2>
+            <span class="chip ${activePending.length ? "warn" : "ok"}">${fa(activePending.length)} درخواست</span>
           </div>
           <div class="backend-warning">
-            قالب معرفی در بله:
+            قالب معرفی کاربر در بله:
             <pre>نام: محمد امیری
 جایگاه شغلی: مدیر پروژه</pre>
           </div>
-          <div class="list" id="pendingUsersList">${empty("در حال دریافت...")}</div>
-        </div>`;
-      try {
-        const pendingUsers = await backendFetch("/api/pending-users");
-        const activePending = pendingUsers.filter((item) => item.status === "pending");
-        $("pendingUsersCount").textContent = `${fa(activePending.length)} درخواست`;
-        $("pendingUsersCount").className = activePending.length ? "chip warn" : "chip ok";
-        $("pendingUsersList").innerHTML = activePending.length
-          ? activePending.map((item) => `
-            <article class="item-card">
-              <div class="item-top">
-                <div style="display:flex; gap:10px; align-items:flex-start;">
-                  <span class="card-icon">${icons.approveUser}</span>
-                  <div>
-                    <h3>${item.fullName}</h3>
-                    <p class="muted small">جایگاه شغلی: ${item.jobTitle}</p>
-                    <p class="muted small">آیدی بله: ${item.baleChatId}</p>
-                    <div class="chips"><span class="chip blue">آیدی بله: ${item.baleChatId}</span><span class="chip">${dateFa(item.createdAt)}</span></div>
+          <div class="list" id="pendingUsersList">
+            ${activePending.length ? activePending.map((item) => `
+              <article class="item-card">
+                <div class="item-top">
+                  <div style="display:flex; gap:10px; align-items:flex-start;">
+                    <span class="card-icon">${icons.approveUser}</span>
+                    <div>
+                      <h3>${item.fullName}</h3>
+                      <p class="muted small">جایگاه شغلی: ${item.jobTitle}</p>
+                      <p class="muted small">آیدی بله: ${item.baleChatId}</p>
+                      <div class="chips"><span class="chip">${dateFa(item.createdAt)}</span></div>
+                    </div>
+                  </div>
+                  <div class="item-actions">
+                    <button class="primary" data-approve-user="${item.id}">تایید</button>
+                    <button class="danger" data-reject-user="${item.id}">رد</button>
                   </div>
                 </div>
-                <div class="item-actions">
-                  <button class="primary" data-approve-user="${item.id}">تایید</button>
-                  <button class="danger" data-reject-user="${item.id}">رد</button>
-                </div>
-              </div>
-            </article>`).join("")
-          : empty("کاربر جدیدی در انتظار تایید نیست.");
-        document.querySelectorAll("[data-approve-user]").forEach((btn) => {
-          btn.onclick = async () => {
-            try {
-              await backendFetch("/api/pending-users/approve", {
-                method: "POST",
-                body: JSON.stringify({ pendingUserId: btn.dataset.approveUser, role: "Employee", groupId: "g2" })
-              });
-              toast("کاربر تایید شد.");
-              renderPendingUsers();
-            } catch (error) {
-              toast(error.message);
-            }
-          };
-        });
-        document.querySelectorAll("[data-reject-user]").forEach((btn) => {
-          btn.onclick = async () => {
-            try {
-              await backendFetch("/api/pending-users/reject", {
-                method: "POST",
-                body: JSON.stringify({ pendingUserId: btn.dataset.rejectUser, reason: "رد شده توسط ادمین" })
-              });
-              toast("درخواست کاربر رد شد.");
-              renderPendingUsers();
-            } catch (error) {
-              toast(error.message);
-            }
-          };
-        });
-      } catch (error) {
-        $("pendingUsersCount").textContent = "خطا";
-        $("pendingUsersCount").className = "chip danger";
-        $("pendingUsersList").innerHTML = empty(error.message);
-      }
+              </article>`).join("") : empty("کاربر جدیدی در انتظار تایید نیست.")}
+          </div>
+        </div>
+        <form class="panel" id="newUserForm">
+          <h2>افزودن کاربر جدید</h2>
+          <div class="form-grid">
+            <label>نام و نام خانوادگی<input name="fullName" required></label>
+            <label>جایگاه شغلی<input name="jobTitle" required></label>
+            <label>نقش<select name="role"><option value="Employee">Employee</option><option value="Admin">Admin</option></select></label>
+            <label>گروه<select name="groupId">${(state.groups || []).map((g) => `<option value="${g.id}">${g.title}</option>`).join("")}</select></label>
+            <label>آیدی بله<input name="baleChatId" placeholder="اختیاری"></label>
+            <label>آیدی تلگرام<input name="telegramChatId" placeholder="اختیاری"></label>
+          </div>
+          <button class="primary">ثبت کاربر</button>
+        </form>
+        </div>`;
+      bindUserManagementActions();
+    }
+
+    function bindUserManagementActions() {
+      document.querySelectorAll("[data-approve-user]").forEach((btn) => {
+        btn.onclick = async () => {
+          try {
+            await backendFetch("/api/pending-users/approve", {
+              method: "POST",
+              body: JSON.stringify({ pendingUserId: btn.dataset.approveUser, role: "Employee", groupId: "g2" })
+            });
+            await loadBackendState();
+            toast("کاربر تایید شد.");
+            renderUsers();
+          } catch (error) {
+            toast(error.message);
+          }
+        };
+      });
+      document.querySelectorAll("[data-reject-user]").forEach((btn) => {
+        btn.onclick = async () => {
+          try {
+            await backendFetch("/api/pending-users/reject", {
+              method: "POST",
+              body: JSON.stringify({ pendingUserId: btn.dataset.rejectUser, reason: "رد شده توسط ادمین" })
+            });
+            toast("درخواست کاربر رد شد.");
+            renderUsers();
+          } catch (error) {
+            toast(error.message);
+          }
+        };
+      });
+      $("newUserForm").onsubmit = async (event) => {
+        event.preventDefault();
+        const form = new FormData(event.target);
+        try {
+          await backendFetch("/api/users", {
+            method: "POST",
+            body: JSON.stringify(Object.fromEntries(form.entries()))
+          });
+          await loadBackendState();
+          toast("کاربر جدید ثبت شد.");
+          renderUsers();
+        } catch (error) {
+          toast(error.message);
+        }
+      };
     }
 
     function renderRules() {

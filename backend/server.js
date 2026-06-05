@@ -349,6 +349,24 @@ const routes = {
   },
 
   "GET /api/users": async ({ data }) => data.users,
+  "POST /api/users": async ({ data, body, currentUser }) => {
+    if (!isPrivileged(currentUser)) return { status: 403, body: { error: "فقط مدیر سیستم می‌تواند کاربر جدید بسازد." } };
+    const user = {
+      id: id("U"),
+      fullName: String(body.fullName || "").trim(),
+      jobTitle: String(body.jobTitle || "").trim(),
+      role: body.role || "Employee",
+      groups: [body.groupId || "g2"],
+      telegramChatId: String(body.telegramChatId || "").trim(),
+      baleChatId: String(body.baleChatId || "").trim(),
+      active: body.active !== false,
+      isCeo: false
+    };
+    if (!user.fullName || !user.jobTitle) return { status: 400, body: { error: "نام و جایگاه شغلی الزامی است." } };
+    data.users.push(user);
+    log(data, currentUser.id, "create_user", "user", user.id, null, user);
+    return { status: 201, body: user };
+  },
   "GET /api/groups": async ({ data }) => data.groups,
   "GET /api/pending-users": async ({ data, currentUser }) => {
     if (!isPrivileged(currentUser)) return { status: 403, body: { error: "دسترسی به کاربران در انتظار تایید مجاز نیست." } };
