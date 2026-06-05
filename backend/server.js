@@ -683,6 +683,25 @@ const routes = {
     log(data, currentUser.id, "create_user", "user", user.id, null, user);
     return { status: 201, body: user };
   },
+  "PATCH /api/users": async ({ data, body, currentUser }) => {
+    if (!isPrivileged(currentUser)) return { status: 403, body: { error: "فقط مدیر سیستم می‌تواند کاربر را ویرایش کند." } };
+    const target = data.users.find((user) => user.id === body.userId);
+    if (!target) return { status: 404, body: { error: "کاربر پیدا نشد." } };
+    const before = { ...target };
+    const fullName = String(body.fullName || "").trim();
+    const jobTitle = String(body.jobTitle || "").trim();
+    if (!fullName || !jobTitle) return { status: 400, body: { error: "نام و جایگاه شغلی الزامی است." } };
+    target.fullName = fullName;
+    target.jobTitle = jobTitle;
+    if (!target.isCeo) target.role = body.role || target.role || "Employee";
+    target.groups = [body.groupId || target.groups?.[0] || "g2"];
+    target.telegramChatId = String(body.telegramChatId || "").trim();
+    target.baleChatId = String(body.baleChatId || "").trim();
+    target.baleUsername = normalizeBaleUsername(body.baleUsername || "");
+    target.baleProfileUrl = cleanPublicUrl(body.baleProfileUrl || (target.baleUsername ? `https://ble.ir/${target.baleUsername.replace(/^@/, "")}` : ""));
+    log(data, currentUser.id, "update_user", "user", target.id, before, target);
+    return { saved: true, user: target };
+  },
   "PATCH /api/users/status": async ({ data, body, currentUser }) => {
     if (!isPrivileged(currentUser)) return { status: 403, body: { error: "فقط مدیر سیستم می‌تواند وضعیت کاربر را تغییر دهد." } };
     const target = data.users.find((user) => user.id === body.userId);
