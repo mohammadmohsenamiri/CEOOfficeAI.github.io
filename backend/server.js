@@ -4,6 +4,7 @@ const path = require("path");
 const crypto = require("crypto");
 
 const PORT = Number(process.env.PORT || 4188);
+const HOST = process.env.HOST || "0.0.0.0";
 const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, "data.json");
 
 const nowIso = () => new Date().toISOString();
@@ -483,6 +484,6 @@ async function handle(req, res) {
   }
 }
 
-http.createServer(handle).listen(PORT, "127.0.0.1", () => {
-  console.log(`CEO Office backend listening on http://127.0.0.1:${PORT}`);
+http.createServer(handle).listen(PORT, HOST, () => {
+  console.log(`CEO Office backend listening on http://${HOST}:${PORT}`);
 });
