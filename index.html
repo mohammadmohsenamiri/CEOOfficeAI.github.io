@@ -1118,9 +1118,13 @@
       notifications: []
     };
 
+    const MOCK_DATA_ENABLED = false;
     let state = loadState();
     let activePage = "dashboard";
     let calendarView = "month";
+    let backendOnline = false;
+    let backendChecked = false;
+    let backendBaseUrl = localStorage.getItem("ceo-office-backend-url") || "";
 
     function loadState() {
       const saved = localStorage.getItem(storageKey);
@@ -1134,6 +1138,67 @@
 
     function user(id) {
       return state.users.find((u) => u.id === id);
+    }
+
+    async function loadBackendState() {
+      const [users, groups, tasks, requests, meetings, messages] = await Promise.all([
+        backendFetch("/api/users"),
+        backendFetch("/api/groups"),
+        backendFetch("/api/tasks"),
+        backendFetch("/api/ceo-requests"),
+        backendFetch("/api/meetings"),
+        backendFetch("/api/messages")
+      ]);
+      const groupTitle = (groupId) => groups.find((group) => group.id === groupId)?.title || groupId || "";
+      state.users = users.map((item) => ({
+        id: item.id,
+        fullName: item.fullName,
+        jobTitle: item.jobTitle,
+        role: item.role,
+        group: groupTitle(item.groups?.[0]),
+        groupIds: item.groups || [],
+        telegram: item.telegramChatId || "",
+        bale: item.baleChatId || "",
+        active: item.active,
+        isCeo: item.isCeo
+      }));
+      state.groups = groups;
+      state.tasks = tasks.map((item) => ({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        creatorId: item.creatorId,
+        group: groupTitle(item.groupId),
+        groupId: item.groupId,
+        type: item.visibility === "ceo_private" ? "ceo_private" : "task",
+        dueAt: item.dueAt,
+        visibility: item.visibility,
+        assignees: (item.assignments || []).map((assignment) => ({
+          userId: assignment.userId,
+          status: assignment.status,
+          rejectReason: assignment.rejectReason || "",
+          doneAt: assignment.doneAt || ""
+        }))
+      }));
+      state.requests = requests.map((item) => ({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        requesterId: item.requesterId,
+        ceoId: item.ceoId,
+        status: item.status,
+        decisionReason: item.decisionReason || "",
+        delegatedTaskId: item.delegatedTaskId || ""
+      }));
+      state.meetings = meetings;
+      state.messages = messages.map((item) => ({
+        id: item.id,
+        source: item.source,
+        sender: item.senderMessengerId,
+        text: item.text,
+        status: item.status,
+        parsedIntent: item.parsedIntent || {}
+      }));
     }
 
     function currentUser() {
@@ -1238,6 +1303,11 @@
     }
 
     function renderDashboard() {
+      if (!backendOnline && !MOCK_DATA_ENABLED) {
+        $("view-dashboard").innerHTML = backendRequired("داشبورد واقعی", "داشبورد واقعی باید از APIهای tasks, meetings, CEO requests و analytics بخواند. GitHub Pages به تنهایی backend ندارد.");
+        bindBackendGate();
+        return;
+      }
       const tasks = visibleTasks();
       const mine = tasks.filter((t) => t.assignees.some((a) => a.userId === currentUser().id));
       const pending = tasks.flatMap((t) => t.assignees).filter((a) => a.status === "pending").length;
@@ -1263,6 +1333,11 @@
     }
 
     function renderTasks() {
+      if (!backendOnline && !MOCK_DATA_ENABLED) {
+        $("view-tasks").innerHTML = backendRequired("تسک‌ها", "تسک واقعی باید در backend ذخیره شود، قوانین CEO را از API بگیرد، و notification بسازد.");
+        bindBackendGate();
+        return;
+      }
       $("view-tasks").innerHTML = `
         <div class="grid">
           <div class="panel">
@@ -1322,6 +1397,25 @@
       const form = new FormData(event.target);
       const assignees = Array.from(event.target.assignees.selectedOptions).map((o) => o.value);
       if (!assignees.length) return toast("حداقل یک مسئول انتخاب کنید.");
+      if (backendOnline) {
+        const groupName = form.get("group").trim() || currentUser().group;
+        const groupId = state.groups?.find((group) => group.title === groupName)?.id || currentUser().groupIds?.[0] || "g3";
+        backendFetch("/api/tasks", {
+          method: "POST",
+          body: JSON.stringify({
+            title: form.get("title").trim(),
+            description: form.get("description").trim(),
+            groupId,
+            dueAt: new Date(form.get("dueAt")).toISOString(),
+            assigneeIds: assignees
+          })
+        }).then(async () => {
+          await loadBackendState();
+          renderTasks();
+          toast("تسک در backend ثبت شد.");
+        }).catch((error) => toast(error.message));
+        return;
+      }
       if (!canAssignTo(assignees)) return toast("تعریف مستقیم تسک برای مدیرعامل مجاز نیست. از بخش درخواست از مدیرعامل استفاده کنید.");
       const task = {
         id: uid("T"),
@@ -1346,6 +1440,17 @@
           const task = state.tasks.find((t) => t.id === btn.dataset.task);
           const mine = task?.assignees.find((a) => a.userId === currentUser().id);
           if (!mine) return;
+          if (backendOnline) {
+            backendFetch("/api/tasks/assignment", {
+              method: "PATCH",
+              body: JSON.stringify({ taskId: task.id, status: btn.dataset.taskAction, rejectReason: btn.dataset.taskAction === "rejected" ? "رد شده از UI" : "" })
+            }).then(async () => {
+              await loadBackendState();
+              render();
+              toast("وضعیت تسک در backend ثبت شد.");
+            }).catch((error) => toast(error.message));
+            return;
+          }
           mine.status = btn.dataset.taskAction;
           mine.doneAt = mine.status === "done" ? new Date().toISOString() : "";
           if (mine.status === "rejected") mine.rejectReason = "رد شده در MVP";
@@ -1357,6 +1462,11 @@
     }
 
     function renderRequests() {
+      if (!backendOnline && !MOCK_DATA_ENABLED) {
+        $("view-requests").innerHTML = backendRequired("درخواست از مدیرعامل", "درخواست واقعی باید در backend ذخیره شود و فقط درخواست‌کننده/CEO به آن دسترسی داشته باشند.");
+        bindBackendGate();
+        return;
+      }
       $("view-requests").innerHTML = `
         <div class="grid">
           <div class="panel">
@@ -1373,6 +1483,17 @@
       $("requestForm").onsubmit = (event) => {
         event.preventDefault();
         const form = new FormData(event.target);
+        if (backendOnline) {
+          backendFetch("/api/ceo-requests", {
+            method: "POST",
+            body: JSON.stringify({ title: form.get("title").trim(), description: form.get("description").trim() })
+          }).then(async () => {
+            await loadBackendState();
+            renderRequests();
+            toast("درخواست در backend ثبت شد.");
+          }).catch((error) => toast(error.message));
+          return;
+        }
         const ceo = state.users.find((u) => u.isCeo);
         state.requests.unshift({ id: uid("R"), title: form.get("title").trim(), description: form.get("description").trim(), requesterId: currentUser().id, ceoId: ceo.id, status: "pending", decisionReason: "", delegatedTaskId: "" });
         saveState();
@@ -1413,6 +1534,11 @@
     }
 
     function renderMeetings() {
+      if (!backendOnline && !MOCK_DATA_ENABLED) {
+        $("view-meetings").innerHTML = backendRequired("تقویم و جلسات", "تقویم واقعی باید جلسات را از backend بخواند. بدون backend فقط shell صفحه قابل نمایش است، نه داده واقعی.");
+        bindBackendGate();
+        return;
+      }
       const monthDate = new Date();
       const monthTitle = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { month: "long", year: "numeric" }).format(monthDate);
       $("view-meetings").innerHTML = `
@@ -1453,6 +1579,24 @@
         event.preventDefault();
         const form = new FormData(event.target);
         const members = Array.from(event.target.members.selectedOptions).map((o) => o.value);
+        if (backendOnline) {
+          backendFetch("/api/meetings", {
+            method: "POST",
+            body: JSON.stringify({
+              title: form.get("title").trim(),
+              description: form.get("description").trim(),
+              startAt: new Date(form.get("startAt")).toISOString(),
+              endAt: new Date(form.get("endAt")).toISOString(),
+              location: form.get("location").trim(),
+              members
+            })
+          }).then(async () => {
+            await loadBackendState();
+            renderMeetings();
+            toast("جلسه در backend ثبت شد.");
+          }).catch((error) => toast(error.message));
+          return;
+        }
         if (!members.includes(currentUser().id)) members.push(currentUser().id);
         state.meetings.unshift({ id: uid("M"), title: form.get("title").trim(), description: form.get("description").trim(), startAt: new Date(form.get("startAt")).toISOString(), endAt: new Date(form.get("endAt")).toISOString(), location: form.get("location").trim(), creatorId: currentUser().id, status: "scheduled", members });
         saveState();
@@ -1572,6 +1716,11 @@
     }
 
     function renderMessenger() {
+      if (!backendOnline && !MOCK_DATA_ENABLED) {
+        $("view-messenger").innerHTML = backendRequired("پیام‌رسان و AI", "AI واقعی و جریان تایید باید از backend و provider آنلاین یا parser backend عبور کند. در GitHub Pages به تنهایی اجرا نمی‌شود.");
+        bindBackendGate();
+        return;
+      }
       $("view-messenger").innerHTML = `
         <div class="ai-workspace">
           <div class="ai-composer">
@@ -1624,9 +1773,20 @@
         };
       });
       $("parseMessage").onclick = () => {
-        const intent = parsePersianMessage($("messageText").value);
+        const text = $("messageText").value;
+        if (backendOnline) {
+          backendFetch("/api/messages/parse", {
+            method: "POST",
+            body: JSON.stringify({ text })
+          }).then((intent) => {
+            $("aiOutput").textContent = JSON.stringify(intent, null, 2);
+            $("aiOutput").dataset.intent = JSON.stringify({ source, intent, text });
+          }).catch((error) => toast(error.message));
+          return;
+        }
+        const intent = parsePersianMessage(text);
         $("aiOutput").textContent = JSON.stringify(intent, null, 2);
-        $("aiOutput").dataset.intent = JSON.stringify({ source, intent, text: $("messageText").value });
+        $("aiOutput").dataset.intent = JSON.stringify({ source, intent, text });
       };
       $("promptPreset").onchange = (event) => {
         $("messageText").value = event.target.value;
@@ -1652,6 +1812,46 @@
 
     function confirmIntent(payload) {
       const { intent } = payload;
+      if (backendOnline) {
+        const createFromIntent = async () => {
+          if (intent.intent === "create_task") {
+            await backendFetch("/api/tasks", {
+              method: "POST",
+              body: JSON.stringify({
+                title: intent.title,
+                description: payload.text,
+                groupId: currentUser().groupIds?.[0] || "g3",
+                dueAt: new Date(Date.now() + 86400000).toISOString(),
+                assigneeIds: intent.assignees?.length ? intent.assignees : [currentUser().id]
+              })
+            });
+          }
+          if (intent.intent === "create_ceo_request" || intent.intent === "create_manager_request") {
+            await backendFetch("/api/ceo-requests", {
+              method: "POST",
+              body: JSON.stringify({ title: intent.title, description: payload.text })
+            });
+          }
+          if (intent.intent === "create_meeting") {
+            await backendFetch("/api/meetings", {
+              method: "POST",
+              body: JSON.stringify({
+                title: intent.title,
+                description: payload.text,
+                startAt: new Date(Date.now() + 86400000).toISOString(),
+                endAt: new Date(Date.now() + 90000000).toISOString(),
+                location: "ثبت نشده",
+                members: intent.members || []
+              })
+            });
+          }
+          await loadBackendState();
+          renderMessenger();
+          toast("عملیات در backend ثبت شد.");
+        };
+        createFromIntent().catch((error) => toast(error.message));
+        return;
+      }
       state.messages.unshift({ id: uid("MSG"), source: payload.source, sender: currentUser().telegram, text: payload.text, status: "confirmed", parsedIntent: intent });
       if (intent.intent === "create_task") {
         const assignees = intent.assignees.length ? intent.assignees : [currentUser().id];
@@ -1671,7 +1871,8 @@
     }
 
     async function backendFetch(path, options = {}) {
-      const response = await fetch(`http://127.0.0.1:4188${path}`, {
+      const base = backendBaseUrl || (location.protocol === "file:" ? "http://127.0.0.1:4188" : location.origin);
+      const response = await fetch(`${base}${path}`, {
         ...options,
         headers: {
           "Content-Type": "application/json",
@@ -1685,6 +1886,11 @@
     }
 
     async function renderBaleSettings() {
+      if (!backendOnline && !MOCK_DATA_ENABLED) {
+        $("view-bale").innerHTML = backendRequired("بازوی بله", "بازوی بله واقعی فقط با backend عمومی HTTPS کار می‌کند. GitHub Pages نمی‌تواند webhook یا bot را اجرا کند.");
+        bindBackendGate();
+        return;
+      }
       $("view-bale").innerHTML = `
         <div class="grid">
           <form class="panel" id="baleForm">
@@ -1790,6 +1996,11 @@
     }
 
     async function renderAnalytics() {
+      if (!backendOnline && !MOCK_DATA_ENABLED) {
+        $("view-analytics").innerHTML = backendRequired("تحلیل و هشدارهای هوشمند", "تحلیل واقعی باید از endpointهای analytics و smart-notifications خوانده شود.");
+        bindBackendGate();
+        return;
+      }
       $("view-analytics").innerHTML = `
         <div class="grid">
           <div class="panel">
@@ -1833,6 +2044,11 @@
     }
 
     async function renderDeploy() {
+      if (!backendOnline && !MOCK_DATA_ENABLED) {
+        $("view-deploy").innerHTML = backendRequired("استقرار", "برای تنظیمات استقرار واقعی باید backend متصل باشد. راهنمای deploy در فایل‌های خروجی وجود دارد.");
+        bindBackendGate();
+        return;
+      }
       $("view-deploy").innerHTML = `
         <div class="grid">
           <form class="panel" id="deployForm">
@@ -1881,6 +2097,11 @@
     }
 
     async function renderOffline() {
+      if (!backendOnline && !MOCK_DATA_ENABLED) {
+        $("view-offline").innerHTML = backendRequired("فاز آفلاین", "وضعیت AI آفلاین باید از backend خوانده شود. بدون backend این صفحه mock نشان نمی‌دهد.");
+        bindBackendGate();
+        return;
+      }
       $("view-offline").innerHTML = `
         <div class="grid">
           <form class="panel" id="offlineForm">
@@ -1937,6 +2158,11 @@
     }
 
     function renderUsers() {
+      if (!backendOnline && !MOCK_DATA_ENABLED) {
+        $("view-users").innerHTML = backendRequired("افراد و نقش‌ها", "مدیریت کاربران واقعی باید از backend و سطح دسترسی Admin خوانده شود.");
+        bindBackendGate();
+        return;
+      }
       $("view-users").innerHTML = `
         <div class="panel">
           <div class="panel-head"><h2>کاربران سازمان</h2><span class="chip">${fa(state.users.length)} نفر</span></div>
@@ -1950,6 +2176,11 @@
     }
 
     function renderRules() {
+      if (!backendOnline && !MOCK_DATA_ENABLED) {
+        $("view-rules").innerHTML = backendRequired("قوانین دسترسی", "قوانین واقعی باید در backend enforce شوند، نه فقط در UI. این صفحه بدون backend mock نشان نمی‌دهد.");
+        bindBackendGate();
+        return;
+      }
       const rows = [
         ["R-CEO-01", "هیچ‌کس وظایف مدیرعامل را نمی‌بیند مگر خود CEO یا نقش مجاز."],
         ["R-CEO-02", "تعریف مستقیم تسک برای CEO فقط توسط خود CEO مجاز است."],
@@ -1976,7 +2207,81 @@
       return `<div class="item-card"><p class="muted">${text}</p></div>`;
     }
 
-    render();
+    function backendRequired(featureName, details = "") {
+      return `
+        <div class="panel">
+          <div class="panel-head">
+            <div style="display:flex; gap:10px; align-items:center;">
+              <span class="card-icon">${icons.lock}</span>
+              <div>
+                <h2>${featureName} هنوز به backend متصل نیست</h2>
+                <p class="muted small">این صفحه دیگر mock data نشان نمی‌دهد. برای استفاده واقعی باید backend Node اجرا یا deploy شود.</p>
+              </div>
+            </div>
+            <span class="chip danger">Backend Required</span>
+          </div>
+          ${details ? `<div class="backend-warning">${details}</div>` : ""}
+          <div class="form-grid">
+            <label class="full">Backend URL
+              <input id="backendUrlInput" value="${backendBaseUrl || ""}" placeholder="مثلاً https://your-service.onrender.com">
+            </label>
+          </div>
+          <div class="item-actions">
+            <button class="primary" id="saveBackendUrl">ذخیره و تست اتصال</button>
+            <button class="blue" id="useLocalBackend">استفاده از backend محلی</button>
+          </div>
+          <pre>Local: http://127.0.0.1:4188
+Online: https://YOUR-SERVICE.onrender.com</pre>
+        </div>`;
+    }
+
+    async function checkBackend() {
+      backendChecked = true;
+      try {
+        await backendFetch("/api/health");
+        backendOnline = true;
+      } catch {
+        backendOnline = false;
+      }
+    }
+
+    function bindBackendGate() {
+      const save = $("saveBackendUrl");
+      const local = $("useLocalBackend");
+      if (save) {
+        save.onclick = async () => {
+          backendBaseUrl = $("backendUrlInput").value.trim().replace(/\/$/, "");
+          localStorage.setItem("ceo-office-backend-url", backendBaseUrl);
+          await checkBackend();
+          render();
+          toast(backendOnline ? "backend متصل شد." : "اتصال backend برقرار نشد.");
+        };
+      }
+      if (local) {
+        local.onclick = async () => {
+          backendBaseUrl = "http://127.0.0.1:4188";
+          localStorage.setItem("ceo-office-backend-url", backendBaseUrl);
+          await checkBackend();
+          render();
+          toast(backendOnline ? "backend محلی متصل شد." : "backend محلی اجرا نیست.");
+        };
+      }
+    }
+
+    async function boot() {
+      if (!backendBaseUrl && location.protocol !== "file:") backendBaseUrl = location.origin;
+      await checkBackend();
+      if (backendOnline) {
+        try {
+          await loadBackendState();
+        } catch (error) {
+          backendOnline = false;
+        }
+      }
+      render();
+    }
+
+    boot();
   </script>
 </body>
 </html>
