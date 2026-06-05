@@ -1979,6 +1979,9 @@
               <button class="blue" type="button" id="sendBaleTest">ارسال پیام تست واقعی</button>
               <button class="blue" type="button" id="testBaleWebhook">تست پیام بله</button>
             </div>
+            <div class="list" id="baleActionResult">
+              ${empty("هنوز تستی اجرا نشده است.")}
+            </div>
           </form>
           <div class="panel">
             <h2>راهنمای اتصال بله</h2>
@@ -2010,7 +2013,7 @@
         event.preventDefault();
         const form = new FormData(event.target);
         try {
-          await backendFetch("/api/settings/bale", {
+          const result = await backendFetch("/api/settings/bale", {
             method: "PUT",
             body: JSON.stringify({
               enabled: form.get("enabled") === "true",
@@ -2020,9 +2023,10 @@
               defaultReplyMode: form.get("defaultReplyMode")
             })
           });
+          showBaleResult("ذخیره تنظیمات", true, result);
           toast("تنظیمات بله ذخیره شد.");
-          renderBaleSettings();
         } catch (error) {
+          showBaleResult("ذخیره تنظیمات", false, { error: error.message });
           toast(error.message);
         }
       };
@@ -2033,8 +2037,10 @@
             method: "POST",
             body: JSON.stringify({ message: { chat: { id: currentUser().bale }, text: "برای سارا تسک پیگیری گزارش تا فردا بساز" } })
           });
+          showBaleResult("تست دریافت webhook", true, result);
           toast(result.reply);
         } catch (error) {
+          showBaleResult("تست دریافت webhook", false, { error: error.message });
           toast(error.message);
         }
       };
@@ -2044,8 +2050,10 @@
             method: "POST",
             body: JSON.stringify({})
           });
+          showBaleResult("ثبت webhook در بله", Boolean(result.ok), result);
           toast(result.ok ? "webhook در بله ثبت شد." : "ثبت webhook ناموفق بود.");
         } catch (error) {
+          showBaleResult("ثبت webhook در بله", false, { error: error.message });
           toast(error.message);
         }
       };
@@ -2055,11 +2063,32 @@
             method: "POST",
             body: JSON.stringify({ text: "پیام تست از سیستم دفتر مدیرعامل" })
           });
+          showBaleResult("ارسال پیام تست واقعی", Boolean(result.ok), result);
           toast(result.ok ? "پیام تست به بله ارسال شد." : "ارسال پیام تست ناموفق بود.");
         } catch (error) {
+          showBaleResult("ارسال پیام تست واقعی", false, { error: error.message });
           toast(error.message);
         }
       };
+    }
+
+    function showBaleResult(title, ok, result) {
+      const box = $("baleActionResult");
+      if (!box) return;
+      box.innerHTML = `
+        <article class="item-card">
+          <div class="item-top">
+            <div style="display:flex; gap:10px; align-items:flex-start;">
+              <span class="card-icon">${ok ? icons.done : icons.alert}</span>
+              <div>
+                <h3>${title}</h3>
+                <p class="muted small">${ok ? "موفق" : "ناموفق"} · ${dateFa(new Date().toISOString())}</p>
+              </div>
+            </div>
+            <span class="chip ${ok ? "ok" : "danger"}">${ok ? "موفق" : "خطا"}</span>
+          </div>
+          <pre>${JSON.stringify(result, null, 2)}</pre>
+        </article>`;
     }
 
     async function renderAnalytics() {
