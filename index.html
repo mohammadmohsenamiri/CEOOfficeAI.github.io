@@ -74,6 +74,30 @@
       min-height: 100vh;
     }
 
+    .app.logged-out aside,
+    .app.logged-out main { display: none; }
+
+    .auth-screen {
+      grid-column: 1 / -1;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .auth-card {
+      width: min(460px, 100%);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 28px 90px rgba(15, 23, 42, .14);
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .auth-form { display: grid; gap: 12px; }
+
     aside {
       background: #fff;
       border-left: 1px solid var(--line);
@@ -1213,6 +1237,31 @@
 </head>
 <body>
   <div class="app">
+    <section class="auth-screen hidden" id="loginScreen">
+      <div class="auth-card">
+        <div class="brand">
+          <strong>CEO Office AI Coordinator</strong>
+          <span>ورود امن با پیام‌رسان بله</span>
+        </div>
+        <div class="tabs">
+          <button class="active" type="button" data-auth-tab="login">ورود</button>
+          <button type="button" data-auth-tab="signup">ساخت حساب</button>
+        </div>
+        <form id="loginForm" class="auth-form">
+          <label>آیدی بله یا نام کاربری<input name="identifier" placeholder="@username" required></label>
+          <button type="button" class="blue" id="requestLoginCode">ارسال کد به بله</button>
+          <label>کد دریافت‌شده در بله<input name="code" inputmode="numeric" placeholder="کد ۶ رقمی"></label>
+          <button type="submit" class="primary">ورود</button>
+        </form>
+        <form id="signupForm" class="auth-form hidden">
+          <label>نام و نام خانوادگی<input name="fullName" required></label>
+          <label>جایگاه شغلی<input name="jobTitle" required></label>
+          <label>آیدی بله<input name="baleUsername" placeholder="@username" required></label>
+          <label>لینک پروفایل بله<input name="baleProfileUrl" placeholder="https://ble.ir/username"></label>
+          <button type="submit" class="primary">ثبت درخواست و انتظار تایید ادمین</button>
+        </form>
+      </div>
+    </section>
     <aside>
       <div class="brand">
         <strong>CEO Office AI Coordinator</strong>
@@ -1223,6 +1272,7 @@
         <label>کاربر فعال
           <select id="currentUser"></select>
         </label>
+        <button class="ghost" id="logoutButton">خروج</button>
         <button class="ghost" id="resetData" title="بازگردانی داده‌های نمونه">بازنشانی داده‌ها</button>
       </div>
     </aside>
@@ -1231,7 +1281,7 @@
       <div class="topbar">
         <div>
           <h1 id="pageTitle">داشبورد</h1>
-          <p class="muted" id="pageSubtitle">نمای عملیاتی تسک‌ها، جلسات و درخواست‌های مدیرعامل</p>
+          <p class="muted" id="pageSubtitle">نمای عملیاتی وظیفه‌ها، جلسات و درخواست‌های مدیرعامل</p>
         </div>
         <div class="chips">
           <span class="chip blue" id="todayChip"></span>
@@ -1259,6 +1309,8 @@
   <script>
     const $ = (id) => document.getElementById(id);
     const storageKey = "ceo-office-ai-coordinator-v1";
+    const authUserKey = "ceo-office-auth-user-id";
+    const activePageKey = "ceo-office-active-page";
     const nf = new Intl.NumberFormat("fa-IR");
     const df = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { dateStyle: "medium", timeStyle: "short" });
 
@@ -1291,10 +1343,10 @@
       ["recurring", "وظایف تکرارشونده", "چرخه‌های روزانه، هفتگی و ماهانه", "clock"],
       ["requests", "درخواست از مدیرعامل", "مسیر مجاز برای درخواست‌های خصوصی CEO", "requests"],
       ["meetings", "جلسات", "تقویم شمسی و یادآوری", "meetings"],
-      ["bale", "تنظیمات بله", "اتصال بازوی بله، webhook و پیام تایید فارسی", "bale"],
       ["analytics", "تحلیل و هشدارها", "پیشنهادهای هوشمند، KPI و کارهای عقب‌افتاده", "analytics"],
       ["offline", "فاز آفلاین", "AI محلی، سرور داخلی و IP ثابت", "offline"],
-      ["users", "افراد", "کاربران، تایید بله و افزودن دستی", "users"]
+      ["users", "افراد", "کاربران، تایید بله و افزودن دستی", "users"],
+      ["bale", "تنظیمات بله", "اتصال بازوی بله، webhook و پیام تایید فارسی", "bale"]
     ];
 
     const seed = {
@@ -1322,19 +1374,21 @@
         { id: "M-3001", title: "جلسه هماهنگی فروش و عملیات", description: "بررسی تعهدات باز و تصمیم برای هفته آینده.", startAt: "2026-06-06T08:00:00.000Z", endAt: "2026-06-06T09:00:00.000Z", location: "اتاق جلسات اصلی", creatorId: "u2", status: "scheduled", members: ["u2", "u3", "u4"] }
       ],
       messages: [
-        { id: "MSG-1", source: "telegram", sender: "1002", text: "برای سارا و حسین تسک گزارش فروش تا شنبه بساز", status: "parsed", parsedIntent: { intent: "create_task", title: "گزارش فروش", assignees: ["سارا احمدی", "حسین نوری"], needsConfirmation: true } }
+        { id: "MSG-1", source: "telegram", sender: "1002", text: "برای سارا و حسین وظیفه گزارش فروش تا شنبه بساز", status: "parsed", parsedIntent: { intent: "create_task", title: "گزارش فروش", assignees: ["سارا احمدی", "حسین نوری"], needsConfirmation: true } }
       ],
       notifications: []
     };
 
     const MOCK_DATA_ENABLED = false;
     let state = loadState();
-    let activePage = "dashboard";
+    let activePage = localStorage.getItem(activePageKey) || "dashboard";
     let calendarView = "month";
     let calendarFocusDate = new Date();
     let backendOnline = false;
     let backendChecked = false;
     let backendBaseUrl = localStorage.getItem("ceo-office-backend-url") || "";
+    const savedAuthUserId = localStorage.getItem(authUserKey);
+    if (savedAuthUserId) state.currentUserId = savedAuthUserId;
 
     function loadState() {
       const saved = localStorage.getItem(storageKey);
@@ -1435,9 +1489,22 @@
       return user(state.currentUserId) || state.users[0];
     }
 
+    function isLoggedIn() {
+      return Boolean(localStorage.getItem(authUserKey));
+    }
+
     function isPrivileged() {
       const u = currentUser();
       return u.role === "Admin" || u.role === "CEO";
+    }
+
+    function visiblePages() {
+      const u = currentUser();
+      return pages.filter(([id]) => {
+        if (id === "requests") return u.role === "CEO";
+        if (["users", "analytics", "offline", "bale"].includes(id)) return u.role === "Admin";
+        return true;
+      });
     }
 
     function fa(value) {
@@ -1506,31 +1573,85 @@
       return `<span class="chip ${cls}">${labels[status] || status}</span>`;
     }
 
+    function bindAuthForms() {
+      if ($("loginScreen")?.dataset.bound === "true") return;
+      $("loginScreen").dataset.bound = "true";
+      document.querySelectorAll("[data-auth-tab]").forEach((btn) => {
+        btn.onclick = () => {
+          document.querySelectorAll("[data-auth-tab]").forEach((item) => item.classList.remove("active"));
+          btn.classList.add("active");
+          $("loginForm").classList.toggle("hidden", btn.dataset.authTab !== "login");
+          $("signupForm").classList.toggle("hidden", btn.dataset.authTab !== "signup");
+        };
+      });
+      $("requestLoginCode").onclick = async () => {
+        const identifier = new FormData($("loginForm")).get("identifier");
+        if (!identifier) return toast("آیدی بله یا نام کاربری را وارد کنید.");
+        try {
+          await backendFetch("/api/auth/request-code", { method: "POST", body: JSON.stringify({ identifier }) });
+          toast("کد ورود به بله ارسال شد.");
+        } catch (error) { toast(error.message); }
+      };
+      $("loginForm").onsubmit = async (event) => {
+        event.preventDefault();
+        const payload = Object.fromEntries(new FormData(event.target).entries());
+        try {
+          const result = await backendFetch("/api/auth/login", { method: "POST", body: JSON.stringify(payload) });
+          localStorage.setItem(authUserKey, result.user.id);
+          state.currentUserId = result.user.id;
+          await loadBackendState();
+          render();
+          toast("ورود انجام شد.");
+        } catch (error) { toast(error.message); }
+      };
+      $("signupForm").onsubmit = async (event) => {
+        event.preventDefault();
+        const payload = Object.fromEntries(new FormData(event.target).entries());
+        try {
+          await backendFetch("/api/auth/signup", { method: "POST", body: JSON.stringify(payload) });
+          event.target.reset();
+          toast("درخواست حساب ثبت شد و در انتظار تایید ادمین است.");
+        } catch (error) { toast(error.message); }
+      };
+    }
+
     function renderShell() {
-      $("nav").innerHTML = pages.map(([id, title, , icon]) => `<button class="nav-button ${id === activePage ? "active" : ""}" data-page="${id}"><span class="nav-main"><span class="nav-arrow">›</span><span class="nav-icon">${icons[icon]}</span><span class="nav-label">${title}</span></span></button>`).join("");
+      const navPages = visiblePages();
+      if (!navPages.some(([id]) => id === activePage)) activePage = "dashboard";
+      $("nav").innerHTML = navPages.map(([id, title, , icon]) => `<button class="nav-button ${id === activePage ? "active" : ""}" data-page="${id}"><span class="nav-main"><span class="nav-arrow">›</span><span class="nav-icon">${icons[icon]}</span><span class="nav-label">${title}</span></span></button>`).join("");
       $("nav").querySelectorAll("button").forEach((btn) => btn.addEventListener("click", () => {
         activePage = btn.dataset.page;
+        localStorage.setItem(activePageKey, activePage);
         render();
       }));
 
-      $("currentUser").innerHTML = state.users.map((u) => `<option value="${u.id}" ${u.id === state.currentUserId ? "selected" : ""}>${u.fullName} - ${u.role}</option>`).join("");
-      $("currentUser").onchange = (event) => {
-        state.currentUserId = event.target.value;
-        saveState();
-        render();
-      };
+      $("currentUser").innerHTML = `<option value="${currentUser().id}">${currentUser().fullName} - ${currentUser().role}</option>`;
+      $("currentUser").disabled = true;
       $("resetData").onclick = () => {
         state = structuredClone(seed);
         saveState();
         render();
         toast("داده‌های نمونه بازنشانی شد.");
       };
+      $("logoutButton").onclick = () => {
+        localStorage.removeItem(authUserKey);
+        render();
+      };
       $("todayChip").textContent = dateFa(new Date().toISOString());
       $("roleChip").textContent = `${currentUser().fullName} | ${currentUser().role}`;
     }
 
     function render() {
+      if (!isLoggedIn()) {
+        document.querySelector(".app")?.classList.add("logged-out");
+        $("loginScreen")?.classList.remove("hidden");
+        bindAuthForms();
+        return;
+      }
+      document.querySelector(".app")?.classList.remove("logged-out");
+      $("loginScreen")?.classList.add("hidden");
       renderShell();
+      if (!visiblePages().some(([id]) => id === activePage)) activePage = "dashboard";
       pages.forEach(([id]) => $(`view-${id}`).classList.toggle("hidden", id !== activePage));
       const page = pages.find(([id]) => id === activePage);
       $("pageTitle").textContent = page[1];
@@ -1564,15 +1685,15 @@
       const done = tasks.filter((t) => t.assignees.every((a) => a.status === "done")).length;
       $("view-dashboard").innerHTML = `
         <div class="metrics">
-          <div class="metric"><span class="metric-icon">${icons.dashboard}</span><span class="muted">تسک‌های قابل مشاهده</span><b>${fa(tasks.length)}</b></div>
-          <div class="metric"><span class="metric-icon">${icons.tasks}</span><span class="muted">تسک‌های من</span><b>${fa(mine.length)}</b></div>
+          <div class="metric"><span class="metric-icon">${icons.dashboard}</span><span class="muted">وظیفه‌های قابل مشاهده</span><b>${fa(tasks.length)}</b></div>
+          <div class="metric"><span class="metric-icon">${icons.tasks}</span><span class="muted">وظیفه‌های من</span><b>${fa(mine.length)}</b></div>
           <div class="metric"><span class="metric-icon">${icons.clock}</span><span class="muted">در انتظار قبول</span><b>${fa(pending)}</b></div>
           <div class="metric"><span class="metric-icon">${icons.done}</span><span class="muted">تکمیل‌شده</span><b>${fa(done)}</b></div>
         </div>
         <div class="grid">
           <div class="panel">
             <div class="panel-head"><h2>وظایف جاری</h2><button class="blue" data-go="tasks">مدیریت وظایف</button></div>
-            <div class="list">${tasks.slice(0, 4).map(taskCard).join("") || empty("تسکی برای نمایش وجود ندارد.")}</div>
+            <div class="list">${tasks.slice(0, 4).map(taskCard).join("") || empty("وظیفهی برای نمایش وجود ندارد.")}</div>
           </div>
           <div class="panel">
             <div class="panel-head"><h2>درخواست‌های مدیرعامل</h2><button class="primary" data-go="requests">ثبت درخواست</button></div>
@@ -1584,7 +1705,7 @@
 
     function renderTasks() {
       if (!backendOnline && !MOCK_DATA_ENABLED) {
-        $("view-tasks").innerHTML = backendRequired("تسک‌ها", "تسک واقعی باید در backend ذخیره شود، قوانین CEO را از API بگیرد، و notification بسازد.");
+        $("view-tasks").innerHTML = backendRequired("وظیفه‌ها", "وظیفه واقعی باید در backend ذخیره شود، قوانین CEO را از API بگیرد، و notification بسازد.");
         bindBackendGate();
         return;
       }
@@ -1599,7 +1720,7 @@
                 <button class="primary" id="openTaskModal">وظیفه جاری جدید</button>
               </div>
             </div>
-            <div class="list">${tasks.map(taskCard).join("") || empty("تسکی مطابق دسترسی شما وجود ندارد.")}</div>
+            <div class="list">${tasks.map(taskCard).join("") || empty("وظیفهی مطابق دسترسی شما وجود ندارد.")}</div>
           </div>
           ${taskModal(false)}
         </div>`;
@@ -1680,7 +1801,7 @@
           </div>
           <div class="chips"><span class="chip">مسئولان: ${assignees || "ثبت نشده"}</span></div>
           <div class="item-actions">
-            <button class="blue" data-generate-recurring="${task.id}">ساخت تسک بعدی</button>
+            <button class="blue" data-generate-recurring="${task.id}">ساخت وظیفه بعدی</button>
             ${canDelete ? `<button class="danger" data-delete-recurring="${task.id}">حذف چرخه</button>` : ""}
           </div>
         </article>`;
@@ -1691,7 +1812,7 @@
         <div class="modal-backdrop hidden" id="recurringTaskModal">
           <form class="modal-card" id="recurringTaskForm">
             <div class="panel-head">
-              <h2>تسک تکرارشونده جدید</h2>
+              <h2>وظیفه تکرارشونده جدید</h2>
               <button type="button" class="ghost" data-close-modal="recurringTaskModal">بستن</button>
             </div>
             <div class="form-grid">
@@ -1793,11 +1914,11 @@
               await backendFetch("/api/recurring-tasks/generate-next", { method: "POST", body: JSON.stringify({ recurringTaskId }) });
               await loadBackendState();
               renderRecurringTasks();
-              toast("تسک بعدی از چرخه ساخته شد.");
+              toast("وظیفه بعدی از چرخه ساخته شد.");
             } catch (error) { toast(error.message); }
             return;
           }
-          toast("ساخت خودکار تسک در حالت local mock فعال نیست.");
+          toast("ساخت خودکار وظیفه در حالت local mock فعال نیست.");
         };
       });
     }
@@ -1809,7 +1930,7 @@
         <div class="modal-backdrop hidden" id="${modalId}">
           <form class="modal-card" id="${formId}" data-long-term="${longTerm ? "true" : "false"}">
             <div class="panel-head">
-              <h2>${longTerm ? "وظیفه بلندمدت جدید" : "تسک جدید"}</h2>
+              <h2>${longTerm ? "وظیفه بلندمدت جدید" : "وظیفه جدید"}</h2>
               <button type="button" class="ghost" data-close-modal="${modalId}">بستن</button>
             </div>
             <div class="form-grid">
@@ -1877,7 +1998,7 @@
               <button class="primary" data-task-action="accepted" data-task="${task.id}">قبول</button>
               <button class="blue" data-task-action="done" data-task="${task.id}">Done</button>
               <button class="danger" data-task-action="rejected" data-task="${task.id}">رد</button>` : ""}
-            ${!task.longTerm && canDelete ? `<button class="blue" data-transfer-long="${task.id}">انتقال به بخش تسک‌های بلندمدت</button>` : ""}
+            ${!task.longTerm && canDelete ? `<button class="blue" data-transfer-long="${task.id}">انتقال به بخش وظیفه‌های بلندمدت</button>` : ""}
             ${canDelete ? `<button class="danger" data-delete-task="${task.id}">حذف</button>` : ""}
           </div>
         </article>`;
@@ -1906,11 +2027,11 @@
           $(longTerm ? "longTermTaskModal" : "taskModal")?.classList.add("hidden");
           await loadBackendState();
           longTerm ? renderLongTermTasks() : renderTasks();
-          toast(longTerm ? "وظیفه بلندمدت در backend ثبت شد." : "تسک در backend ثبت شد.");
+          toast(longTerm ? "وظیفه بلندمدت در backend ثبت شد." : "وظیفه در backend ثبت شد.");
         }).catch((error) => toast(error.message));
         return;
       }
-      if (!canAssignTo(assignees)) return toast("تعریف مستقیم تسک برای مدیرعامل مجاز نیست. از بخش درخواست از مدیرعامل استفاده کنید.");
+      if (!canAssignTo(assignees)) return toast("تعریف مستقیم وظیفه برای مدیرعامل مجاز نیست. از بخش درخواست از مدیرعامل استفاده کنید.");
       const task = {
         id: uid("T"),
         title: form.get("title").trim(),
@@ -1927,7 +2048,7 @@
       saveState();
       $(longTerm ? "longTermTaskModal" : "taskModal")?.classList.add("hidden");
       longTerm ? renderLongTermTasks() : renderTasks();
-      toast(longTerm ? "وظیفه بلندمدت ثبت شد." : "تسک ثبت شد و نوتیف assign ساخته شد.");
+      toast(longTerm ? "وظیفه بلندمدت ثبت شد." : "وظیفه ثبت شد و نوتیف assign ساخته شد.");
     }
 
     function bindTaskActions() {
@@ -1942,7 +2063,7 @@
               });
               await loadBackendState();
               render();
-              toast("تسک به بخش وظایف بلندمدت منتقل شد.");
+              toast("وظیفه به بخش وظایف بلندمدت منتقل شد.");
             } catch (error) {
               toast(error.message);
             }
@@ -1954,7 +2075,7 @@
             task.dueAt = "";
             saveState();
             render();
-            toast("تسک به بخش وظایف بلندمدت منتقل شد.");
+            toast("وظیفه به بخش وظایف بلندمدت منتقل شد.");
           }
         };
       });
@@ -1969,7 +2090,7 @@
               });
               await loadBackendState();
               render();
-              toast("تسک حذف شد.");
+              toast("وظیفه حذف شد.");
             } catch (error) {
               toast(error.message);
             }
@@ -1978,7 +2099,7 @@
           state.tasks = state.tasks.filter((task) => task.id !== taskId);
           saveState();
           render();
-          toast("تسک حذف شد.");
+          toast("وظیفه حذف شد.");
         };
       });
       document.querySelectorAll("[data-task-action]").forEach((btn) => {
@@ -1993,7 +2114,7 @@
             }).then(async () => {
               await loadBackendState();
               render();
-              toast("وضعیت تسک در backend ثبت شد.");
+              toast("وضعیت وظیفه در backend ثبت شد.");
             }).catch((error) => toast(error.message));
             return;
           }
@@ -2002,7 +2123,7 @@
           if (mine.status === "rejected") mine.rejectReason = "رد شده در MVP";
           saveState();
           render();
-          toast(mine.status === "done" ? "سهم شما Done شد." : "وضعیت تسک ثبت شد.");
+          toast(mine.status === "done" ? "سهم شما Done شد." : "وضعیت وظیفه ثبت شد.");
         };
       });
     }
@@ -2705,12 +2826,12 @@
             </div>
             <div class="ai-box">
               <label>پیام کاربر
-                <textarea id="messageText">برای سارا و حسین تسک آماده‌سازی گزارش فروش تا فردا بساز</textarea>
+                <textarea id="messageText">برای سارا و حسین وظیفه آماده‌سازی گزارش فروش تا فردا بساز</textarea>
               </label>
               <div class="prompt-row">
                 <label>نمونه سریع
                   <select id="promptPreset">
-                    <option value="برای سارا و حسین تسک آماده‌سازی گزارش فروش تا فردا بساز">ساخت تسک چندمسئوله</option>
+                    <option value="برای سارا و حسین وظیفه آماده‌سازی گزارش فروش تا فردا بساز">ساخت وظیفه چندمسئوله</option>
                     <option value="برای فردا ساعت ۱۰ جلسه هماهنگی فروش و عملیات با سارا و حسین ثبت کن">ساخت جلسه</option>
                     <option value="درخواست تایید بودجه رویداد مشتریان را برای مدیرعامل ثبت کن">درخواست از مدیرعامل</option>
                   </select>
@@ -2782,13 +2903,13 @@
       const names = state.users.filter((u) => !u.isCeo).filter((u) => text.includes(u.fullName.split(" ")[0])).map((u) => u.id);
       if (text.includes("جلسه")) return { intent: "create_meeting", title: cleanupTitle(text, "جلسه"), members: names.length ? names : [currentUser().id], startText: text.includes("فردا") ? "فردا" : "امروز", confidence: .76, needsConfirmation: true };
       if (text.includes("مدیرعامل") || text.includes("بودجه") || text.includes("تایید")) return { intent: "create_manager_request", title: cleanupTitle(text, "درخواست"), confidence: .72, needsConfirmation: true };
-      if (text.includes("تسک") || text.includes("کار")) return { intent: "create_task", title: cleanupTitle(text, "تسک"), assignees: names, dueText: text.includes("فردا") ? "فردا" : "امروز", confidence: .81, needsConfirmation: true };
-      if (text.includes("تسک‌های من")) return { intent: "list_my_tasks", confidence: .93, needsConfirmation: false };
-      return { intent: "unknown", confidence: .3, needsConfirmation: false, question: "لطفاً بفرمایید تسک، جلسه یا درخواست مدیرعامل می‌خواهید؟" };
+      if (text.includes("وظیفه") || text.includes("کار")) return { intent: "create_task", title: cleanupTitle(text, "وظیفه"), assignees: names, dueText: text.includes("فردا") ? "فردا" : "امروز", confidence: .81, needsConfirmation: true };
+      if (text.includes("وظیفه‌های من")) return { intent: "list_my_tasks", confidence: .93, needsConfirmation: false };
+      return { intent: "unknown", confidence: .3, needsConfirmation: false, question: "لطفاً بفرمایید وظیفه، جلسه یا درخواست مدیرعامل می‌خواهید؟" };
     }
 
     function cleanupTitle(text, fallback) {
-      return text.replace(/برای|بساز|ثبت کن|تا فردا|تا امروز|تسک|جلسه/g, "").trim().slice(0, 70) || fallback;
+      return text.replace(/برای|بساز|ثبت کن|تا فردا|تا امروز|وظیفه|جلسه/g, "").trim().slice(0, 70) || fallback;
     }
 
     function confirmIntent(payload) {
@@ -2863,7 +2984,7 @@
       state.messages.unshift({ id: uid("MSG"), source: payload.source, sender: currentUser().telegram, text: payload.text, status: "confirmed", parsedIntent: intent });
       if (intent.intent === "create_task") {
         const assignees = intent.assignees.length ? intent.assignees : [currentUser().id];
-        if (!canAssignTo(assignees)) return toast("قانون CEO اجازه ثبت مستقیم این تسک را نمی‌دهد.");
+        if (!canAssignTo(assignees)) return toast("قانون CEO اجازه ثبت مستقیم این وظیفه را نمی‌دهد.");
         state.tasks.unshift({ id: uid("T"), title: intent.title, description: payload.text, creatorId: currentUser().id, group: currentUser().group, type: "task", dueAt: new Date(Date.now() + 86400000).toISOString(), visibility: "group", assignees: assignees.map((id) => ({ userId: id, status: "pending", rejectReason: "", doneAt: "" })) });
       }
       if (intent.intent === "create_manager_request") {
@@ -3000,7 +3121,7 @@
         try {
           const result = await backendFetch("/api/webhooks/bale", {
             method: "POST",
-            body: JSON.stringify({ message: { chat: { id: currentUser().bale }, text: "برای سارا تسک پیگیری گزارش تا فردا بساز" } })
+            body: JSON.stringify({ message: { chat: { id: currentUser().bale }, text: "برای سارا وظیفه پیگیری گزارش تا فردا بساز" } })
           });
           showBaleResult("تست دریافت webhook", true, result);
           toast(result.reply);
@@ -3080,7 +3201,7 @@
         $("analyticsStatus").textContent = "backend متصل";
         $("analyticsStatus").className = "chip ok";
         $("analyticsMetrics").innerHTML = `
-          <div class="metric"><span class="metric-icon">${icons.tasks}</span><span class="muted">تسک‌ها</span><b>${fa(overview.totals.tasks)}</b></div>
+          <div class="metric"><span class="metric-icon">${icons.tasks}</span><span class="muted">وظیفه‌ها</span><b>${fa(overview.totals.tasks)}</b></div>
           <div class="metric"><span class="metric-icon">${icons.done}</span><span class="muted">تکمیل‌شده</span><b>${fa(overview.totals.doneTasks)}</b></div>
           <div class="metric"><span class="metric-icon">${icons.meetings}</span><span class="muted">جلسات</span><b>${fa(overview.totals.meetings)}</b></div>
           <div class="metric"><span class="metric-icon">${icons.alert}</span><span class="muted">هشدارها</span><b>${fa(suggestions.suggestions.length)}</b></div>`;
@@ -3494,9 +3615,9 @@
       }
       const rows = [
         ["R-CEO-01", "هیچ‌کس وظایف مدیرعامل را نمی‌بیند مگر خود CEO یا نقش مجاز."],
-        ["R-CEO-02", "تعریف مستقیم تسک برای CEO فقط توسط خود CEO مجاز است."],
+        ["R-CEO-02", "تعریف مستقیم وظیفه برای CEO فقط توسط خود CEO مجاز است."],
         ["R-CEO-03", "درخواست از مدیرعامل فقط برای درخواست‌کننده و CEO قابل مشاهده است."],
-        ["R-TASK-02", "هر مسئول تسک می‌تواند قبول، رد یا Done کند."],
+        ["R-TASK-02", "هر مسئول وظیفه می‌تواند قبول، رد یا Done کند."],
         ["R-NOTIF-01", "در Assign، سررسید و تکمیل نهایی نوتیف ساخته می‌شود."],
         ["R-UI-01", "تمام رابط فارسی، RTL، شمسی و با اعداد فارسی نمایش داده می‌شود."]
       ];
@@ -3507,6 +3628,7 @@
       document.querySelectorAll("[data-go]").forEach((btn) => {
         btn.onclick = () => {
           activePage = btn.dataset.go;
+          localStorage.setItem(activePageKey, activePage);
           render();
         };
       });
@@ -3517,6 +3639,12 @@
     function empty(text) {
       return `<div class="item-card"><p class="muted">${text}</p></div>`;
     }
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      document.querySelectorAll(".modal-backdrop:not(.hidden)").forEach((modal) => modal.classList.add("hidden"));
+      document.querySelectorAll(".date-picker-popover:not(.hidden)").forEach((picker) => picker.classList.add("hidden"));
+    });
 
     function backendRequired(featureName, details = "") {
       return `

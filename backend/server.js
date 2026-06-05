@@ -50,6 +50,7 @@ const seed = {
   meetings: [],
   incomingMessages: [],
   pendingUsers: [],
+  authCodes: [],
   notifications: [],
   auditLogs: []
 };
@@ -88,6 +89,7 @@ function applyEnvironmentSettings(data) {
   data.meetings = data.meetings || [];
   data.incomingMessages = data.incomingMessages || [];
   data.pendingUsers = data.pendingUsers || [];
+  data.authCodes = data.authCodes || [];
   data.notifications = data.notifications || [];
   data.auditLogs = data.auditLogs || [];
 
@@ -348,7 +350,7 @@ function createTaskFromRecurring(data, recurringTask) {
     assignments: (recurringTask.assigneeIds || []).map((userId) => ({ userId, status: "pending", rejectReason: "", doneAt: "" }))
   };
   data.tasks.unshift(task);
-  task.assignments.forEach((assignment) => createNotification(data, assignment.userId, "تسک تکرارشونده جدید", task.title, { type: "task", id: task.id }));
+  task.assignments.forEach((assignment) => createNotification(data, assignment.userId, "وظیفه تکرارشونده جدید", task.title, { type: "task", id: task.id }));
   recurringTask.lastGeneratedAt = nowIso();
   recurringTask.nextRunAt = nextRecurringRun(task.dueAt, recurringTask.cycle, recurringTask.interval, recurringTask.daysOfWeek, recurringTask.dayOfMonth, recurringTask.time);
   return task;
@@ -380,17 +382,17 @@ function parsePersianIntent(data, text) {
   if (/تکرارشونده|تکرار شونده|روزانه|هفتگی|ماهانه/.test(normalizedText)) {
     const assignees = resolveUsersByPersianText(data, normalizedText);
     const cycle = normalizedText.includes("ماهانه") ? "monthly" : normalizedText.includes("هفتگی") ? "weekly" : "daily";
-    return { intent: "create_recurring_task", title: normalizedText.slice(0, 90) || "تسک تکرارشونده جدید", assignees, cycle, confidence: 0.84, needsConfirmation: false };
+    return { intent: "create_recurring_task", title: normalizedText.slice(0, 90) || "وظیفه تکرارشونده جدید", assignees, cycle, confidence: 0.84, needsConfirmation: false };
   }
   if (/انتقال.*بلندمدت|بلندمدت کن|بدون تاریخ کن/.test(normalizedText)) {
     const visibleTitle = data.tasks.find((item) => item.title && normalizedText.includes(item.title));
     return { intent: "transfer_task_to_long_term", title: normalizedText.slice(0, 90), taskId: visibleTitle?.id || "", confidence: 0.74, needsConfirmation: false };
   }
-  if (/نمایش|لیست|گزارش|امروز|فردا|این هفته|جلسات|وظایف|تسک‌ها|تسک ها/.test(normalizedText)) {
+  if (/نمایش|لیست|گزارش|امروز|فردا|این هفته|جلسات|وظایف|وظیفه‌ها|وظیفه ها/.test(normalizedText)) {
     return { intent: "ask_ai", question: normalizedText, confidence: 0.86, needsConfirmation: false };
   }
   const assignees = resolveUsersByPersianText(data, text);
-  const cleaned = text.replace(/برای|بساز|ثبت کن|تا فردا|تا امروز|تسک|جلسه/g, "").trim().slice(0, 90);
+  const cleaned = text.replace(/برای|بساز|ثبت کن|تا فردا|تا امروز|وظیفه|جلسه/g, "").trim().slice(0, 90);
   if (text.includes("بلندمدت") || text.includes("بلند مدت") || text.includes("بدون تاریخ")) {
     return { intent: "create_long_term_task", title: cleaned || "وظیفه بلندمدت جدید", assignees, confidence: 0.82, needsConfirmation: false };
   }
@@ -400,11 +402,11 @@ function parsePersianIntent(data, text) {
   if (text.includes("مدیرعامل") || text.includes("بودجه") || text.includes("تایید")) {
     return { intent: "create_ceo_request", title: cleaned || "درخواست از مدیرعامل", confidence: 0.72, needsConfirmation: false };
   }
-  if (text.includes("تسک") || text.includes("کار")) {
-    return { intent: "create_task", title: cleaned || "تسک جدید", assignees, dueText: text.includes("فردا") ? "فردا" : "امروز", confidence: 0.81, needsConfirmation: false };
+  if (text.includes("وظیفه") || text.includes("کار")) {
+    return { intent: "create_task", title: cleaned || "وظیفه جدید", assignees, dueText: text.includes("فردا") ? "فردا" : "امروز", confidence: 0.81, needsConfirmation: false };
   }
-  if (text.includes("تسک‌های من") || text.includes("/mytasks")) return { intent: "query_tasks", confidence: 0.93, needsConfirmation: false };
-  return { intent: "unknown", confidence: 0.3, needsConfirmation: false, question: "لطفاً مشخص کنید تسک، جلسه یا درخواست از مدیرعامل می‌خواهید." };
+  if (text.includes("وظیفه‌های من") || text.includes("/mytasks")) return { intent: "query_tasks", confidence: 0.93, needsConfirmation: false };
+  return { intent: "unknown", confidence: 0.3, needsConfirmation: false, question: "لطفاً مشخص کنید وظیفه، جلسه یا درخواست از مدیرعامل می‌خواهید." };
 }
 
 function nextDateFromText(text) {
@@ -419,11 +421,11 @@ function nextDateFromText(text) {
 function createTaskEntity(data, currentUser, intent, text, longTerm = false) {
   let assigneeIds = Array.isArray(intent.assignees) && intent.assignees.length ? intent.assignees : [currentUser.id];
   assigneeIds = Array.from(new Set(assigneeIds));
-  if (!canAssignTo(data, currentUser, assigneeIds)) throw new Error("تعریف مستقیم تسک برای مدیرعامل مجاز نیست. از مسیر درخواست از مدیرعامل استفاده کنید.");
+  if (!canAssignTo(data, currentUser, assigneeIds)) throw new Error("تعریف مستقیم وظیفه برای مدیرعامل مجاز نیست. از مسیر درخواست از مدیرعامل استفاده کنید.");
   const ceo = data.users.find((user) => user.isCeo);
   const task = {
     id: id("T"),
-    title: intent.title || "تسک جدید",
+    title: intent.title || "وظیفه جدید",
     description: text,
     creatorId: currentUser.id,
     groupId: currentUser.groups?.[0] || "g2",
@@ -436,14 +438,14 @@ function createTaskEntity(data, currentUser, intent, text, longTerm = false) {
     assignments: assigneeIds.map((userId) => ({ userId, status: "pending", rejectReason: "", doneAt: "" }))
   };
   data.tasks.unshift(task);
-  task.assignments.forEach((assignment) => createNotification(data, assignment.userId, longTerm ? "وظیفه بلندمدت جدید" : "تسک جدید", task.title, { type: "task", id: task.id }));
+  task.assignments.forEach((assignment) => createNotification(data, assignment.userId, longTerm ? "وظیفه بلندمدت جدید" : "وظیفه جدید", task.title, { type: "task", id: task.id }));
   return task;
 }
 
 async function executeBaleIntent(data, currentUser, intent, text) {
   if (intent.intent === "create_task") {
     const task = createTaskEntity(data, currentUser, intent, text, false);
-    return { created: true, type: "task", id: task.id, reply: `تسک ثبت شد: ${task.title}` };
+    return { created: true, type: "task", id: task.id, reply: `وظیفه ثبت شد: ${task.title}` };
   }
   if (intent.intent === "create_long_term_task") {
     const task = createTaskEntity(data, currentUser, intent, text, true);
@@ -451,10 +453,10 @@ async function executeBaleIntent(data, currentUser, intent, text) {
   }
   if (intent.intent === "create_recurring_task") {
     const assigneeIds = Array.from(new Set((Array.isArray(intent.assignees) && intent.assignees.length) ? intent.assignees : [currentUser.id]));
-    if (!canAssignTo(data, currentUser, assigneeIds)) throw new Error("تعریف مستقیم تسک برای مدیرعامل مجاز نیست.");
+    if (!canAssignTo(data, currentUser, assigneeIds)) throw new Error("تعریف مستقیم وظیفه برای مدیرعامل مجاز نیست.");
     const recurringTask = {
       id: id("RT"),
-      title: intent.title || "تسک تکرارشونده جدید",
+      title: intent.title || "وظیفه تکرارشونده جدید",
       description: text,
       creatorId: currentUser.id,
       groupId: currentUser.groups?.[0] || "g2",
@@ -471,16 +473,16 @@ async function executeBaleIntent(data, currentUser, intent, text) {
       createdAt: nowIso()
     };
     data.recurringTasks.unshift(recurringTask);
-    return { created: true, type: "recurring_task", id: recurringTask.id, reply: `تسک تکرارشونده ثبت شد: ${recurringTask.title}` };
+    return { created: true, type: "recurring_task", id: recurringTask.id, reply: `وظیفه تکرارشونده ثبت شد: ${recurringTask.title}` };
   }
   if (intent.intent === "transfer_task_to_long_term") {
     const task = data.tasks.find((item) => item.id === intent.taskId || (item.title && text.includes(item.title)));
-    if (!task || !canViewTask(currentUser, task)) return { created: false, type: "transfer_task_to_long_term", reply: "تسکی برای انتقال پیدا نشد. لطفاً عنوان دقیق تسک را در پیام بنویسید." };
-    if (currentUser.role !== "Admin" && task.creatorId !== currentUser.id) return { created: false, type: "transfer_task_to_long_term", reply: "فقط سازنده یا ادمین می‌تواند تسک را به بلندمدت منتقل کند." };
+    if (!task || !canViewTask(currentUser, task)) return { created: false, type: "transfer_task_to_long_term", reply: "وظیفهی برای انتقال پیدا نشد. لطفاً عنوان دقیق وظیفه را در پیام بنویسید." };
+    if (currentUser.role !== "Admin" && task.creatorId !== currentUser.id) return { created: false, type: "transfer_task_to_long_term", reply: "فقط سازنده یا ادمین می‌تواند وظیفه را به بلندمدت منتقل کند." };
     task.longTerm = true;
     task.dueAt = "";
     task.updatedAt = nowIso();
-    return { created: false, type: "transfer_task_to_long_term", id: task.id, reply: `تسک به وظایف بلندمدت منتقل شد: ${task.title}` };
+    return { created: false, type: "transfer_task_to_long_term", id: task.id, reply: `وظیفه به وظایف بلندمدت منتقل شد: ${task.title}` };
   }
   if (intent.intent === "ask_ai") {
     const ai = await askMessengerAI(data, currentUser, intent.question || text);
@@ -504,7 +506,7 @@ async function executeBaleIntent(data, currentUser, intent, text) {
   }
   if (intent.intent === "query_tasks") {
     const tasks = data.tasks.filter((task) => canViewTask(currentUser, task)).slice(0, 8);
-    return { created: false, type: "query_tasks", reply: tasks.length ? tasks.map((task) => `- ${task.title}`).join("\n") : "تسکی برای شما ثبت نشده است." };
+    return { created: false, type: "query_tasks", reply: tasks.length ? tasks.map((task) => `- ${task.title}`).join("\n") : "وظیفهی برای شما ثبت نشده است." };
   }
   return { created: false, type: "unknown", reply: intent.question || "پیام دریافت شد، اما دستور قابل ثبت تشخیص داده نشد." };
 }
@@ -524,6 +526,29 @@ function normalizeBaleUsername(value) {
   if (!cleaned) return "";
   const withoutUrl = cleaned.replace(/^https?:\/\/ble\.ir\//i, "");
   return withoutUrl.startsWith("@") ? withoutUrl : `@${withoutUrl}`;
+}
+
+function findUserForLogin(data, identifier) {
+  const raw = String(identifier || "").trim();
+  const baleUsername = normalizeBaleUsername(raw);
+  return (data.users || []).find((user) => user.active && (
+    user.baleUsername === baleUsername ||
+    user.fullName === raw ||
+    user.baleChatId === raw
+  ));
+}
+
+function authPublicUser(user) {
+  return {
+    id: user.id,
+    fullName: user.fullName,
+    jobTitle: user.jobTitle,
+    role: user.role,
+    groups: user.groups || [],
+    baleUsername: user.baleUsername || "",
+    baleProfileUrl: user.baleProfileUrl || "",
+    isCeo: Boolean(user.isCeo)
+  };
 }
 
 async function sendBaleText(data, chatId, text) {
@@ -662,6 +687,46 @@ const routes = {
     return result.ok ? result : { status: 502, body: result };
   },
 
+  "POST /api/auth/request-code": async ({ data, body }) => {
+    const target = findUserForLogin(data, body.identifier);
+    if (!target) return { status: 404, body: { error: "کاربر تاییدشده‌ای با این شناسه بله پیدا نشد." } };
+    if (!target.baleChatId) return { status: 400, body: { error: "حساب شما هنوز به شناسه فنی بله متصل نیست. ابتدا به بازوی بله پیام بدهید یا از ادمین بخواهید اتصال را تکمیل کند." } };
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    data.authCodes = (data.authCodes || []).filter((item) => item.userId !== target.id);
+    data.authCodes.push({ id: id("AUTH"), userId: target.id, codeHash: crypto.createHash("sha256").update(code).digest("hex"), expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(), usedAt: "", createdAt: nowIso() });
+    const sendResult = await sendBaleText(data, target.baleChatId, `کد ورود شما به CEO Office AI:\n${code}\n\nاین کد تا ۱۰ دقیقه معتبر است.`);
+    return { sent: true, userHint: { fullName: target.fullName, baleUsername: target.baleUsername || "" }, baleSend: sendResult };
+  },
+
+  "POST /api/auth/login": async ({ data, body }) => {
+    const target = findUserForLogin(data, body.identifier);
+    if (!target) return { status: 404, body: { error: "کاربر تاییدشده‌ای با این شناسه پیدا نشد." } };
+    const codeHash = crypto.createHash("sha256").update(String(body.code || "").trim()).digest("hex");
+    const record = (data.authCodes || []).find((item) => item.userId === target.id && item.codeHash === codeHash && !item.usedAt);
+    if (!record) return { status: 401, body: { error: "کد ورود معتبر نیست." } };
+    if (new Date(record.expiresAt).getTime() < Date.now()) return { status: 401, body: { error: "کد ورود منقضی شده است." } };
+    record.usedAt = nowIso();
+    log(data, target.id, "login", "user", target.id, null, { at: record.usedAt });
+    return { loggedIn: true, user: authPublicUser(target) };
+  },
+
+  "POST /api/auth/signup": async ({ data, body }) => {
+    const fullName = String(body.fullName || "").trim();
+    const jobTitle = String(body.jobTitle || "").trim();
+    const baleUsername = normalizeBaleUsername(body.baleUsername || "");
+    const baleProfileUrl = cleanPublicUrl(body.baleProfileUrl || (baleUsername ? `https://ble.ir/${baleUsername.replace(/^@/, "")}` : ""));
+    if (!fullName || !jobTitle || !baleUsername) return { status: 400, body: { error: "نام، جایگاه شغلی و آیدی بله الزامی است." } };
+    if ((data.users || []).some((user) => user.baleUsername === baleUsername)) return { status: 409, body: { error: "این آیدی بله قبلاً به یک حساب تاییدشده متصل شده است." } };
+    const existing = (data.pendingUsers || []).find((item) => item.baleUsername === baleUsername && item.status === "pending");
+    if (existing) return { saved: true, pending: existing, message: "درخواست شما قبلاً ثبت شده و در انتظار تایید ادمین است." };
+    const pending = { id: id("PU"), fullName, jobTitle, baleChatId: String(body.baleChatId || "").trim(), baleUsername, baleProfileUrl, status: "pending", createdAt: nowIso(), rawText: "signup-form" };
+    data.pendingUsers.unshift(pending);
+    const admin = data.users.find((user) => user.role === "Admin");
+    if (admin) createNotification(data, admin.id, "کاربر جدید در انتظار تایید", pending.fullName, { type: "pending_user", id: pending.id });
+    log(data, "anonymous", "signup_pending_user", "pending_user", pending.id, null, pending);
+    return { saved: true, pending };
+  },
+
   "GET /api/users": async ({ data }) => data.users,
   "POST /api/users": async ({ data, body, currentUser }) => {
     if (!isPrivileged(currentUser)) return { status: 403, body: { error: "فقط مدیر سیستم می‌تواند کاربر جدید بسازد." } };
@@ -758,7 +823,7 @@ const routes = {
     pending.approvedAt = nowIso();
     pending.approvedBy = currentUser.id;
     createNotification(data, currentUser.id, "کاربر جدید تایید شد", user.fullName, { type: "user", id: user.id });
-    await sendBaleText(data, pending.baleChatId, "حساب شما تایید شد. از این به بعد می‌توانید درخواست‌ها و تسک‌ها را از همین گفتگو ارسال کنید.");
+    await sendBaleText(data, pending.baleChatId, "حساب شما تایید شد. از این به بعد می‌توانید درخواست‌ها و وظیفه‌ها را از همین گفتگو ارسال کنید.");
     log(data, currentUser.id, "approve_pending_user", "user", user.id, pending, user);
     return { saved: true, user };
   },
@@ -792,7 +857,7 @@ const routes = {
   "POST /api/tasks": async ({ data, body, currentUser }) => {
     const assigneeIds = Array.isArray(body.assigneeIds) ? body.assigneeIds : [];
     if (!assigneeIds.length) return { status: 400, body: { error: "حداقل یک مسئول انتخاب کنید." } };
-    if (!canAssignTo(data, currentUser, assigneeIds)) return { status: 403, body: { error: "تعریف مستقیم تسک برای مدیرعامل مجاز نیست. از مسیر درخواست از مدیرعامل استفاده کنید." } };
+    if (!canAssignTo(data, currentUser, assigneeIds)) return { status: 403, body: { error: "تعریف مستقیم وظیفه برای مدیرعامل مجاز نیست. از مسیر درخواست از مدیرعامل استفاده کنید." } };
     const ceo = data.users.find((user) => user.isCeo);
     const task = {
       id: id("T"),
@@ -809,15 +874,15 @@ const routes = {
       assignments: assigneeIds.map((userId) => ({ userId, status: "pending", rejectReason: "", doneAt: "" }))
     };
     data.tasks.unshift(task);
-    task.assignments.forEach((a) => createNotification(data, a.userId, "تسک جدید", task.title, { type: "task", id: task.id }));
+    task.assignments.forEach((a) => createNotification(data, a.userId, "وظیفه جدید", task.title, { type: "task", id: task.id }));
     log(data, currentUser.id, "create", "task", task.id, null, task);
     return { status: 201, body: task };
   },
 
   "DELETE /api/tasks": async ({ data, body, currentUser }) => {
     const task = data.tasks.find((item) => item.id === body.taskId);
-    if (!task || !canViewTask(currentUser, task)) return { status: 404, body: { error: "تسک پیدا نشد." } };
-    if (currentUser.role !== "Admin" && task.creatorId !== currentUser.id) return { status: 403, body: { error: "فقط سازنده یا مدیر سیستم می‌تواند تسک را حذف کند." } };
+    if (!task || !canViewTask(currentUser, task)) return { status: 404, body: { error: "وظیفه پیدا نشد." } };
+    if (currentUser.role !== "Admin" && task.creatorId !== currentUser.id) return { status: 403, body: { error: "فقط سازنده یا مدیر سیستم می‌تواند وظیفه را حذف کند." } };
     data.tasks = data.tasks.filter((item) => item.id !== task.id);
     log(data, currentUser.id, "delete", "task", task.id, task, null);
     return { saved: true };
@@ -825,8 +890,8 @@ const routes = {
 
   "PATCH /api/tasks/long-term": async ({ data, body, currentUser }) => {
     const task = data.tasks.find((item) => item.id === body.taskId);
-    if (!task || !canViewTask(currentUser, task)) return { status: 404, body: { error: "تسک پیدا نشد." } };
-    if (currentUser.role !== "Admin" && task.creatorId !== currentUser.id) return { status: 403, body: { error: "فقط سازنده یا ادمین می‌تواند تسک را به بلندمدت منتقل کند." } };
+    if (!task || !canViewTask(currentUser, task)) return { status: 404, body: { error: "وظیفه پیدا نشد." } };
+    if (currentUser.role !== "Admin" && task.creatorId !== currentUser.id) return { status: 403, body: { error: "فقط سازنده یا ادمین می‌تواند وظیفه را به بلندمدت منتقل کند." } };
     const before = { ...task };
     task.longTerm = true;
     task.dueAt = "";
@@ -840,7 +905,7 @@ const routes = {
   "POST /api/recurring-tasks": async ({ data, body, currentUser }) => {
     const assigneeIds = Array.isArray(body.assigneeIds) ? body.assigneeIds : [];
     if (!assigneeIds.length) return { status: 400, body: { error: "حداقل یک مسئول انتخاب کنید." } };
-    if (!canAssignTo(data, currentUser, assigneeIds)) return { status: 403, body: { error: "تعریف مستقیم تسک برای مدیرعامل مجاز نیست." } };
+    if (!canAssignTo(data, currentUser, assigneeIds)) return { status: 403, body: { error: "تعریف مستقیم وظیفه برای مدیرعامل مجاز نیست." } };
     const recurringTask = {
       id: id("RT"),
       title: String(body.title || "").trim(),
@@ -859,7 +924,7 @@ const routes = {
       active: body.active !== false,
       createdAt: nowIso()
     };
-    if (!recurringTask.title) return { status: 400, body: { error: "عنوان تسک تکرارشونده الزامی است." } };
+    if (!recurringTask.title) return { status: 400, body: { error: "عنوان وظیفه تکرارشونده الزامی است." } };
     data.recurringTasks.unshift(recurringTask);
     log(data, currentUser.id, "create", "recurring_task", recurringTask.id, null, recurringTask);
     return { status: 201, body: recurringTask };
@@ -867,7 +932,7 @@ const routes = {
 
   "DELETE /api/recurring-tasks": async ({ data, body, currentUser }) => {
     const item = data.recurringTasks.find((task) => task.id === body.recurringTaskId);
-    if (!item || !canViewRecurringTask(currentUser, item)) return { status: 404, body: { error: "تسک تکرارشونده پیدا نشد." } };
+    if (!item || !canViewRecurringTask(currentUser, item)) return { status: 404, body: { error: "وظیفه تکرارشونده پیدا نشد." } };
     if (currentUser.role !== "Admin" && item.creatorId !== currentUser.id) return { status: 403, body: { error: "فقط سازنده یا ادمین می‌تواند این چرخه را حذف کند." } };
     data.recurringTasks = data.recurringTasks.filter((task) => task.id !== item.id);
     log(data, currentUser.id, "delete", "recurring_task", item.id, item, null);
@@ -876,7 +941,7 @@ const routes = {
 
   "POST /api/recurring-tasks/generate-next": async ({ data, body, currentUser }) => {
     const item = data.recurringTasks.find((task) => task.id === body.recurringTaskId);
-    if (!item || !canViewRecurringTask(currentUser, item)) return { status: 404, body: { error: "تسک تکرارشونده پیدا نشد." } };
+    if (!item || !canViewRecurringTask(currentUser, item)) return { status: 404, body: { error: "وظیفه تکرارشونده پیدا نشد." } };
     const task = createTaskFromRecurring(data, item);
     log(data, currentUser.id, "generate_next", "recurring_task", item.id, null, task);
     return { saved: true, task, recurringTask: item };
@@ -884,24 +949,24 @@ const routes = {
 
   "PATCH /api/tasks/assignment": async ({ data, body, currentUser }) => {
     const task = data.tasks.find((item) => item.id === body.taskId);
-    if (!task || !canViewTask(currentUser, task)) return { status: 404, body: { error: "تسک پیدا نشد." } };
+    if (!task || !canViewTask(currentUser, task)) return { status: 404, body: { error: "وظیفه پیدا نشد." } };
     const assignment = task.assignments.find((item) => item.userId === currentUser.id);
-    if (!assignment) return { status: 403, body: { error: "شما مسئول این تسک نیستید." } };
+    if (!assignment) return { status: 403, body: { error: "شما مسئول این وظیفه نیستید." } };
     const before = { ...assignment };
     assignment.status = body.status;
     assignment.rejectReason = body.rejectReason || "";
     assignment.doneAt = body.status === "done" ? nowIso() : "";
     if (task.assignments.every((item) => item.status === "done")) {
       task.status = "done";
-      createNotification(data, task.creatorId, "تسک تکمیل شد", task.title, { type: "task", id: task.id });
+      createNotification(data, task.creatorId, "وظیفه تکمیل شد", task.title, { type: "task", id: task.id });
     } else {
-      createNotification(data, task.creatorId, "وضعیت تسک تغییر کرد", `${currentUser.fullName}: ${body.status}`, { type: "task", id: task.id });
+      createNotification(data, task.creatorId, "وضعیت وظیفه تغییر کرد", `${currentUser.fullName}: ${body.status}`, { type: "task", id: task.id });
     }
     log(data, currentUser.id, "update_assignment", "task", task.id, before, assignment);
     return { task };
   },
 
-  "GET /api/ceo-requests": async ({ data, currentUser }) => data.ceoRequests.filter((request) => currentUser.role === "CEO" || currentUser.role === "Admin" || request.requesterId === currentUser.id),
+  "GET /api/ceo-requests": async ({ data, currentUser }) => data.ceoRequests.filter((request) => currentUser.role === "CEO" || request.requesterId === currentUser.id),
 
   "POST /api/ceo-requests": async ({ data, body, currentUser }) => {
     const ceo = data.users.find((user) => user.isCeo) || data.users.find((user) => user.role === "Admin");
@@ -919,6 +984,25 @@ const routes = {
     const before = { ...request };
     request.status = body.status;
     request.decisionReason = body.decisionReason || "";
+    if (body.status === "delegated" && !request.delegatedTaskId) {
+      const task = {
+        id: id("T"),
+        title: request.title,
+        description: request.description,
+        creatorId: currentUser.id,
+        groupId: currentUser.groups?.[0] || "g2",
+        dueAt: new Date(Date.now() + 86400000).toISOString(),
+        priority: "medium",
+        longTerm: false,
+        visibility: "group",
+        status: "open",
+        createdAt: nowIso(),
+        assignments: [{ userId: request.requesterId, status: "pending", rejectReason: "", doneAt: "" }]
+      };
+      data.tasks.unshift(task);
+      request.delegatedTaskId = task.id;
+      createNotification(data, request.requesterId, "وظیفه جدید از درخواست مدیرعامل", task.title, { type: "task", id: task.id });
+    }
     log(data, currentUser.id, "decision", "ceo_request", request.id, before, request);
     return { request };
   },
@@ -1083,7 +1167,7 @@ const routes = {
           id: id("SUG"),
           type: "overdue_task",
           severity: "high",
-          title: "تسک عقب‌افتاده",
+          title: "وظیفه عقب‌افتاده",
           body: task.title,
           relatedEntity: { type: "task", id: task.id }
         });
@@ -1110,7 +1194,7 @@ const routes = {
     for (const task of data.tasks) {
       const due = task.dueAt ? new Date(task.dueAt).getTime() : null;
       if (task.status !== "done" && due && due < now) {
-        createNotification(data, task.creatorId, "هشدار تسک عقب‌افتاده", task.title, { type: "task", id: task.id });
+        createNotification(data, task.creatorId, "هشدار وظیفه عقب‌افتاده", task.title, { type: "task", id: task.id });
         created += 1;
       }
     }
