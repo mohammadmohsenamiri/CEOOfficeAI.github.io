@@ -1,11 +1,12 @@
 # CEO Office AI Coordinator Backend MVP
 
-This is a dependency-free local backend for the prototype.
+Dependency-free Node.js backend for the Persian-first CEO Office AI Coordinator.
 
 ## Run
 
-```powershell
-node C:\Users\Data\Documents\Codex\2026-06-05\files-mentioned-by-the-user-ceo\outputs\backend\server.js
+```bash
+cd backend
+node server.js
 ```
 
 Backend URL:
@@ -14,42 +15,47 @@ Backend URL:
 http://127.0.0.1:4188
 ```
 
-## Covered v4 Phases
+## Covered phases in this corrected version
 
-- `P0`: Persian-first output conventions, RTL/Jalali handled in UI, Persian backend messages.
-- `P1`: users, groups, CEO/Admin/Employee roles, JSON persistence, audit logs.
-- `P2`: normalized Bale text webhook and message storage.
-- `P3`: parser endpoint with JSON intent shape and confirmation-ready output.
-- `P4`: task CRUD, multi-assignee assignments, accept/reject/done, notifications.
-- `P5`: CEO request route, CEO privacy guard, direct CEO assignment block.
-- `P6`: meeting CRUD, members, meeting notifications.
+- `P0`: Persian-first output conventions, RTL UI, Jalali date picker in the frontend.
+- `P1`: Users, access levels, JSON persistence, audit logs.
+- `P2`: Bale / بله webhook input normalization and message storage.
+- `P3`: AI-backed messenger response endpoint. General messenger answers are not hardcoded; they are generated through the configured AI adapter with access-scoped data.
+- `P4`: Task CRUD, assignment actions, status actions, transfer to long-term tasks.
+- `P5`: Long-term tasks as their own task type and UI page.
+- `P6`: Recurring task templates and generated task instances with repetition cycles.
+- `P7`: Meetings CRUD and AI-visible meeting context.
+- `P8`: Messenger-executable actions for listing tasks, weekly/date queries, creating tasks, recurring tasks, and transferring tasks to long-term tasks.
 
-## Important Limits
+## Important limits
 
-This is a local MVP backend, not production yet:
+- JSON storage is for MVP/demo only; use PostgreSQL for production.
+- Bale sending is off by default. Set `BALE_SEND_REPLIES=true` and configure token/endpoint before live use.
+- Messenger intelligence needs a configured AI provider. Without `AI_PROVIDER` and API key/local adapter, the backend returns a clear configuration error instead of pretending to answer with AI.
+- Scheduled reminder workers and production authentication are still separate production work.
 
-- No real password login/JWT.
-- No real Bale API send call yet.
-- No online AI provider call yet; parser is rule-based fallback.
-- No database server yet; data is stored in `data.json`.
-- No scheduled reminder worker yet.
-
-## Useful Routes
+## Useful routes
 
 ```text
 GET    /api/health
+GET    /api/settings/ai
+PUT    /api/settings/ai
 GET    /api/settings/bale
 PUT    /api/settings/bale
 POST   /api/webhooks/bale
+POST   /api/messages/ask
 POST   /api/messages/parse
 GET    /api/users
-GET    /api/groups
 GET    /api/tasks
 POST   /api/tasks
+PATCH  /api/tasks/:id
+DELETE /api/tasks/:id
+POST   /api/tasks/:id/transfer-to-long-term
 PATCH  /api/tasks/assignment
-GET    /api/ceo-requests
-POST   /api/ceo-requests
-PATCH  /api/ceo-requests/decision
+GET    /api/recurring-tasks
+POST   /api/recurring-tasks
+PATCH  /api/recurring-tasks/:id
+POST   /api/recurring-tasks/:id/generate-next
 GET    /api/meetings
 POST   /api/meetings
 GET    /api/notifications

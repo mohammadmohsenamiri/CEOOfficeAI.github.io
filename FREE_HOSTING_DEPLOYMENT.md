@@ -1,21 +1,26 @@
 # Free Online Preview Deployment
 
-## Option A: Fullstack Preview on Render Free
+## Option A: Fullstack preview on Render Free
 
-Use this when you want both UI and backend API online.
+Use this when you want both the UI and backend API online.
 
 1. Create a GitHub repository.
-2. Put these files in the repo root or deploy the `outputs/backend` folder as the service root:
+2. Put these files in the repo root and deploy the `backend` folder as the service root:
    - `server.js`
    - `package.json`
    - `render.yaml`
-   - `../ceo-office-ai-coordinator-mvp.html` if keeping the current folder layout.
-3. In Render, create a new Web Service from the repo.
+   - `data.json`
+3. In Render, create a Web Service from the repo.
 4. Set:
    - Runtime: Node
    - Start command: `node server.js`
    - Free plan
-5. After deploy, open:
+5. Add environment variables:
+   - `AI_PROVIDER=openai` or `openai-chat-compatible` or `offline`
+   - `AI_MODEL=gpt-5.4-mini` or your selected model
+   - `AI_API_KEY=...`
+   - `BALE_BOT_TOKEN=...` if you want Bale replies
+6. After deploy, open:
 
 ```text
 https://YOUR-SERVICE.onrender.com/
@@ -27,20 +32,19 @@ Bale webhook preview URL:
 https://YOUR-SERVICE.onrender.com/api/webhooks/bale
 ```
 
-## Option B: Frontend-only Preview
+## Option B: Frontend-only preview
 
-Use GitHub Pages, Vercel, or Cloudflare Pages if you only need the UI.
+Use GitHub Pages, Vercel, or Cloudflare Pages only if you need the UI preview.
 
 Deploy:
 
 ```text
+index.html
 ceo-office-ai-coordinator-mvp.html
 ```
 
-Limit:
+Limit: the backend settings, AI messenger, Bale webhook, analytics, and server-side access guards will not work unless the backend is hosted separately.
 
-The backend settings, Bale webhook, analytics, and offline settings will not work unless the backend is hosted separately.
+## MVP limitation
 
-## MVP Limitation
-
-Render free filesystem is temporary on many setups. This preview uses JSON storage, so it is suitable for demos only. For a more stable free setup, replace `data.json` with a managed PostgreSQL provider such as Supabase or Neon.
+Render free filesystem can be temporary on many setups. This preview uses JSON storage and is suitable for demos. For a stable free setup, replace `data.json` with managed PostgreSQL such as Supabase or Neon.

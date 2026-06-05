@@ -1,30 +1,29 @@
 # Offline AI and Internal Static IP Phase
 
-This document covers the final phase (`P10`) for internal/on-premise deployment.
+This document covers the final phase for internal/on-premise deployment.
 
-## Current MVP Coverage
+## Current MVP coverage
 
 Implemented:
 
-- Backend AI mode setting: `online` or `offline`
-- Offline model path setting
-- Fallback parser status
-- `/api/offline/status`
-- UI page: `فاز آفلاین`
+- Backend AI mode setting: `online/openai`, `openai-chat-compatible`, `offline`, or `disabled`.
+- Offline adapter mode through `AI_PROVIDER=offline` and `AI_BASE_URL=http://your-local-adapter/...`.
+- Same permission guards for UI and messenger.
+- UI pages for normal tasks, long-term tasks, recurring tasks, meetings, messenger, and settings.
 
 Not bundled:
 
-- Real local LLM
-- GPU runtime
-- Local speech-to-text
-- Production Docker stack
+- Real local LLM weights.
+- GPU runtime.
+- Local speech-to-text.
+- Production Docker stack.
 
-## Internal Deployment Target
+## Internal deployment target
 
 Recommended internal architecture:
 
 ```text
-Users / Bale / Telegram
+Users / Bale / Internal Messenger
         |
 Public HTTPS or internal reverse proxy
         |
@@ -37,7 +36,7 @@ PostgreSQL + Redis
 Optional Local AI Adapter
 ```
 
-## Static IP Checklist
+## Static IP checklist
 
 - Reserve static IP or internal DNS name.
 - Configure HTTPS certificate.
@@ -48,38 +47,38 @@ Optional Local AI Adapter
 - Restrict admin endpoints by network and role.
 - Add monitoring for API health, webhook failures, and notification jobs.
 
-## Offline AI Adapter Contract
+## Offline AI adapter contract
 
-The local model adapter should accept:
+The local model adapter can accept:
 
 ```json
 {
-  "text": "برای سارا تسک گزارش فروش تا فردا بساز",
+  "messages": [
+    { "role": "system", "content": "..." },
+    { "role": "user", "content": "..." }
+  ],
   "locale": "fa-IR",
   "timezone": "Asia/Tehran",
-  "schema": "intent-v1"
+  "schema": "messenger-intent-v1"
 }
 ```
 
-And return:
+It should return either plain text or JSON matching:
 
 ```json
 {
-  "intent": "create_task",
-  "title": "گزارش فروش",
-  "assignees": ["u3"],
-  "dueAt": "2026-06-06T08:00:00.000Z",
-  "confidence": 0.82,
-  "needsConfirmation": true
+  "responseText": "تسک‌های قابل مشاهده شما...",
+  "action": "list_week_tasks",
+  "params": {}
 }
 ```
 
-## Important Rule
+## Important rule
 
 Offline AI must still pass through the same server-side permission guards:
 
-- CEO direct assignment block
-- CEO private task isolation
-- group membership checks
-- user/person matching
-- confirmation before write
+- CEO direct assignment block if you later enable that policy.
+- CEO private task isolation.
+- Group and assignee visibility checks.
+- User/person matching.
+- Confirmation before risky write actions, if added in production.

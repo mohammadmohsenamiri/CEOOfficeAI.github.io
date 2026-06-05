@@ -1,12 +1,16 @@
 services:
   - type: web
     name: ceo-office-ai-coordinator-preview
-    runtime: node
+    env: node
     plan: free
     buildCommand: ""
     startCommand: "node server.js"
     envVars:
-      - key: PORT
-        value: "10000"
-      - key: DATA_FILE
-        value: "/tmp/ceo-office-data.json"
+      - key: NODE_VERSION
+        value: 20
+      - key: AI_PROVIDER
+        value: disabled
+      - key: AI_MODEL
+        value: gpt-5.4-mini
+      - key: AI_BASE_URL
+        value: https://api.openai.com
