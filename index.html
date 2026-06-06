@@ -686,6 +686,65 @@
       color: #cbd5e1;
     }
 
+    .auth-screen {
+      background:
+        radial-gradient(circle at 72% 18%, rgba(139, 92, 246, .22), transparent 34%),
+        radial-gradient(circle at 18% 84%, rgba(6, 182, 212, .14), transparent 30%),
+        linear-gradient(145deg, #080a12 0%, #101522 52%, #090b12 100%);
+    }
+
+    .auth-card {
+      background: rgba(15, 19, 32, .92);
+      border-color: rgba(139, 92, 246, .30);
+      box-shadow: var(--glow);
+      backdrop-filter: blur(18px);
+    }
+
+    .auth-card .brand {
+      margin-bottom: 2px;
+    }
+
+    .auth-card .tabs {
+      background: rgba(2, 6, 23, .28);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 6px;
+    }
+
+    .auth-card .tabs button {
+      min-height: 44px;
+      color: #cbd5e1;
+      border-color: transparent;
+      background: transparent;
+    }
+
+    .auth-card .tabs button.active {
+      color: #fff;
+      background: linear-gradient(135deg, rgba(139, 92, 246, .92), rgba(6, 182, 212, .76));
+      box-shadow: 0 14px 34px rgba(20, 184, 166, .16);
+    }
+
+    .auth-card label {
+      color: #dbeafe;
+      font-weight: 750;
+    }
+
+    .auth-card input {
+      min-height: 46px;
+      background: rgba(2, 6, 23, .62);
+      border-color: rgba(148, 163, 184, .22);
+      color: #f8fafc;
+    }
+
+    .auth-card input::placeholder {
+      color: #94a3b8;
+    }
+
+    .auth-card button.primary {
+      min-height: 48px;
+      font-weight: 850;
+    }
+
     .chip {
       background: rgba(255, 255, 255, .06);
       border-color: rgba(255, 255, 255, .10);

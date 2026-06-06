@@ -121,6 +121,7 @@ function applyEnvironmentSettings(data) {
   const adminBaleUsername = normalizeBaleUsername(process.env.ADMIN_BALE_USERNAME || "");
   const adminFullName = process.env.ADMIN_FULL_NAME || "مدیر سیستم";
   const adminJobTitle = process.env.ADMIN_JOB_TITLE || "ادمین";
+  const adminUsername = String(process.env.ADMIN_USERNAME || "admin").trim().toLowerCase();
   const existingAdmin = (data.users || []).find((user) => user.role === "Admin");
   const existingCeo = (data.users || []).find((user) => user.role === "CEO" || user.isCeo);
   if (!existingAdmin) {
@@ -130,6 +131,8 @@ function applyEnvironmentSettings(data) {
       jobTitle: adminJobTitle,
       role: "Admin",
       groups: ["g2"],
+      username: adminUsername,
+      passwordHash: process.env.ADMIN_PASSWORD ? hashPassword(process.env.ADMIN_PASSWORD) : "",
       telegramChatId: "",
       baleChatId: adminBaleChatId,
       baleUsername: adminBaleUsername,
@@ -140,6 +143,8 @@ function applyEnvironmentSettings(data) {
   } else {
     if (process.env.ADMIN_FULL_NAME) existingAdmin.fullName = adminFullName;
     if (process.env.ADMIN_JOB_TITLE) existingAdmin.jobTitle = adminJobTitle;
+    if (adminUsername) existingAdmin.username = adminUsername;
+    if (process.env.ADMIN_PASSWORD) existingAdmin.passwordHash = hashPassword(process.env.ADMIN_PASSWORD);
     if (adminBaleChatId) existingAdmin.baleChatId = adminBaleChatId;
     if (adminBaleUsername) {
       existingAdmin.baleUsername = adminBaleUsername;
@@ -163,6 +168,9 @@ function applyEnvironmentSettings(data) {
       active: true,
       isCeo: true
     });
+  } else {
+    if (process.env.CEO_USERNAME) existingCeo.username = String(process.env.CEO_USERNAME).trim().toLowerCase();
+    if (process.env.CEO_PASSWORD) existingCeo.passwordHash = hashPassword(process.env.CEO_PASSWORD);
   }
   return data;
 }
