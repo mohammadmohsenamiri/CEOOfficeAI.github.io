@@ -506,38 +506,188 @@ function RequestsPanel({ data, activeUser, onAction }: { data: AppData; activeUs
 function MeetingsPanel({ data, onAction }: { data: AppData; onAction: (work: () => Promise<void>, success?: string) => Promise<void> }) {
   const [view, setView] = useState<CalendarView>("month");
   const [focus, setFocus] = useState(new Date());
+  const [modalOpen, setModalOpen] = useState(false);
+  const hours = Array.from({ length: 14 }, (_, index) => index + 7);
+
+  useEffect(() => {
+    if (!modalOpen) return;
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setModalOpen(false);
+    };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [modalOpen]);
+
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const date = String(form.get("date"));
     const start = String(form.get("startTime") || "09:00");
     const end = String(form.get("endTime") || "10:00");
-    await onAction(() => api.createMeeting({ title: String(form.get("title") || "جلسه"), location: String(form.get("location")), startAt: isoFromDateTime(date, start), endAt: isoFromDateTime(date, end), members: selectedValues(form, "members") }).then(() => undefined), "جلسه ثبت شد.");
+    if (new Date(`${date}T${end}:00`) <= new Date(`${date}T${start}:00`)) {
+      await onAction(async () => { throw new Error("ساعت پایان باید بعد از ساعت شروع باشد."); });
+      return;
+    }
+    await onAction(() => api.createMeeting({
+      title: String(form.get("title") || "جلسه"),
+      description: String(form.get("description") || ""),
+      location: String(form.get("location")),
+      startAt: isoFromDateTime(date, start),
+      endAt: isoFromDateTime(date, end),
+      members: selectedValues(form, "members")
+    }).then(() => undefined), "جلسه ثبت شد.");
+    setFocus(dateFromLocalValue(date));
+    setModalOpen(false);
     event.currentTarget.reset();
   }
-  const days = calendarDays(focus, view);
+
+  async function moveMeeting(meetingId: string, dropDate: string, dropHour?: number) {
+    const meeting = data.meetings.find((item) => item.id === meetingId);
+    if (!meeting || !dropDate) return;
+    const oldStart = new Date(meeting.startAt);
+    const oldEnd = new Date(meeting.endAt);
+    const duration = Math.max(30 * 60000, oldEnd.getTime() - oldStart.getTime());
+    const nextStart = dateFromLocalValue(dropDate);
+    nextStart.setHours(dropHour ?? oldStart.getHours(), oldStart.getMinutes(), 0, 0);
+    const nextEnd = new Date(nextStart.getTime() + duration);
+    await onAction(() => api.rescheduleMeeting(meeting.id, nextStart.toISOString(), nextEnd.toISOString()).then(() => undefined), "زمان جلسه جابه جا شد.");
+    setFocus(nextStart);
+  }
+
+  const visibleMeetings = [...data.meetings].sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+
   return (
     <section className="panel">
-      <div className="panel-head"><h2>{calendarTitle(focus, view)}</h2><div className="actions"><button onClick={() => setFocus(shiftDate(focus, view, -1))}>قبلی</button><button className="blue" onClick={() => setFocus(new Date())}>امروز</button><button onClick={() => setFocus(shiftDate(focus, view, 1))}>بعدی</button></div></div>
-      <div className="tabs"><button className={view === "month" ? "primary" : ""} onClick={() => setView("month")}>ماه</button><button className={view === "week" ? "primary" : ""} onClick={() => setView("week")}>هفته</button><button className={view === "day" ? "primary" : ""} onClick={() => setView("day")}>روز</button></div>
-      <form className="card form-grid" onSubmit={create}><label>عنوان<input name="title" defaultValue="جلسه" /></label><JalaliDatePicker name="date" defaultValue={todayInput()} /><label>شروع<input name="startTime" type="time" defaultValue="09:00" /></label><label>پایان<input name="endTime" type="time" defaultValue="10:00" /></label><label className="full">مکان یا لینک<input name="location" /></label><label className="full">اعضا<select name="members" multiple>{data.users.filter((user) => user.active).map((user) => <option value={user.id} key={user.id}>{user.fullName}</option>)}</select></label><button className="primary full">ثبت جلسه</button></form>
-      <div className="calendar">
-        {days.map((day) => {
-          const dayMeetings = data.meetings.filter((meeting) => new Date(meeting.startAt).toDateString() === day.toDateString());
-          return <article className="card day" key={day.toISOString()}><strong>{new Intl.DateTimeFormat("fa-IR-u-ca-persian", { weekday: "short", day: "numeric", month: "short" }).format(day)}</strong><div className="list">{dayMeetings.map((meeting) => <MeetingMini key={meeting.id} meeting={meeting} users={data.users} onReschedule={(date) => onAction(() => api.rescheduleMeeting(meeting.id, isoFromDateTime(date, meeting.startAt.slice(11, 16) || "09:00"), isoFromDateTime(date, meeting.endAt.slice(11, 16) || "10:00")).then(() => undefined), "زمان جلسه تغییر کرد.")} />)}{!dayMeetings.length ? <span className="muted small">جلسه ای ثبت نشده</span> : null}</div></article>;
-        })}
+      <div className="panel-head">
+        <div>
+          <h2>{calendarTitle(focus, view)}</h2>
+          <p className="muted small">جلسات را بکشید و روی روز یا ساعت جدید رها کنید.</p>
+        </div>
+        <div className="actions">
+          <button className="primary" onClick={() => setModalOpen(true)}>جلسه جدید</button>
+          <button onClick={() => setFocus(shiftDate(focus, view, -1))}>{view === "month" ? "ماه قبل" : view === "week" ? "هفته قبل" : "روز قبل"}</button>
+          <button className="blue" onClick={() => setFocus(new Date())}>امروز</button>
+          <button onClick={() => setFocus(shiftDate(focus, view, 1))}>{view === "month" ? "ماه بعد" : view === "week" ? "هفته بعد" : "روز بعد"}</button>
+        </div>
       </div>
-      <MeetingList meetings={data.meetings} users={data.users} />
+      <div className="tabs">
+        <button className={view === "month" ? "primary" : ""} onClick={() => setView("month")}>ماه</button>
+        <button className={view === "week" ? "primary" : ""} onClick={() => setView("week")}>هفته</button>
+        <button className={view === "day" ? "primary" : ""} onClick={() => setView("day")}>روز</button>
+      </div>
+      {view === "month" ? <CalendarMonth focus={focus} meetings={visibleMeetings} onMove={moveMeeting} /> : null}
+      {view === "week" ? <CalendarWeek focus={focus} hours={hours} meetings={visibleMeetings} onMove={moveMeeting} /> : null}
+      {view === "day" ? <CalendarDay focus={focus} hours={hours} meetings={visibleMeetings} onMove={moveMeeting} /> : null}
+      <div className="panel-head"><h2>برنامه پیش رو</h2><span className="chip">{fa(visibleMeetings.length)} جلسه</span></div>
+      <MeetingList meetings={visibleMeetings} users={data.users} />
+      {modalOpen ? (
+        <div className="modal-backdrop" onClick={(event) => { if (event.currentTarget === event.target) setModalOpen(false); }}>
+          <form className="modal-card" onSubmit={create}>
+            <div className="panel-head">
+              <h2>جلسه جدید</h2>
+              <button type="button" onClick={() => setModalOpen(false)}>بستن</button>
+            </div>
+            <div className="form-grid">
+              <label className="full">عنوان<input name="title" defaultValue="جلسه" required /></label>
+              <label className="full">توضیح<textarea name="description" /></label>
+              <JalaliDatePicker name="date" defaultValue={localDateValue(focus)} />
+              <label>ساعت شروع<input name="startTime" type="time" defaultValue="09:00" required /></label>
+              <label>ساعت پایان<input name="endTime" type="time" defaultValue="10:00" required /></label>
+              <label className="full">مکان یا لینک<input name="location" placeholder="اتاق جلسه یا لینک" /></label>
+              <label className="full">اعضا<select name="members" multiple size={5}>{data.users.filter((user) => user.active).map((user) => <option value={user.id} key={user.id}>{user.fullName}</option>)}</select></label>
+            </div>
+            <button className="primary">ثبت جلسه</button>
+          </form>
+        </div>
+      ) : null}
     </section>
   );
 }
 
-function calendarDays(focus: Date, view: CalendarView) {
-  const count = view === "month" ? 30 : view === "week" ? 7 : 1;
-  const start = new Date(focus);
-  if (view === "month") start.setDate(1);
-  if (view === "week") start.setDate(start.getDate() - start.getDay());
-  return Array.from({ length: count }, (_, index) => { const day = new Date(start); day.setDate(start.getDate() + index); return day; });
+function CalendarMonth({ focus, meetings, onMove }: { focus: Date; meetings: Meeting[]; onMove: (meetingId: string, date: string) => void }) {
+  const year = focus.getFullYear();
+  const month = focus.getMonth();
+  const first = new Date(year, month, 1);
+  const startOffset = (first.getDay() + 1) % 7;
+  const start = new Date(year, month, 1 - startOffset);
+  const weekdays = ["شنبه", "یکشنبه", "دوشنبه", "سه شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
+  return (
+    <div className="calendar-grid">
+      {weekdays.map((day) => <div className="calendar-weekday" key={day}>{day}</div>)}
+      {Array.from({ length: 42 }, (_, index) => {
+        const day = new Date(start);
+        day.setDate(start.getDate() + index);
+        const dayMeetings = meetings.filter((meeting) => sameLocalDay(new Date(meeting.startAt), day));
+        return (
+          <div className={`calendar-day ${day.getMonth() !== month ? "dim" : ""} ${sameLocalDay(day, new Date()) ? "today" : ""}`} key={day.toISOString()} onDragOver={(event) => event.preventDefault()} onDrop={(event) => onMove(event.dataTransfer.getData("text/plain"), localDateValue(day))}>
+            <span className="day-number">{new Intl.DateTimeFormat("fa-IR-u-ca-persian", { day: "numeric" }).format(day)}</span>
+            {dayMeetings.slice(0, 3).map((meeting) => <MeetingPill key={meeting.id} meeting={meeting} />)}
+            {dayMeetings.length > 3 ? <span className="muted small">+{fa(dayMeetings.length - 3)} جلسه</span> : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function CalendarWeek({ focus, hours, meetings, onMove }: { focus: Date; hours: number[]; meetings: Meeting[]; onMove: (meetingId: string, date: string, hour?: number) => void }) {
+  const start = startOfPersianWeek(focus);
+  const weekdays = ["شنبه", "یکشنبه", "دوشنبه", "سه شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
+  return (
+    <div className="calendar-week-view">
+      <div className="week-hour-rail"><span />{hours.map((hour) => <span key={hour}>{fa(hour)}:۰۰</span>)}</div>
+      {weekdays.map((weekday, index) => {
+        const day = new Date(start);
+        day.setDate(start.getDate() + index);
+        return (
+          <div className="week-column" key={weekday}>
+            <header><span>{weekday}</span><span className="muted small">{new Intl.DateTimeFormat("fa-IR-u-ca-persian", { day: "numeric", month: "short" }).format(day)}</span></header>
+            {hours.map((hour) => {
+              const slotMeetings = meetings.filter((meeting) => sameLocalDay(new Date(meeting.startAt), day) && new Date(meeting.startAt).getHours() === hour);
+              return <div className="week-hour-cell" key={hour} onDragOver={(event) => event.preventDefault()} onDrop={(event) => onMove(event.dataTransfer.getData("text/plain"), localDateValue(day), hour)}>{slotMeetings.map((meeting) => <MeetingPill key={meeting.id} meeting={meeting} />)}</div>;
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function CalendarDay({ focus, hours, meetings, onMove }: { focus: Date; hours: number[]; meetings: Meeting[]; onMove: (meetingId: string, date: string, hour?: number) => void }) {
+  return (
+    <div className="calendar-day-view">
+      {hours.map((hour) => {
+        const slotMeetings = meetings.filter((meeting) => sameLocalDay(new Date(meeting.startAt), focus) && new Date(meeting.startAt).getHours() === hour);
+        return (
+          <div className="hour-row" key={hour}>
+            <div className="hour-label">{fa(hour)}:۰۰</div>
+            <div className="hour-cell" onDragOver={(event) => event.preventDefault()} onDrop={(event) => onMove(event.dataTransfer.getData("text/plain"), localDateValue(focus), hour)}>{slotMeetings.map((meeting) => <MeetingPill key={meeting.id} meeting={meeting} />)}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function MeetingPill({ meeting }: { meeting: Meeting }) {
+  return (
+    <div className="event-pill" draggable onDragStart={(event) => event.dataTransfer.setData("text/plain", meeting.id)}>
+      <strong>{meeting.title}</strong>
+      <span>{timeFa(meeting.startAt)} · {meeting.location || "بدون مکان"}</span>
+    </div>
+  );
+}
+
+function sameLocalDay(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function startOfPersianWeek(date: Date) {
+  const start = new Date(date);
+  const offset = (start.getDay() + 1) % 7;
+  start.setDate(start.getDate() - offset);
+  start.setHours(0, 0, 0, 0);
+  return start;
 }
 
 function shiftDate(date: Date, view: CalendarView, step: number) {
@@ -549,8 +699,14 @@ function shiftDate(date: Date, view: CalendarView, step: number) {
 }
 
 function calendarTitle(date: Date, view: CalendarView) {
-  const label = view === "month" ? "ماه" : view === "week" ? "هفته" : "روز";
-  return `${label} ${new Intl.DateTimeFormat("fa-IR-u-ca-persian", { dateStyle: "full" }).format(date)}`;
+  if (view === "day") return new Intl.DateTimeFormat("fa-IR-u-ca-persian", { dateStyle: "full" }).format(date);
+  if (view === "week") {
+    const start = startOfPersianWeek(date);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return `${new Intl.DateTimeFormat("fa-IR-u-ca-persian", { day: "numeric", month: "short" }).format(start)} تا ${new Intl.DateTimeFormat("fa-IR-u-ca-persian", { day: "numeric", month: "short", year: "numeric" }).format(end)}`;
+  }
+  return new Intl.DateTimeFormat("fa-IR-u-ca-persian", { month: "long", year: "numeric" }).format(date);
 }
 
 function MeetingList({ meetings, users }: { meetings: Meeting[]; users: User[] }) {
