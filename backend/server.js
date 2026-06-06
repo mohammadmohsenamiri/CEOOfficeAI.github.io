@@ -733,12 +733,16 @@ const routes = {
     }
   }),
 
-  "GET /api/settings/bale": async ({ data }) => {
-    const safe = { ...data.settings.bale, botToken: data.settings.bale.botToken ? "********" : "" };
+  "GET /api/settings/bale": async ({ data, currentUser }) => {
+    if (!isPrivileged(currentUser)) return { status: 403, body: { error: "دسترسی به تنظیمات پیام رسان مجاز نیست." } };
+    const safe = { ...data.settings.bale, botToken: data.settings.bale.botToken ? "********" : "", secret: data.settings.bale.secret ? "********" : "" };
     return safe;
   },
 
-  "GET /api/settings/ai": async ({ data }) => data.settings.ai,
+  "GET /api/settings/ai": async ({ data, currentUser }) => {
+    if (!isPrivileged(currentUser)) return { status: 403, body: { error: "دسترسی به تنظیمات هوش مصنوعی مجاز نیست." } };
+    return { ...data.settings.ai, apiKey: data.settings.ai.apiKey ? "********" : "" };
+  },
 
   "PUT /api/settings/ai": async ({ data, body, currentUser }) => {
     if (!isPrivileged(currentUser)) return { status: 403, body: { error: "فقط مدیر سیستم می‌تواند تنظیمات AI را تغییر دهد." } };
@@ -755,7 +759,7 @@ const routes = {
       updatedAt: nowIso()
     };
     log(data, currentUser.id, "update_ai_settings", "settings", "ai", before, data.settings.ai);
-    return { saved: true, ai: data.settings.ai };
+    return { saved: true, ai: { ...data.settings.ai, apiKey: data.settings.ai.apiKey ? "********" : "" } };
   },
 
   "POST /api/settings/ai/test": async ({ data, currentUser }) => {
@@ -799,7 +803,7 @@ const routes = {
       updatedAt: nowIso()
     };
     log(data, currentUser.id, "update_bale_settings", "settings", "bale", before, data.settings.bale);
-    return { saved: true, bale: { ...data.settings.bale, botToken: data.settings.bale.botToken ? "********" : "" } };
+    return { saved: true, bale: { ...data.settings.bale, botToken: data.settings.bale.botToken ? "********" : "", secret: data.settings.bale.secret ? "********" : "" } };
   },
 
   "POST /api/settings/bale/register-webhook": async ({ data, currentUser }) => {

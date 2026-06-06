@@ -764,7 +764,45 @@ function MeetingMini({ meeting, users, onReschedule }: { meeting: Meeting; users
   );
 }
 
+function UserEditModal({ user, onClose, onAction }: { user: User; onClose: () => void; onAction: (work: () => Promise<void>, success?: string) => Promise<void> }) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    await onAction(() => api.updateUser({
+      userId: user.id,
+      fullName: String(form.get("fullName")),
+      jobTitle: String(form.get("jobTitle")),
+      role: String(form.get("role") || user.role),
+      username: String(form.get("username")),
+      password: String(form.get("password")),
+      baleUsername: String(form.get("baleUsername")),
+      baleChatId: String(form.get("baleChatId")),
+      baleProfileUrl: String(form.get("baleProfileUrl"))
+    }).then(() => undefined), "اطلاعات کاربر ویرایش شد.");
+    onClose();
+  }
+  return (
+    <div className="modal-backdrop" onClick={(event) => { if (event.currentTarget === event.target) onClose(); }}>
+      <form className="modal-card" onSubmit={submit}>
+        <div className="panel-head"><h2>ویرایش کاربر</h2><button type="button" onClick={onClose}>بستن</button></div>
+        <div className="form-grid">
+          <label>نام<input name="fullName" defaultValue={user.fullName} required /></label>
+          <label>جایگاه<input name="jobTitle" defaultValue={user.jobTitle} required /></label>
+          <label>نقش<select name="role" defaultValue={user.role} disabled={user.isCeo || user.role === "Admin"}><option value="User">کاربر</option><option value="Admin">Admin</option><option value="CEO">CEO</option></select></label>
+          <label>نام کاربری<input name="username" defaultValue={user.username || ""} /></label>
+          <label>رمز عبور جدید<input name="password" type="password" placeholder="در صورت تغییر وارد کنید" /></label>
+          <label>آیدی بله<input name="baleUsername" defaultValue={user.baleUsername || ""} /></label>
+          <label>شناسه فنی بله<input name="baleChatId" defaultValue={user.baleChatId || ""} /></label>
+          <label className="full">لینک پروفایل بله<input name="baleProfileUrl" defaultValue={user.baleProfileUrl || ""} /></label>
+        </div>
+        <button className="primary">ذخیره تغییرات</button>
+      </form>
+    </div>
+  );
+}
+
 function UsersPanel({ data, onAction }: { data: AppData; onAction: (work: () => Promise<void>, success?: string) => Promise<void> }) {
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -776,7 +814,8 @@ function UsersPanel({ data, onAction }: { data: AppData; onAction: (work: () => 
       <div className="panel-head"><h2>افراد</h2><span className="chip">{fa(data.users.length)} نفر</span></div>
       <form className="card form-grid" onSubmit={create}><label>نام<input name="fullName" required /></label><label>جایگاه<input name="jobTitle" required /></label><label>نقش<select name="role"><option value="User">کاربر</option><option value="Admin">Admin</option></select></label><label>نام کاربری<input name="username" /></label><label>رمز عبور<input name="password" type="password" /></label><label>آیدی بله<input name="baleUsername" /></label><label>شناسه فنی بله<input name="baleChatId" /></label><button className="primary full">افزودن کاربر</button></form>
       {data.pendingUsers.filter((user) => user.status === "pending").length ? <div className="panel"><h2>در انتظار تایید</h2>{data.pendingUsers.filter((user) => user.status === "pending").map((user) => <article className="card" key={user.id}><div className="row"><div><h3>{user.fullName}</h3><p className="muted">{user.jobTitle}</p></div><span className="chip warn">در انتظار</span></div><div className="chips"><span className="chip ltr">{user.baleChatId || "-"}</span><span className="chip ltr">{user.baleUsername || "-"}</span>{user.baleProfileUrl ? <a className="chip ltr" href={user.baleProfileUrl} target="_blank">پروفایل بله</a> : null}</div><div className="actions"><button className="blue" onClick={() => onAction(() => api.approvePendingUser(user.id).then(() => undefined), "کاربر تایید شد.")}>تایید</button><button className="danger" onClick={() => onAction(() => api.rejectPendingUser(user.id).then(() => undefined), "درخواست رد شد.")}>رد</button></div></article>)}</div> : null}
-      <div className="grid">{data.users.map((user) => <article className="card" key={user.id}><div className="row"><div><h3>{user.fullName}</h3><p className="muted">{user.jobTitle}</p></div><span className={user.active ? "chip ok" : "chip warn"}>{user.active ? "فعال" : "معلق"}</span></div><div className="chips"><span className="chip">{user.role}</span><span className="chip ltr">{user.baleUsername || user.baleChatId || "بدون بله"}</span>{user.baleProfileUrl ? <a className="chip ltr" href={user.baleProfileUrl} target="_blank">پروفایل</a> : null}</div><div className="actions">{!user.isCeo ? <><button onClick={() => onAction(() => api.setUserStatus(user.id, !user.active).then(() => undefined), user.active ? "کاربر معلق شد." : "کاربر فعال شد.")}>{user.active ? "تعلیق" : "فعال سازی"}</button><button className="danger" onClick={() => onAction(() => api.deleteUser(user.id).then(() => undefined), "کاربر حذف شد.")}>حذف</button></> : <span className="chip">مدیرعامل قابل حذف نیست</span>}</div></article>)}</div>
+      <div className="grid">{data.users.map((user) => <article className="card" key={user.id}><div className="row"><div><h3>{user.fullName}</h3><p className="muted">{user.jobTitle}</p></div><span className={user.active ? "chip ok" : "chip warn"}>{user.active ? "فعال" : "معلق"}</span></div><div className="chips"><span className="chip">{user.role}</span><span className="chip ltr">{user.baleUsername || user.baleChatId || "بدون بله"}</span>{user.baleProfileUrl ? <a className="chip ltr" href={user.baleProfileUrl} target="_blank">پروفایل</a> : null}</div><div className="actions"><button className="blue" onClick={() => setEditingUser(user)}>ویرایش</button>{!user.isCeo ? <><button onClick={() => onAction(() => api.setUserStatus(user.id, !user.active).then(() => undefined), user.active ? "کاربر معلق شد." : "کاربر فعال شد.")}>{user.active ? "تعلیق" : "فعال سازی"}</button><button className="danger" onClick={() => onAction(() => api.deleteUser(user.id).then(() => undefined), "کاربر حذف شد.")}>حذف</button></> : <span className="chip">مدیرعامل قابل حذف نیست</span>}</div></article>)}</div>
+      {editingUser ? <UserEditModal user={editingUser} onClose={() => setEditingUser(null)} onAction={onAction} /> : null}
     </section>
   );
 }
