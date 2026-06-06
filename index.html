@@ -1166,8 +1166,9 @@
 
     .user-card-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 10px;
+      align-items: stretch;
     }
 
     .user-meta {
@@ -1175,6 +1176,32 @@
       gap: 6px;
       color: #cbd5e1;
       font-size: 12px;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .user-card {
+      width: 100%;
+      min-width: 0;
+      align-content: space-between;
+    }
+
+    .user-card .item-top {
+      min-width: 0;
+    }
+
+    .user-card .item-top > div {
+      min-width: 0;
+    }
+
+    .user-card h3 {
+      overflow-wrap: anywhere;
+      line-height: 1.7;
+    }
+
+    .user-card .item-actions {
+      justify-content: flex-start;
+      margin-top: auto;
     }
 
     .bale-link {
@@ -1183,6 +1210,7 @@
       border-bottom: 1px dashed rgba(103, 232, 249, .45);
       direction: ltr;
       unicode-bidi: isolate;
+      overflow-wrap: anywhere;
     }
 
     .user-toolbar {
