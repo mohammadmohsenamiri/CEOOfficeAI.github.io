@@ -3503,6 +3503,7 @@
         $("offlineStatus").className = "chip danger";
       }
       $("offlineForm").elements.mode.onchange = () => updateAiModeFields($("offlineForm"));
+      $("offlineForm").elements.onlineProvider.onchange = () => applyAiProviderDefaults($("offlineForm"));
       $("offlineForm").onsubmit = async (event) => {
         event.preventDefault();
         const form = new FormData(event.target);
@@ -3564,6 +3565,20 @@
       });
       if (mode === "offline" && form.onlineProvider.value !== "ollama") form.onlineProvider.value = "ollama";
       if (mode === "online" && form.onlineProvider.value === "ollama") form.onlineProvider.value = "openrouter";
+      applyAiProviderDefaults(form);
+    }
+
+    function applyAiProviderDefaults(form) {
+      if (!form) return;
+      const provider = form.elements.onlineProvider.value;
+      if (provider === "openrouter") {
+        if (!form.elements.baseUrl.value) form.elements.baseUrl.value = "https://openrouter.ai/api/v1";
+        if (!form.elements.model.value || form.elements.model.value === "gpt-4o-mini") form.elements.model.value = "openrouter/free";
+      }
+      if (provider === "ollama") {
+        if (!form.elements.baseUrl.value || form.elements.baseUrl.value.includes("openrouter.ai")) form.elements.baseUrl.value = "http://127.0.0.1:11434";
+        if (!form.elements.model.value || form.elements.model.value === "openrouter/free") form.elements.model.value = "qwen3:3b";
+      }
     }
 
     async function renderUsers() {

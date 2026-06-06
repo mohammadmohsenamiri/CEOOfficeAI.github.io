@@ -272,11 +272,15 @@ function buildScopedMessengerData(data, currentUser) {
 
 function aiRuntimeSettings(data) {
   const ai = data.settings.ai || {};
+  const provider = process.env.AI_PROVIDER || ai.onlineProvider || "not-configured";
+  const providerKey = String(provider || "").toLowerCase();
+  const defaultBaseUrl = providerKey === "openrouter" ? "https://openrouter.ai/api/v1" : "";
+  const defaultModel = providerKey === "openrouter" ? "openrouter/free" : "gpt-4o-mini";
   return {
-    provider: process.env.AI_PROVIDER || ai.onlineProvider || "not-configured",
-    baseUrl: cleanPublicUrl(process.env.AI_BASE_URL || ai.baseUrl || ""),
+    provider,
+    baseUrl: cleanPublicUrl(process.env.AI_BASE_URL || ai.baseUrl || defaultBaseUrl),
     apiKey: process.env.AI_API_KEY || ai.apiKey || "",
-    model: process.env.AI_MODEL || ai.model || "gpt-4o-mini"
+    model: process.env.AI_MODEL || ai.model || defaultModel
   };
 }
 
@@ -323,11 +327,15 @@ async function askMessengerAI(data, currentUser, text) {
   const provider = String(settings.provider || "").toLowerCase();
   const isOllama = provider === "ollama" || settings.baseUrl.includes("localhost:11434") || settings.baseUrl.includes("127.0.0.1:11434");
   if ((!settings.apiKey && !isOllama) || !settings.baseUrl || provider === "not-configured" || provider === "disabled") {
+    const missing = [];
+    if (provider === "not-configured" || provider === "disabled") missing.push("Provider");
+    if (!settings.baseUrl) missing.push("Base URL");
+    if (!settings.apiKey && !isOllama) missing.push("API Key");
     return {
       provider: settings.provider,
       model: settings.model,
       configured: false,
-      reply: "هوش مصنوعی پیام‌رسان هنوز پیکربندی نشده است. برای پاسخ‌های عمومی باید AI_PROVIDER و AI_BASE_URL و AI_API_KEY و AI_MODEL در Render تنظیم شوند."
+      reply: `هوش مصنوعی پیام‌رسان هنوز کامل پیکربندی نشده است. مقدارهای ناقص: ${missing.join("، ")}. در تنظیمات AI این موارد را وارد و ذخیره کنید.`
     };
   }
   const scopedData = buildScopedMessengerData(data, currentUser);
