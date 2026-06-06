@@ -32,8 +32,6 @@ The migration goal is feature parity with the HTML version, not a visual or func
 | F003 | RTL and Persian localization | Fully right-align menus, text, and layouts | Implemented | RTL menus, cards, forms, modals, tables, icons, arrows, empty states |
 | F004 | RTL and Persian localization | Persian-localize all labels and remove the word "task" from the UI | Implemented | Persian visible labels; English "task" absent from production UI |
 | F005 | Icons | Use icons for all menu items and cards | Implemented | Consistent icons for menu items, dashboard cards, action cards, major entries |
-| F006 | Rules page | Remove the Rules page from the menu and enforce rules in the infrastructure | Partially implemented | Rules hidden from normal navigation; server-side enforcement |
-| F007 | Free deployment page | Remove or reduce unused pages such as the free deployment page | Partially implemented | Removed/hidden or moved to admin/help; no broken route |
 | F008 | Separate Messenger and AI pages | Reduce unused Messenger / AI pages | Partially implemented | Messenger/AI pages have clear purpose or are merged/hidden |
 | F009 | Jalali calendar | Use the Jalali calendar in all sections | Implemented | Jalali dates in tasks, recurring tasks, meetings, dashboard, filters, reports |
 | F010 | Jalali Date Picker | Use a dedicated Jalali Date Picker instead of the Gregorian date picker | Implemented | Every date input uses Jalali picker and saves/reopens correctly |

@@ -6,20 +6,49 @@ import type { AiSettings, AnalyticsOverview, AppData, BaleSettings, Meeting, Sma
 
 type PageKey = "dashboard" | "tasks" | "longterm" | "recurring" | "requests" | "meetings" | "users" | "analytics" | "ai" | "messenger";
 type CalendarView = "month" | "week" | "day";
+type IconKey = "dashboard" | "tasks" | "requests" | "meetings" | "bale" | "analytics" | "offline" | "users" | "approveUser" | "clock" | "done" | "alert" | "user" | "lock" | "spark";
 
 const emptyData: AppData = { users: [], pendingUsers: [], groups: [], tasks: [], recurringTasks: [], meetings: [], requests: [] };
-const navItems: Array<{ key: PageKey; title: string; icon: string; adminOnly?: boolean }> = [
-  { key: "dashboard", title: "داشبورد", icon: "⌂" },
-  { key: "tasks", title: "کارهای جاری", icon: "✓" },
-  { key: "longterm", title: "کارهای بلندمدت", icon: "∞" },
-  { key: "recurring", title: "کارهای تکرارشونده", icon: "↻" },
-  { key: "requests", title: "درخواست از مدیرعامل", icon: "◆" },
-  { key: "meetings", title: "جلسات", icon: "□" },
-  { key: "users", title: "افراد", icon: "◉", adminOnly: true },
-  { key: "analytics", title: "تحلیل و هشدارها", icon: "◌", adminOnly: true },
-  { key: "ai", title: "تنظیمات هوش مصنوعی", icon: "AI", adminOnly: true },
-  { key: "messenger", title: "تنظیمات پیام رسان", icon: "✉", adminOnly: true }
+const navItems: Array<{ key: PageKey; title: string; icon: IconKey; adminOnly?: boolean }> = [
+  { key: "dashboard", title: "داشبورد", icon: "dashboard" },
+  { key: "tasks", title: "وظایف جاری", icon: "tasks" },
+  { key: "longterm", title: "وظایف بلندمدت", icon: "tasks" },
+  { key: "recurring", title: "وظایف تکرارشونده", icon: "clock" },
+  { key: "requests", title: "درخواست از مدیرعامل", icon: "requests" },
+  { key: "meetings", title: "جلسات", icon: "meetings" },
+  { key: "users", title: "افراد", icon: "users", adminOnly: true },
+  { key: "analytics", title: "تحلیل و هشدارها", icon: "analytics", adminOnly: true },
+  { key: "ai", title: "تنظیمات هوش مصنوعی", icon: "offline", adminOnly: true },
+  { key: "messenger", title: "تنظیمات پیام رسان", icon: "bale", adminOnly: true }
 ];
+
+const iconPaths: Record<IconKey, string[]> = {
+  dashboard: ["M3 13h8V3H3z", "M13 21h8V11h-8z", "M13 3h8v4h-8z", "M3 17h8v4H3z"],
+  tasks: ["M9 11l3 3L22 4", "M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"],
+  requests: ["M12 3l7 4v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7z", "M9 12l2 2 4-5"],
+  meetings: ["M8 2v4", "M16 2v4", "M3 10h18", "M5 4h14a2 2 0 0 1 2 2v15H3V6a2 2 0 0 1 2-2z"],
+  bale: ["M21 12a9 9 0 1 1-3.2-6.9", "M8 12h8", "M12 8v8", "M16 4h5v5"],
+  analytics: ["M3 3v18h18", "M7 16l4-5 4 3 5-8"],
+  offline: ["M12 18h.01", "M8.5 14.5a5 5 0 0 1 7 0", "M5 11a10 10 0 0 1 14 0", "M2 8a15 15 0 0 1 20 0", "M3 3l18 18"],
+  users: ["M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2", "M22 21v-2a4 4 0 0 0-3-3.87", "M16 3.13a4 4 0 0 1 0 7.75"],
+  approveUser: ["M3 21a6 6 0 0 1 12 0", "M16 11l2 2 4-5"],
+  clock: ["M12 6v6l4 2"],
+  done: ["M20 6L9 17l-5-5"],
+  alert: ["M10.3 3.9L2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z", "M12 9v4", "M12 17h.01"],
+  user: ["M20 21a8 8 0 0 0-16 0"],
+  lock: ["M4 11h16v10H4z", "M8 11V7a4 4 0 0 1 8 0v4"],
+  spark: ["M12 2l1.7 6.3L20 10l-6.3 1.7L12 18l-1.7-6.3L4 10l6.3-1.7z", "M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"]
+};
+
+function Icon({ name }: { name: IconKey }) {
+  return (
+    <svg className="svg-icon" viewBox="0 0 24 24" aria-hidden="true">
+      {name === "users" || name === "approveUser" || name === "user" ? <circle cx={name === "users" ? 9 : 12} cy={name === "users" ? 7 : 8} r="4" /> : null}
+      {name === "clock" ? <circle cx="12" cy="12" r="10" /> : null}
+      {iconPaths[name].map((path) => <path key={path} d={path} />)}
+    </svg>
+  );
+}
 
 function fa(value: number | string) {
   return new Intl.NumberFormat("fa-IR").format(Number(value) || 0);
@@ -43,6 +72,125 @@ function todayInput(offset = 0) {
   const date = new Date();
   date.setDate(date.getDate() + offset);
   return date.toISOString().slice(0, 10);
+}
+
+function localDateValue(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function dateFromLocalValue(value: string) {
+  const [year, month, day] = String(value).split("-").map(Number);
+  return new Date(year, month - 1, day, 9, 0, 0, 0);
+}
+
+function div(a: number, b: number) {
+  return Math.trunc(a / b);
+}
+
+function gregorianToJalali(date: Date) {
+  const gy = date.getFullYear();
+  const gm = date.getMonth() + 1;
+  const gd = date.getDate();
+  const gdm = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+  let jy = gy <= 1600 ? 0 : 979;
+  let gy2 = gy <= 1600 ? gy - 621 : gy - 1600;
+  const gy3 = gm > 2 ? gy2 + 1 : gy2;
+  let days = 365 * gy2 + div(gy3 + 3, 4) - div(gy3 + 99, 100) + div(gy3 + 399, 400) - 80 + gd + gdm[gm - 1];
+  jy += 33 * div(days, 12053);
+  days %= 12053;
+  jy += 4 * div(days, 1461);
+  days %= 1461;
+  if (days > 365) {
+    jy += div(days - 1, 365);
+    days = (days - 1) % 365;
+  }
+  const jm = days < 186 ? 1 + div(days, 31) : 7 + div(days - 186, 30);
+  const jd = 1 + (days < 186 ? days % 31 : (days - 186) % 30);
+  return { jy, jm, jd };
+}
+
+function jalaliToGregorian(jy: number, jm: number, jd: number) {
+  jy += jy > 979 ? -979 : 0;
+  let days = 365 * jy + div(jy, 33) * 8 + div((jy % 33) + 3, 4) + 78 + jd + (jm < 7 ? (jm - 1) * 31 : (jm - 7) * 30 + 186);
+  let gy = 1600 + 400 * div(days, 146097);
+  days %= 146097;
+  if (days > 36524) {
+    gy += 100 * div(--days, 36524);
+    days %= 36524;
+    if (days >= 365) days++;
+  }
+  gy += 4 * div(days, 1461);
+  days %= 1461;
+  if (days > 365) {
+    gy += div(days - 1, 365);
+    days = (days - 1) % 365;
+  }
+  let gd = days + 1;
+  const leap = (gy % 4 === 0 && gy % 100 !== 0) || gy % 400 === 0;
+  const salA = [0, 31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  let gm = 1;
+  while (gm <= 12 && gd > salA[gm]) gd -= salA[gm++];
+  return { gy, gm, gd };
+}
+
+function JalaliDatePicker({ name, defaultValue, onChange }: { name: string; defaultValue?: string; onChange?: (value: string) => void }) {
+  const [selected, setSelected] = useState(defaultValue || todayInput());
+  const initialJalali = gregorianToJalali(dateFromLocalValue(defaultValue || todayInput()));
+  const [view, setView] = useState({ jy: initialJalali.jy, jm: initialJalali.jm });
+  const [open, setOpen] = useState(false);
+  const selectedDate = dateFromLocalValue(selected);
+  const selectedJalali = gregorianToJalali(selectedDate);
+  const weekdays = ["ش", "ی", "د", "س", "چ", "پ", "ج"];
+  const daysInMonth = view.jm <= 6 ? 31 : view.jm <= 11 ? 30 : 29;
+  const first = jalaliToGregorian(view.jy, view.jm, 1);
+  const firstDate = new Date(first.gy, first.gm - 1, first.gd);
+  const offset = (firstDate.getDay() + 1) % 7;
+  const titleDate = new Date(first.gy, first.gm - 1, first.gd);
+
+  function shiftMonth(delta: number) {
+    setView((current) => {
+      let jy = current.jy;
+      let jm = current.jm + delta;
+      if (jm < 1) { jm = 12; jy--; }
+      if (jm > 12) { jm = 1; jy++; }
+      return { jy, jm };
+    });
+  }
+
+  function choose(jd: number) {
+    const g = jalaliToGregorian(view.jy, view.jm, jd);
+    const next = localDateValue(new Date(g.gy, g.gm - 1, g.gd));
+    setSelected(next);
+    onChange?.(next);
+    setOpen(false);
+  }
+
+  return (
+    <div className="full persian-date-picker">
+      <input type="hidden" name={name} value={selected} />
+      <label>تاریخ شمسی
+        <button type="button" className="blue picker-toggle" onClick={() => setOpen((value) => !value)}>
+          {new Intl.DateTimeFormat("fa-IR-u-ca-persian", { dateStyle: "full" }).format(selectedDate)}
+        </button>
+      </label>
+      <div className={open ? "date-picker-popover" : "date-picker-popover hidden"}>
+        <div className="date-picker-head">
+          <button type="button" onClick={() => shiftMonth(-1)}>ماه قبل</button>
+          <strong>{new Intl.DateTimeFormat("fa-IR-u-ca-persian", { month: "long", year: "numeric" }).format(titleDate)}</strong>
+          <button type="button" onClick={() => shiftMonth(1)}>ماه بعد</button>
+        </div>
+        <div className="date-picker-grid">
+          {weekdays.map((day) => <span key={day}>{day}</span>)}
+          {Array.from({ length: offset }, (_, index) => <span key={`blank-${index}`} />)}
+          {Array.from({ length: daysInMonth }, (_, index) => {
+            const jd = index + 1;
+            const active = selectedJalali.jy === view.jy && selectedJalali.jm === view.jm && selectedJalali.jd === jd;
+            return <button type="button" className={active ? "primary" : ""} key={jd} onClick={() => choose(jd)}>{fa(jd)}</button>;
+          })}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function isPrivileged(user?: User | null) {
@@ -117,7 +265,7 @@ export default function Home() {
         <nav className="nav">
           {visibleNav.map((item) => (
             <button key={item.key} className={page === item.key ? "active" : ""} onClick={() => go(item.key)}>
-              <span className="nav-title"><b>{item.icon}</b>{item.title}</span>
+              <span className="nav-title"><b><Icon name={item.icon} /></b>{item.title}</span>
               <span>‹</span>
             </button>
           ))}
@@ -224,23 +372,23 @@ function Dashboard({ data, go }: { data: AppData; go: (page: PageKey) => void })
   return (
     <>
       <section className="metrics">
-        <Metric title="کارهای جاری" value={current.length} />
-        <Metric title="کارهای بلندمدت" value={longTerm.length} />
-        <Metric title="چرخه های تکرار" value={data.recurringTasks.length} />
-        <Metric title="جلسات" value={data.meetings.length} />
-        <Metric title="درخواست های باز" value={pendingRequests.length} />
-        <Metric title="افراد فعال" value={data.users.filter((user) => user.active).length} />
+        <Metric title="وظایف جاری" value={current.length} icon="tasks" />
+        <Metric title="وظایف بلندمدت" value={longTerm.length} icon="tasks" />
+        <Metric title="چرخه های تکرار" value={data.recurringTasks.length} icon="clock" />
+        <Metric title="جلسات" value={data.meetings.length} icon="meetings" />
+        <Metric title="درخواست های باز" value={pendingRequests.length} icon="requests" />
+        <Metric title="افراد فعال" value={data.users.filter((user) => user.active).length} icon="users" />
       </section>
       <section className="grid">
-        <div className="panel"><div className="panel-head"><h2>کارهای نزدیک</h2><button className="blue" onClick={() => go("tasks")}>مشاهده</button></div><TaskList tasks={current.slice(0, 4)} users={data.users} /></div>
+        <div className="panel"><div className="panel-head"><h2>وظایف نزدیک</h2><button className="blue" onClick={() => go("tasks")}>مشاهده</button></div><TaskList tasks={current.slice(0, 4)} users={data.users} /></div>
         <div className="panel"><div className="panel-head"><h2>جلسات پیش رو</h2><button className="blue" onClick={() => go("meetings")}>تقویم</button></div><MeetingList meetings={data.meetings.slice(0, 4)} users={data.users} /></div>
       </section>
     </>
   );
 }
 
-function Metric({ title, value }: { title: string; value: number }) {
-  return <div className="card metric"><span className="muted">{title}</span><b>{fa(value)}</b></div>;
+function Metric({ title, value, icon }: { title: string; value: number; icon?: IconKey }) {
+  return <div className="card metric">{icon ? <span className="metric-icon"><Icon name={icon} /></span> : null}<span className="muted">{title}</span><b>{fa(value)}</b></div>;
 }
 
 function AssigneePicker({ users, name = "assigneeIds" }: { users: User[]; name?: string }) {
@@ -267,21 +415,21 @@ function TasksPanel({ tasks, users, longTerm, onAction }: { tasks: Task[]; users
       dueAt: longTerm ? "" : isoFromDateTime(String(form.get("date")), "09:00"),
       longTerm,
       assigneeIds: selectedValues(form, "assigneeIds")
-    }).then(() => undefined), longTerm ? "کار بلندمدت ساخته شد." : "کار جاری ساخته شد.");
+    }).then(() => undefined), longTerm ? "وظیفه بلندمدت ساخته شد." : "وظیفه جاری ساخته شد.");
     event.currentTarget.reset();
   }
 
   return (
     <section className="panel">
-      <div className="panel-head"><h2>{longTerm ? "کارهای بلندمدت" : "کارهای جاری"}</h2><span className="chip">{fa(tasks.length)} مورد</span></div>
+      <div className="panel-head"><h2>{longTerm ? "وظایف بلندمدت" : "وظایف جاری"}</h2><span className="chip">{fa(tasks.length)} مورد</span></div>
       <form className="card form-grid" onSubmit={create}>
         <label>عنوان<input name="title" required /></label>
-        {!longTerm ? <label>تاریخ<input name="date" type="date" defaultValue={todayInput()} required /><span className="muted small">نمایش در فهرست به تقویم جلالی تبدیل می شود.</span></label> : null}
+        {!longTerm ? <JalaliDatePicker name="date" defaultValue={todayInput()} /> : null}
         <label className="full">توضیحات<textarea name="description" /></label>
         <AssigneePicker users={users} />
         <button className="primary full">ثبت</button>
       </form>
-      <TaskList tasks={tasks} users={users} onDelete={(id) => onAction(() => api.deleteTask(id).then(() => undefined), "کار حذف شد.")} onMove={longTerm ? undefined : (id) => onAction(() => api.moveTaskToLongTerm(id).then(() => undefined), "به بلندمدت منتقل شد.")} onAssignment={(id, status) => onAction(() => api.updateAssignment(id, status).then(() => undefined), "وضعیت ثبت شد.")} />
+      <TaskList tasks={tasks} users={users} onDelete={(id) => onAction(() => api.deleteTask(id).then(() => undefined), "وظیفه حذف شد.")} onMove={longTerm ? undefined : (id) => onAction(() => api.moveTaskToLongTerm(id).then(() => undefined), "به بلندمدت منتقل شد.")} onAssignment={(id, status) => onAction(() => api.updateAssignment(id, status).then(() => undefined), "وضعیت ثبت شد.")} />
     </section>
   );
 }
@@ -292,7 +440,7 @@ function TaskList({ tasks, users, onDelete, onMove, onAssignment }: { tasks: Tas
     <div className="list">
       {tasks.map((task) => (
         <article className="card" key={task.id}>
-          <div className="row"><div><h3>{task.title}</h3><p className="muted">{task.description || "بدون توضیح"}</p></div><span className="chip">{task.longTerm ? "بلندمدت" : dateFa(task.dueAt)}</span></div>
+          <div className="row"><div className="icon-heading"><span className="card-icon"><Icon name={task.longTerm ? "clock" : "tasks"} /></span><div><h3>{task.title}</h3><p className="muted">{task.description || "بدون توضیح"}</p></div></div><span className="chip">{task.longTerm ? "بلندمدت" : dateFa(task.dueAt)}</span></div>
           <div className="chips">{task.assignments?.map((assignment) => <span className="chip" key={assignment.userId}>{users.find((user) => user.id === assignment.userId)?.fullName || "کاربر"}: {assignment.status}</span>)}</div>
           <div className="actions">
             {onAssignment ? <><button className="blue" onClick={() => onAssignment(task.id, "done")}>انجام شد</button><button onClick={() => onAssignment(task.id, "rejected")}>رد</button></> : null}
@@ -323,12 +471,12 @@ function RecurringPanel({ data, onAction }: { data: AppData; onAction: (work: ()
 
   return (
     <section className="panel">
-      <div className="panel-head"><h2>کارهای تکرارشونده</h2><span className="chip">{fa(data.recurringTasks.length)} چرخه</span></div>
+      <div className="panel-head"><h2>وظایف تکرارشونده</h2><span className="chip">{fa(data.recurringTasks.length)} چرخه</span></div>
       <form className="card form-grid" onSubmit={create}>
         <label>عنوان<input name="title" required /></label>
         <label>چرخه<select name="cycle" defaultValue="daily"><option value="daily">روزانه</option><option value="weekly">هفتگی</option><option value="monthly">ماهانه</option></select></label>
         <label>فاصله<input name="interval" type="number" min="1" defaultValue="1" /></label>
-        <label>شروع<input name="date" type="date" defaultValue={todayInput()} /></label>
+        <JalaliDatePicker name="date" defaultValue={todayInput()} />
         <label>ساعت<input name="time" type="time" defaultValue="09:00" /></label>
         <label className="full">توضیحات<textarea name="description" /></label>
         <AssigneePicker users={data.users} />
@@ -350,7 +498,7 @@ function RequestsPanel({ data, activeUser, onAction }: { data: AppData; activeUs
     <section className="panel">
       <div className="panel-head"><h2>درخواست از مدیرعامل</h2><span className="chip">{fa(data.requests.length)} درخواست</span></div>
       <form className="card form-grid" onSubmit={create}><label>عنوان<input name="title" required /></label><label className="full">شرح<textarea name="description" /></label><button className="primary full">ارسال درخواست</button></form>
-      <div className="list">{data.requests.map((request) => <article className="card" key={request.id}><div className="row"><h3>{request.title}</h3><span className="chip">{request.status}</span></div><p className="muted">{request.description || "بدون توضیح"}</p>{request.decisionReason ? <p>{request.decisionReason}</p> : null}{activeUser?.role === "CEO" ? <div className="actions"><button className="blue" onClick={() => onAction(() => api.decideCeoRequest(request.id, "accepted").then(() => undefined), "درخواست پذیرفته شد.")}>پذیرش</button><button onClick={() => onAction(() => api.decideCeoRequest(request.id, "delegated").then(() => undefined), "درخواست به کار تبدیل شد.")}>تبدیل به کار</button><button className="danger" onClick={() => onAction(() => api.decideCeoRequest(request.id, "rejected").then(() => undefined), "درخواست رد شد.")}>رد</button></div> : null}</article>)}</div>
+      <div className="list">{data.requests.map((request) => <article className="card" key={request.id}><div className="row"><h3>{request.title}</h3><span className="chip">{request.status}</span></div><p className="muted">{request.description || "بدون توضیح"}</p>{request.decisionReason ? <p>{request.decisionReason}</p> : null}{activeUser?.role === "CEO" ? <div className="actions"><button className="blue" onClick={() => onAction(() => api.decideCeoRequest(request.id, "accepted").then(() => undefined), "درخواست پذیرفته شد.")}>پذیرش</button><button onClick={() => onAction(() => api.decideCeoRequest(request.id, "delegated").then(() => undefined), "درخواست به وظیفه تبدیل شد.")}>تبدیل به وظیفه</button><button className="danger" onClick={() => onAction(() => api.decideCeoRequest(request.id, "rejected").then(() => undefined), "درخواست رد شد.")}>رد</button></div> : null}</article>)}</div>
     </section>
   );
 }
@@ -372,7 +520,7 @@ function MeetingsPanel({ data, onAction }: { data: AppData; onAction: (work: () 
     <section className="panel">
       <div className="panel-head"><h2>{calendarTitle(focus, view)}</h2><div className="actions"><button onClick={() => setFocus(shiftDate(focus, view, -1))}>قبلی</button><button className="blue" onClick={() => setFocus(new Date())}>امروز</button><button onClick={() => setFocus(shiftDate(focus, view, 1))}>بعدی</button></div></div>
       <div className="tabs"><button className={view === "month" ? "primary" : ""} onClick={() => setView("month")}>ماه</button><button className={view === "week" ? "primary" : ""} onClick={() => setView("week")}>هفته</button><button className={view === "day" ? "primary" : ""} onClick={() => setView("day")}>روز</button></div>
-      <form className="card form-grid" onSubmit={create}><label>عنوان<input name="title" defaultValue="جلسه" /></label><label>تاریخ<input name="date" type="date" defaultValue={todayInput()} required /></label><label>شروع<input name="startTime" type="time" defaultValue="09:00" /></label><label>پایان<input name="endTime" type="time" defaultValue="10:00" /></label><label className="full">مکان یا لینک<input name="location" /></label><label className="full">اعضا<select name="members" multiple>{data.users.filter((user) => user.active).map((user) => <option value={user.id} key={user.id}>{user.fullName}</option>)}</select></label><button className="primary full">ثبت جلسه</button></form>
+      <form className="card form-grid" onSubmit={create}><label>عنوان<input name="title" defaultValue="جلسه" /></label><JalaliDatePicker name="date" defaultValue={todayInput()} /><label>شروع<input name="startTime" type="time" defaultValue="09:00" /></label><label>پایان<input name="endTime" type="time" defaultValue="10:00" /></label><label className="full">مکان یا لینک<input name="location" /></label><label className="full">اعضا<select name="members" multiple>{data.users.filter((user) => user.active).map((user) => <option value={user.id} key={user.id}>{user.fullName}</option>)}</select></label><button className="primary full">ثبت جلسه</button></form>
       <div className="calendar">
         {days.map((day) => {
           const dayMeetings = data.meetings.filter((meeting) => new Date(meeting.startAt).toDateString() === day.toDateString());
@@ -416,7 +564,7 @@ function MeetingMini({ meeting, users, onReschedule }: { meeting: Meeting; users
       <div className="row"><h3>{meeting.title}</h3><span className="chip">{dateFa(meeting.startAt, true)} تا {timeFa(meeting.endAt)}</span></div>
       <p className="muted">{meeting.location || "بدون مکان"}</p>
       <div className="chips">{meeting.members.map((id) => <span className="chip" key={id}>{users.find((user) => user.id === id)?.fullName || "کاربر"}</span>)}</div>
-      {onReschedule ? <label>جابجایی به تاریخ<input type="date" onChange={(event) => event.target.value && onReschedule(event.target.value)} /></label> : null}
+      {onReschedule ? <JalaliDatePicker name={`reschedule-${meeting.id}`} defaultValue={localDateValue(new Date(meeting.startAt))} onChange={onReschedule} /> : null}
     </article>
   );
 }
@@ -448,7 +596,7 @@ function AnalyticsPanel({ onAction }: { onAction: (work: () => Promise<void>, su
   return (
     <section className="panel">
       <div className="panel-head"><h2>تحلیل و هشدارها</h2><button className="blue" onClick={() => onAction(() => api.runSmartNotifications().then(() => undefined), "هشدارهای هوشمند اجرا شد.")}>اجرای هشدارها</button></div>
-      {overview ? <section className="metrics"><Metric title="همه کارها" value={overview.totals.tasks} /><Metric title="باز" value={overview.totals.openTasks} /><Metric title="انجام شده" value={overview.totals.doneTasks} /><Metric title="اعلان ها" value={overview.totals.notifications} /></section> : <div className="card muted">گزارش در دسترس نیست.</div>}
+      {overview ? <section className="metrics"><Metric title="همه وظایف" value={overview.totals.tasks} icon="tasks" /><Metric title="باز" value={overview.totals.openTasks} icon="clock" /><Metric title="انجام شده" value={overview.totals.doneTasks} icon="done" /><Metric title="اعلان ها" value={overview.totals.notifications} icon="alert" /></section> : <div className="card muted">گزارش در دسترس نیست.</div>}
       <div className="grid">{overview?.byUser.map((row) => <article className="card" key={row.userId}><div className="row"><h3>{row.fullName}</h3><span className="chip">{fa(row.completionRate)}٪</span></div><div className="chips"><span className="chip">کل: {fa(row.assigned)}</span><span className="chip ok">انجام: {fa(row.done)}</span><span className="chip warn">باز: {fa(row.pending)}</span></div></article>)}</div>
       <div className="list">{suggestions.map((item) => <article className="card" key={item.id}><div className="row"><h3>{item.title}</h3><span className="chip">{item.severity}</span></div><p className="muted">{item.body}</p></article>)}</div>
     </section>

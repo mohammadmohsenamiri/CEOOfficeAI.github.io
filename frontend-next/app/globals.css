@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;200;300;400;500;600;700;800;900&display=swap");
+
 :root {
   --bg: #080a12;
   --surface: rgba(15, 19, 32, 0.88);
@@ -190,6 +192,16 @@ a {
   background: rgba(255, 255, 255, .08);
 }
 
+.svg-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .nav button.active {
   color: #fff;
   border-color: rgba(139, 92, 246, .34);
@@ -237,6 +249,30 @@ a {
 
 .metric {
   padding: 16px;
+}
+
+.metric-icon,
+.card-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  color: #dbeafe;
+  background: linear-gradient(135deg, rgba(139, 92, 246, .28), rgba(6, 182, 212, .18));
+  border: 1px solid rgba(255, 255, 255, .1);
+  margin-bottom: 10px;
+}
+
+.card-icon {
+  flex: 0 0 auto;
+  margin-bottom: 0;
+}
+
+.icon-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
 }
 
 .metric b {
@@ -344,6 +380,67 @@ a {
 
 .day strong {
   color: #a5b4fc;
+}
+
+.persian-date-picker {
+  position: relative;
+  display: grid;
+  gap: 8px;
+}
+
+.picker-toggle {
+  width: 100%;
+  text-align: right;
+}
+
+.date-picker-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  width: min(360px, 92vw);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(10, 14, 25, .98);
+  box-shadow: var(--shadow);
+}
+
+.date-picker-popover.hidden {
+  display: none;
+}
+
+.date-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.date-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.date-picker-grid span,
+.date-picker-grid button {
+  min-height: 36px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.date-picker-grid span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.date-picker-grid button.primary {
+  border: 0;
+  color: white;
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
 }
 
 .ltr {
