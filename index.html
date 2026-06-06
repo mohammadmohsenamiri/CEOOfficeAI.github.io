@@ -3211,6 +3211,7 @@
               </label>
               <label>حالت پاسخ
                 <select name="defaultReplyMode">
+                  <option value="ai-assisted">پاسخ هوشمند با AI</option>
                   <option value="persian-confirmation">تایید فارسی قبل از ثبت</option>
                   <option value="persian-command-only">فقط دستورهای متنی فارسی</option>
                 </select>
@@ -3466,7 +3467,13 @@
                 <button type="button" class="blue" id="useOllamaQwen">تنظیم خودکار Ollama + Qwen3:3b</button>
               </div>
             </div>
-            <button class="primary">ذخیره تنظیمات AI</button>
+            <div class="item-actions">
+              <button class="primary">ذخیره تنظیمات AI</button>
+              <button class="blue" type="button" id="testAiConnection">تست ارتباط و اتصال پیام‌رسان به AI</button>
+            </div>
+            <div class="list" id="aiActionResult">
+              ${empty("بعد از ذخیره تنظیمات، تست ارتباط AI را اجرا کنید.")}
+            </div>
           </form>
           <div class="panel">
             <h2>مقادیر پیشنهادی</h2>
@@ -3500,21 +3507,23 @@
         event.preventDefault();
         const form = new FormData(event.target);
         try {
-          await backendFetch("/api/settings/ai", {
-            method: "PUT",
-            body: JSON.stringify({
-              mode: form.get("mode"),
-              fallbackParserEnabled: form.get("fallbackParserEnabled") === "true",
-              onlineProvider: form.get("onlineProvider"),
-              baseUrl: form.get("baseUrl"),
-              apiKey: form.get("apiKey"),
-              model: form.get("model"),
-              offlineModelPath: form.get("offlineModelPath")
-            })
-          });
+          await saveAiSettingsFromForm(event.target);
           toast("تنظیمات AI ذخیره شد.");
           renderOffline();
         } catch (error) {
+          toast(error.message);
+        }
+      };
+      $("testAiConnection").onclick = async () => {
+        try {
+          await saveAiSettingsFromForm($("offlineForm"));
+          const result = await backendFetch("/api/settings/ai/test", { method: "POST", body: JSON.stringify({}) });
+          $("aiActionResult").innerHTML = result.ok
+            ? `<article class="item-card"><div class="item-top"><div style="display:flex;gap:10px;"><span class="card-icon">${icons.spark}</span><div><h3>ارتباط AI موفق بود</h3><p class="muted small">پیام‌رسان به حالت پاسخ هوشمند با AI تغییر کرد.</p></div></div><span class="chip ok">ai-assisted</span></div><pre>${JSON.stringify(result.ai, null, 2)}</pre></article>`
+            : `<article class="item-card"><div class="item-top"><div style="display:flex;gap:10px;"><span class="card-icon">${icons.alert}</span><div><h3>تست AI موفق نبود</h3><p class="muted small">تنظیمات مدل، Base URL و API Key را بررسی کنید.</p></div></div><span class="chip danger">failed</span></div><pre>${JSON.stringify(result.ai, null, 2)}</pre></article>`;
+          toast(result.ok ? "ارتباط AI موفق بود و پیام‌رسان به AI وصل شد." : "تست AI موفق نبود.");
+        } catch (error) {
+          $("aiActionResult").innerHTML = `<article class="item-card"><p class="muted">${error.message}</p></article>`;
           toast(error.message);
         }
       };
@@ -3528,6 +3537,22 @@
         form.apiKey.value = "";
         updateAiModeFields(form);
       };
+    }
+
+    async function saveAiSettingsFromForm(formElement) {
+      const form = new FormData(formElement);
+      return backendFetch("/api/settings/ai", {
+        method: "PUT",
+        body: JSON.stringify({
+          mode: form.get("mode"),
+          fallbackParserEnabled: form.get("fallbackParserEnabled") === "true",
+          onlineProvider: form.get("onlineProvider"),
+          baseUrl: form.get("baseUrl"),
+          apiKey: form.get("apiKey"),
+          model: form.get("model"),
+          offlineModelPath: form.get("offlineModelPath")
+        })
+      });
     }
 
     function updateAiModeFields(form) {

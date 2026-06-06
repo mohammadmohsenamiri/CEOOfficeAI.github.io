@@ -280,6 +280,44 @@ function aiRuntimeSettings(data) {
   };
 }
 
+function aiChatCompletionsUrl(baseUrl) {
+  const clean = String(baseUrl || "").replace(/\/$/, "");
+  if (clean.endsWith("/v1") || clean.endsWith("/api/v1")) return `${clean}/chat/completions`;
+  return `${clean}/v1/chat/completions`;
+}
+
+function ceoOfficeAiSystemPrompt() {
+  return `تو دستیار هوشمند فارسی و راست‌چین سیستم CEO Office AI Coordinator هستی.
+
+ماموریت:
+- فقط بر اساس داده‌هایی پاسخ بده که در scopedData همین پیام آمده و برای همین کاربر مجاز است.
+- اگر داده کافی نیست، صریح، کوتاه و فارسی بگو که داده کافی در دسترس نیست.
+- پاسخ‌ها باید فارسی، عملیاتی، کوتاه، مرتب و مناسب پیام‌رسان بله باشند.
+- از افشای اطلاعات کاربران، وظیفه‌ها، جلسات یا درخواست‌هایی که در scopedData نیستند خودداری کن.
+
+قوانین دسترسی:
+- Admin می‌تواند همه داده‌ها را ببیند.
+- کاربر عادی فقط وظیفه‌ها، چرخه‌های تکرار، جلسات و درخواست‌های مربوط به خودش را می‌بیند.
+- مدیرعامل نقش CEO دارد و درخواست‌های مدیرعامل را می‌بیند.
+- وظیفه مستقیم برای مدیرعامل نباید ساخته شود؛ برای مدیرعامل فقط باید «درخواست از مدیرعامل» ثبت یا پیشنهاد شود.
+- اگر کاربر درباره وظایف، جلسات یا وضعیت افراد خارج از دسترسی خودش پرسید، با احترام بگو به آن داده دسترسی ندارد.
+
+قوانین کاری:
+- برای پرسش‌هایی مثل «وظایف من»، «جلسات فردا»، «کارهای این هفته»، «جلسات تاریخ مشخص»، از scopedData خلاصه دقیق بساز.
+- برای وظیفه جاری، تاریخ انجام لازم است.
+- برای وظیفه بلندمدت، تاریخ انجام نباید لازم باشد.
+- برای وظیفه تکرارشونده، چرخه تکرار مانند روزانه، هفتگی یا ماهانه را در پاسخ مشخص کن.
+- برای جلسه، تاریخ، ساعت شروع، ساعت پایان، اعضا و مکان/لینک مهم هستند.
+- اگر زمان یا روز جلسه مبهم بود، زمان مناسب را پیشنهاد بده ولی بگو ثبت نهایی نیازمند تایید مدیرعامل است.
+- یادآوری جلسه باید کوتاه، واضح و شامل عنوان، زمان و محل/لینک باشد.
+
+نحوه پاسخ:
+- برای گزارش‌ها از bulletهای کوتاه استفاده کن.
+- اگر عملی باید انجام شود اما داده کافی نیست، دقیق بگو چه چیزی کم است.
+- وانمود نکن عملی را انجام داده‌ای مگر اینکه نتیجه اجرای backend در داده یا پیام آمده باشد.
+- JSON خام، متن انگلیسی طولانی، یا توضیح فنی غیرضروری نده.`;
+}
+
 async function askMessengerAI(data, currentUser, text) {
   const settings = aiRuntimeSettings(data);
   const provider = String(settings.provider || "").toLowerCase();
@@ -296,14 +334,14 @@ async function askMessengerAI(data, currentUser, text) {
   const messages = [
     {
       role: "system",
-      content: "تو دستیار فارسی و راست‌چین دفتر مدیرعامل هستی. فقط بر اساس داده‌های مجاز همین کاربر پاسخ بده. اگر داده کافی نیست صریح بگو. پاسخ کوتاه، عملی و فارسی باشد."
+      content: ceoOfficeAiSystemPrompt()
     },
     {
       role: "user",
       content: JSON.stringify({ question: text, scopedData }, null, 2)
     }
   ];
-  const response = await fetch(`${settings.baseUrl.replace(/\/$/, "")}/v1/chat/completions`, {
+  const response = await fetch(aiChatCompletionsUrl(settings.baseUrl), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -710,6 +748,17 @@ const routes = {
     };
     log(data, currentUser.id, "update_ai_settings", "settings", "ai", before, data.settings.ai);
     return { saved: true, ai: data.settings.ai };
+  },
+
+  "POST /api/settings/ai/test": async ({ data, currentUser }) => {
+    if (!isPrivileged(currentUser)) return { status: 403, body: { error: "فقط مدیر سیستم می‌تواند ارتباط AI را تست کند." } };
+    const ai = await askMessengerAI(data, currentUser, "برای تست اتصال، فقط یک جمله کوتاه فارسی بگو که آماده پاسخ‌گویی به پیام‌های دفتر مدیرعامل هستی.");
+    const ok = Boolean(ai.configured && ai.reply && !ai.reply.startsWith("خطای هوش مصنوعی"));
+    if (!ok) return { ok: false, ai, messengerMode: data.settings.bale.defaultReplyMode };
+    const beforeBale = { ...data.settings.bale };
+    data.settings.bale.defaultReplyMode = "ai-assisted";
+    log(data, currentUser.id, "test_ai_and_enable_messenger", "settings", "ai", beforeBale, data.settings.bale);
+    return { ok: true, ai, messengerMode: data.settings.bale.defaultReplyMode };
   },
 
   "GET /api/settings/deployment": async ({ data }) => data.settings.deployment,
@@ -1225,7 +1274,9 @@ const routes = {
     let execution = null;
     if (linkedUser) {
       try {
-        execution = await executeBaleIntent(data, linkedUser, parsedIntent, normalized.text);
+        execution = data.settings.bale.defaultReplyMode === "ai-assisted" && parsedIntent.intent === "unknown"
+          ? await executeBaleIntent(data, linkedUser, { intent: "ask_ai", question: normalized.text }, normalized.text)
+          : await executeBaleIntent(data, linkedUser, parsedIntent, normalized.text);
       } catch (error) {
         execution = { created: false, type: "error", reply: error.message };
       }
