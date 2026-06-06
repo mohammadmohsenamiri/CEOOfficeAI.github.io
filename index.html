@@ -1244,7 +1244,8 @@
           <span>ورود امن با پیام‌رسان بله</span>
         </div>
         <div class="tabs">
-          <button class="active" type="button" data-auth-tab="login">ورود</button>
+          <button class="active" type="button" data-auth-tab="login">ورود با بله</button>
+          <button type="button" data-auth-tab="password">ورود با حساب</button>
           <button type="button" data-auth-tab="signup">ساخت حساب</button>
         </div>
         <form id="loginForm" class="auth-form">
@@ -1253,9 +1254,16 @@
           <label>کد دریافت‌شده در بله<input name="code" inputmode="numeric" placeholder="کد ۶ رقمی"></label>
           <button type="submit" class="primary">ورود</button>
         </form>
+        <form id="passwordLoginForm" class="auth-form hidden">
+          <label>نام کاربری<input name="username" required></label>
+          <label>رمز عبور<input name="password" type="password" required></label>
+          <button type="submit" class="primary">ورود با حساب کاربری</button>
+        </form>
         <form id="signupForm" class="auth-form hidden">
           <label>نام و نام خانوادگی<input name="fullName" required></label>
           <label>جایگاه شغلی<input name="jobTitle" required></label>
+          <label>نام کاربری<input name="username" required></label>
+          <label>رمز عبور<input name="password" type="password" required></label>
           <label>آیدی بله<input name="baleUsername" placeholder="@username" required></label>
           <label>لینک پروفایل بله<input name="baleProfileUrl" placeholder="https://ble.ir/username"></label>
           <button type="submit" class="primary">ثبت درخواست و انتظار تایید ادمین</button>
@@ -1344,7 +1352,7 @@
       ["requests", "درخواست از مدیرعامل", "مسیر مجاز برای درخواست‌های خصوصی CEO", "requests"],
       ["meetings", "جلسات", "تقویم شمسی و یادآوری", "meetings"],
       ["analytics", "تحلیل و هشدارها", "پیشنهادهای هوشمند، KPI و کارهای عقب‌افتاده", "analytics"],
-      ["offline", "فاز آفلاین", "AI محلی، سرور داخلی و IP ثابت", "offline"],
+      ["offline", "تنظیمات AI", "مدل آنلاین، Ollama و Qwen3:3b", "offline"],
       ["users", "افراد", "کاربران، تایید بله و افزودن دستی", "users"],
       ["bale", "تنظیمات بله", "اتصال بازوی بله، webhook و پیام تایید فارسی", "bale"]
     ];
@@ -1354,8 +1362,8 @@
       users: [
         { id: "u1", fullName: "مریم رضایی", jobTitle: "مدیرعامل", role: "CEO", group: "مدیریت", telegram: "1001", bale: "2001", active: true, isCeo: true },
         { id: "u2", fullName: "علی کریمی", jobTitle: "هماهنگ‌کننده دفتر", role: "Admin", group: "دفتر مدیرعامل", telegram: "1002", bale: "2002", active: true, isCeo: false },
-        { id: "u3", fullName: "سارا احمدی", jobTitle: "مدیر فروش", role: "Employee", group: "فروش", telegram: "1003", bale: "2003", active: true, isCeo: false },
-        { id: "u4", fullName: "حسین نوری", jobTitle: "مسئول عملیات", role: "Employee", group: "عملیات", telegram: "1004", bale: "2004", active: true, isCeo: false }
+        { id: "u3", fullName: "سارا احمدی", jobTitle: "مدیر فروش", role: "User", group: "فروش", telegram: "1003", bale: "2003", active: true, isCeo: false },
+        { id: "u4", fullName: "حسین نوری", jobTitle: "مسئول عملیات", role: "User", group: "عملیات", telegram: "1004", bale: "2004", active: true, isCeo: false }
       ],
       tasks: [
         { id: "T-1001", title: "آماده‌سازی گزارش فروش هفتگی", description: "خلاصه فروش، ریسک‌ها و اقدامات پیشنهادی برای جلسه صبح شنبه.", creatorId: "u2", group: "فروش", type: "task", dueAt: "2026-06-06T07:30:00.000Z", visibility: "group", assignees: [
@@ -1426,6 +1434,7 @@
         bale: item.baleChatId || "",
         baleUsername: item.baleUsername || "",
         baleProfileUrl: item.baleProfileUrl || "",
+        username: item.username || "",
         active: item.active,
         isCeo: item.isCeo
       }));
@@ -1501,8 +1510,7 @@
     function visiblePages() {
       const u = currentUser();
       return pages.filter(([id]) => {
-        if (id === "requests") return u.role === "CEO";
-        if (["users", "analytics", "offline", "bale"].includes(id)) return u.role === "Admin";
+        if (["requests", "users", "analytics", "offline", "bale"].includes(id)) return u.role === "Admin" || u.role === "CEO";
         return true;
       });
     }
@@ -1532,7 +1540,7 @@
         const hasMe = task.creatorId === u.id || task.assignees.some((a) => a.userId === u.id);
         if (task.visibility === "ceo_private") return u.role === "CEO" || task.creatorId === u.id || task.assignees.some((a) => a.userId === u.id);
         if (isPrivileged()) return true;
-        return hasMe || task.group === u.group;
+        return hasMe;
       });
     }
 
@@ -1550,8 +1558,12 @@
         if (isPrivileged()) return true;
         if (task.creatorId === u.id) return true;
         if ((task.assigneeIds || []).includes(u.id)) return true;
-        return task.group === u.group || task.groupId && (u.groupIds || []).includes(task.groupId);
+        return false;
       });
+    }
+
+    function assignableUsers() {
+      return state.users.filter((u) => u.active && !u.isCeo);
     }
 
     function visibleRequests() {
@@ -1581,6 +1593,7 @@
           document.querySelectorAll("[data-auth-tab]").forEach((item) => item.classList.remove("active"));
           btn.classList.add("active");
           $("loginForm").classList.toggle("hidden", btn.dataset.authTab !== "login");
+          $("passwordLoginForm").classList.toggle("hidden", btn.dataset.authTab !== "password");
           $("signupForm").classList.toggle("hidden", btn.dataset.authTab !== "signup");
         };
       });
@@ -1597,6 +1610,18 @@
         const payload = Object.fromEntries(new FormData(event.target).entries());
         try {
           const result = await backendFetch("/api/auth/login", { method: "POST", body: JSON.stringify(payload) });
+          localStorage.setItem(authUserKey, result.user.id);
+          state.currentUserId = result.user.id;
+          await loadBackendState();
+          render();
+          toast("ورود انجام شد.");
+        } catch (error) { toast(error.message); }
+      };
+      $("passwordLoginForm").onsubmit = async (event) => {
+        event.preventDefault();
+        const payload = Object.fromEntries(new FormData(event.target).entries());
+        try {
+          const result = await backendFetch("/api/auth/login-password", { method: "POST", body: JSON.stringify(payload) });
           localStorage.setItem(authUserKey, result.user.id);
           state.currentUserId = result.user.id;
           await loadBackendState();
@@ -1693,7 +1718,7 @@
         <div class="grid">
           <div class="panel">
             <div class="panel-head"><h2>وظایف جاری</h2><button class="blue" data-go="tasks">مدیریت وظایف</button></div>
-            <div class="list">${tasks.slice(0, 4).map(taskCard).join("") || empty("وظیفهی برای نمایش وجود ندارد.")}</div>
+            <div class="list">${tasks.slice(0, 4).map(taskCard).join("") || empty("وظیفه‌ای برای نمایش وجود ندارد.")}</div>
           </div>
           <div class="panel">
             <div class="panel-head"><h2>درخواست‌های مدیرعامل</h2><button class="primary" data-go="requests">ثبت درخواست</button></div>
@@ -1720,7 +1745,7 @@
                 <button class="primary" id="openTaskModal">وظیفه جاری جدید</button>
               </div>
             </div>
-            <div class="list">${tasks.map(taskCard).join("") || empty("وظیفهی مطابق دسترسی شما وجود ندارد.")}</div>
+            <div class="list">${tasks.map(taskCard).join("") || empty("وظیفه‌ای مطابق دسترسی شما وجود ندارد.")}</div>
           </div>
           ${taskModal(false)}
         </div>`;
@@ -1836,7 +1861,7 @@
                 <button type="button" data-date-offset="7">هفته بعد</button>
               </div>
               ${persianDatePicker("recurring", quickDate(1))}
-              <label class="full">مسئولان<select name="assignees" multiple size="5">${state.users.filter((u) => u.active).map((u) => `<option value="${u.id}" ${u.id === currentUser().id ? "selected" : ""}>${u.fullName} - ${u.group}</option>`).join("")}</select></label>
+              <label class="full">مسئولان<select name="assignees" multiple size="5">${assignableUsers().map((u) => `<option value="${u.id}" ${u.id === currentUser().id ? "selected" : ""}>${u.fullName} - ${u.jobTitle}</option>`).join("")}</select></label>
             </div>
             <button type="submit" class="primary">ثبت چرخه تکرار</button>
           </form>
@@ -1947,7 +1972,7 @@
                 </div>
                 ${persianDatePicker("task", quickDate(1))}
               `}
-              <label class="full">مسئولان<select name="assignees" multiple size="5">${state.users.filter((u) => u.active).map((u) => `<option value="${u.id}" ${u.id === currentUser().id ? "selected" : ""}>${u.fullName} - ${u.group}</option>`).join("")}</select></label>
+              <label class="full">مسئولان<select name="assignees" multiple size="5">${assignableUsers().map((u) => `<option value="${u.id}" ${u.id === currentUser().id ? "selected" : ""}>${u.fullName} - ${u.jobTitle}</option>`).join("")}</select></label>
             </div>
             <button type="submit" class="primary">${longTerm ? "ثبت وظیفه بلندمدت" : "ثبت وظیفه جاری"}</button>
           </form>
@@ -3280,24 +3305,30 @@
 
     async function renderOffline() {
       if (!backendOnline && !MOCK_DATA_ENABLED) {
-        $("view-offline").innerHTML = backendRequired("فاز آفلاین", "وضعیت AI آفلاین باید از backend خوانده شود. بدون backend این صفحه mock نشان نمی‌دهد.");
+        $("view-offline").innerHTML = backendRequired("تنظیمات AI", "تنظیمات هوش مصنوعی آنلاین و آفلاین باید از backend خوانده و ذخیره شود.");
         bindBackendGate();
         return;
       }
       $("view-offline").innerHTML = `
         <div class="grid">
           <form class="panel" id="offlineForm">
-            <div class="panel-head"><h2>AI آفلاین و استقرار داخلی</h2><span class="chip warn" id="offlineStatus">در حال دریافت</span></div>
+            <div class="panel-head"><h2>تنظیمات AI آنلاین و آفلاین</h2><span class="chip warn" id="offlineStatus">در حال دریافت</span></div>
             <div class="form-grid">
-              <label>AI Mode<select name="mode"><option value="online">Online MVP</option><option value="offline">Offline/Internal</option></select></label>
+              <label>AI Mode<select name="mode"><option value="online">Online</option><option value="offline">Offline / Ollama</option></select></label>
               <label>Fallback Parser<select name="fallbackParserEnabled"><option value="true">فعال</option><option value="false">غیرفعال</option></select></label>
-              <label class="full">Online Provider<input name="onlineProvider" placeholder="OpenAI / other provider"></label>
-              <label class="full">Offline Model Path<input name="offlineModelPath" placeholder="/models/local-persian-intent"></label>
+              <label>Provider<select name="onlineProvider"><option value="openai-compatible">OpenAI Compatible</option><option value="openrouter">OpenRouter</option><option value="ollama">Ollama</option><option value="not-configured">Not configured</option></select></label>
+              <label>Model<input name="model" placeholder="qwen3:3b"></label>
+              <label class="full">Base URL<input name="baseUrl" placeholder="http://127.0.0.1:11434"></label>
+              <label class="full">API Key<input name="apiKey" placeholder="برای Ollama می‌تواند خالی باشد"></label>
+              <label class="full">Offline Model / Path<input name="offlineModelPath" placeholder="qwen3:3b"></label>
+              <div class="full item-actions">
+                <button type="button" class="blue" id="useOllamaQwen">تنظیم خودکار Ollama + Qwen3:3b</button>
+              </div>
             </div>
             <button class="primary">ذخیره تنظیمات AI</button>
           </form>
           <div class="panel">
-            <h2>وضعیت فاز آخر</h2>
+            <h2>مقادیر پیشنهادی</h2>
             <div class="list" id="offlineInfo">${empty("در حال دریافت وضعیت...")}</div>
           </div>
         </div>`;
@@ -3309,11 +3340,15 @@
         const form = $("offlineForm");
         form.mode.value = ai.mode || "online";
         form.fallbackParserEnabled.value = String(ai.fallbackParserEnabled !== false);
-        form.onlineProvider.value = ai.onlineProvider || "";
+        form.onlineProvider.value = ai.onlineProvider || "not-configured";
+        form.baseUrl.value = ai.baseUrl || "";
+        form.apiKey.value = ai.apiKey ? "********" : "";
+        form.model.value = ai.model || "";
         form.offlineModelPath.value = ai.offlineModelPath || "";
         $("offlineInfo").innerHTML = `
           <article class="item-card"><div class="item-top"><div style="display:flex;gap:10px;"><span class="card-icon">${icons.offline}</span><div><h3>${status.mode}</h3><p class="muted small">${status.message}</p></div></div></div></article>
-          <article class="item-card"><div class="item-top"><div style="display:flex;gap:10px;"><span class="card-icon">${icons.lock}</span><div><h3>Internal static IP</h3><p class="muted small">برای production داخلی باید reverse proxy، HTTPS، backup، و static IP سازمانی تنظیم شود.</p></div></div></div></article>`;
+          <article class="item-card"><div class="item-top"><div style="display:flex;gap:10px;"><span class="card-icon">${icons.bot}</span><div><h3>Ollama + Qwen 3B</h3><p class="muted small">Mode: offline | Provider: ollama | Base URL: http://127.0.0.1:11434 | Model: qwen3:3b | API Key: خالی</p></div></div></div></article>
+          <article class="item-card"><div class="item-top"><div style="display:flex;gap:10px;"><span class="card-icon">${icons.spark}</span><div><h3>Online OpenAI-compatible</h3><p class="muted small">Provider: openai-compatible | Base URL: آدرس سرویس /v1 سازگار | Model: نام مدل | API Key: کلید همان سرویس</p></div></div></div></article>`;
       } catch (error) {
         $("offlineStatus").textContent = "backend اجرا نیست";
         $("offlineStatus").className = "chip danger";
@@ -3328,6 +3363,9 @@
               mode: form.get("mode"),
               fallbackParserEnabled: form.get("fallbackParserEnabled") === "true",
               onlineProvider: form.get("onlineProvider"),
+              baseUrl: form.get("baseUrl"),
+              apiKey: form.get("apiKey"),
+              model: form.get("model"),
               offlineModelPath: form.get("offlineModelPath")
             })
           });
@@ -3337,11 +3375,20 @@
           toast(error.message);
         }
       };
+      $("useOllamaQwen").onclick = () => {
+        const form = $("offlineForm");
+        form.mode.value = "offline";
+        form.onlineProvider.value = "ollama";
+        form.baseUrl.value = "http://127.0.0.1:11434";
+        form.model.value = "qwen3:3b";
+        form.offlineModelPath.value = "qwen3:3b";
+        form.apiKey.value = "";
+      };
     }
 
     async function renderUsers() {
       if (!backendOnline && !MOCK_DATA_ENABLED) {
-        $("view-users").innerHTML = backendRequired("افراد و نقش‌ها", "مدیریت کاربران واقعی باید از backend و سطح دسترسی Admin خوانده شود.");
+        $("view-users").innerHTML = backendRequired("افراد و نقش‌ها", "مدیریت کاربران واقعی باید از backend و سطح دسترسی Admin یا مدیرعامل خوانده شود.");
         bindBackendGate();
         return;
       }
@@ -3387,7 +3434,9 @@
                 <input type="hidden" name="userId" id="userFormId">
                 <label>نام و نام خانوادگی<input name="fullName" required></label>
                 <label>جایگاه شغلی<input name="jobTitle" required></label>
-                <label>نقش<select name="role"><option value="Employee">Employee</option><option value="Admin">Admin</option></select></label>
+                <input type="hidden" name="role" value="User">
+                <label>نام کاربری<input name="username"></label>
+                <label>رمز عبور<input name="password" type="password" placeholder="برای تغییر رمز پر شود"></label>
                 <label>گروه<select name="groupId">${(state.groups || []).map((g) => `<option value="${g.id}">${g.title}</option>`).join("")}</select></label>
                 <label>شناسه فنی بله<input name="baleChatId" placeholder="اختیاری"></label>
                 <label>آیدی بله<input name="baleUsername" placeholder="@username"></label>
@@ -3477,7 +3526,7 @@
           try {
             await backendFetch("/api/pending-users/approve", {
               method: "POST",
-              body: JSON.stringify({ pendingUserId: btn.dataset.approveUser, role: "Employee", groupId: "g2" })
+              body: JSON.stringify({ pendingUserId: btn.dataset.approveUser, role: "User", groupId: "g2" })
             });
             await loadBackendState();
             toast("کاربر تایید شد.");
@@ -3540,7 +3589,9 @@
         if (targetUser) {
           form.fullName.value = targetUser.fullName || "";
           form.jobTitle.value = targetUser.jobTitle || "";
-          form.role.value = targetUser.role || "Employee";
+          form.role.value = targetUser.role || "User";
+          form.username.value = targetUser.username || "";
+          form.password.value = "";
           form.groupId.value = targetUser.groupIds?.[0] || "g2";
           form.baleChatId.value = targetUser.bale || "";
           form.baleUsername.value = targetUser.baleUsername || "";

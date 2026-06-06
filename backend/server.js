@@ -24,6 +24,9 @@ const seed = {
     ai: {
       mode: "online",
       onlineProvider: "not-configured",
+      baseUrl: "",
+      apiKey: "",
+      model: "",
       offlineModelPath: "",
       fallbackParserEnabled: true,
       updatedAt: ""
@@ -119,6 +122,7 @@ function applyEnvironmentSettings(data) {
   const adminFullName = process.env.ADMIN_FULL_NAME || "مدیر سیستم";
   const adminJobTitle = process.env.ADMIN_JOB_TITLE || "ادمین";
   const existingAdmin = (data.users || []).find((user) => user.role === "Admin");
+  const existingCeo = (data.users || []).find((user) => user.role === "CEO" || user.isCeo);
   if (!existingAdmin) {
     data.users.unshift({
       id: "admin",
@@ -141,6 +145,24 @@ function applyEnvironmentSettings(data) {
       existingAdmin.baleUsername = adminBaleUsername;
       existingAdmin.baleProfileUrl = `https://ble.ir/${adminBaleUsername.replace(/^@/, "")}`;
     }
+  }
+  if (!existingCeo) {
+    const ceoBaleUsername = normalizeBaleUsername(process.env.CEO_BALE_USERNAME || "");
+    data.users.unshift({
+      id: "ceo",
+      fullName: process.env.CEO_FULL_NAME || "مدیرعامل",
+      jobTitle: process.env.CEO_JOB_TITLE || "مدیرعامل",
+      role: "CEO",
+      groups: ["g1"],
+      username: process.env.CEO_USERNAME || "ceo",
+      passwordHash: process.env.CEO_PASSWORD ? hashPassword(process.env.CEO_PASSWORD) : "",
+      telegramChatId: "",
+      baleChatId: process.env.CEO_BALE_CHAT_ID || "",
+      baleUsername: ceoBaleUsername,
+      baleProfileUrl: ceoBaleUsername ? `https://ble.ir/${ceoBaleUsername.replace(/^@/, "")}` : "",
+      active: true,
+      isCeo: true
+    });
   }
   return data;
 }
@@ -188,20 +210,20 @@ function canViewTask(currentUser, task) {
   if (currentUser.role === "Admin") return true;
   if (task.creatorId === currentUser.id) return true;
   if (task.assignments.some((a) => a.userId === currentUser.id)) return true;
-  return currentUser.groups.includes(task.groupId);
+  return false;
 }
 
 function canViewRecurringTask(currentUser, recurringTask) {
   if (currentUser.role === "Admin") return true;
   if (recurringTask.creatorId === currentUser.id) return true;
   if ((recurringTask.assigneeIds || []).includes(currentUser.id)) return true;
-  return (currentUser.groups || []).includes(recurringTask.groupId);
+  return false;
 }
 
 function canAssignTo(data, currentUser, assigneeIds) {
   const ceo = data.users.find((user) => user.isCeo);
   if (!ceo || !assigneeIds.includes(ceo.id)) return true;
-  return currentUser.role === "CEO" && assigneeIds.every((userId) => userId === ceo.id);
+  return false;
 }
 
 function buildScopedMessengerData(data, currentUser) {
@@ -253,7 +275,8 @@ function aiRuntimeSettings(data) {
 async function askMessengerAI(data, currentUser, text) {
   const settings = aiRuntimeSettings(data);
   const provider = String(settings.provider || "").toLowerCase();
-  if (!settings.apiKey || !settings.baseUrl || provider === "not-configured" || provider === "disabled") {
+  const isOllama = provider === "ollama" || settings.baseUrl.includes("localhost:11434") || settings.baseUrl.includes("127.0.0.1:11434");
+  if ((!settings.apiKey && !isOllama) || !settings.baseUrl || provider === "not-configured" || provider === "disabled") {
     return {
       provider: settings.provider,
       model: settings.model,
@@ -276,7 +299,7 @@ async function askMessengerAI(data, currentUser, text) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${settings.apiKey}`
+      ...((settings.apiKey || isOllama) ? { "Authorization": `Bearer ${settings.apiKey || "ollama"}` } : {})
     },
     body: JSON.stringify({
       model: settings.model,
@@ -418,6 +441,14 @@ function nextDateFromText(text) {
   return date;
 }
 
+function hasExplicitMeetingTime(text) {
+  return /(\d{1,2}:\d{2}|\d{1,2}\s*(صبح|ظهر|عصر|شب)|ساعت\s*\d{1,2})/.test(String(text || ""));
+}
+
+function hasExplicitMeetingDay(text) {
+  return /(امروز|فردا|پس‌فردا|پس فردا|شنبه|یکشنبه|دوشنبه|سه‌شنبه|چهارشنبه|پنجشنبه|جمعه|\d{1,2}\s*(فروردین|اردیبهشت|خرداد|تیر|مرداد|شهریور|مهر|آبان|آذر|دی|بهمن|اسفند))/.test(String(text || ""));
+}
+
 function createTaskEntity(data, currentUser, intent, text, longTerm = false) {
   let assigneeIds = Array.isArray(intent.assignees) && intent.assignees.length ? intent.assignees : [currentUser.id];
   assigneeIds = Array.from(new Set(assigneeIds));
@@ -477,7 +508,7 @@ async function executeBaleIntent(data, currentUser, intent, text) {
   }
   if (intent.intent === "transfer_task_to_long_term") {
     const task = data.tasks.find((item) => item.id === intent.taskId || (item.title && text.includes(item.title)));
-    if (!task || !canViewTask(currentUser, task)) return { created: false, type: "transfer_task_to_long_term", reply: "وظیفهی برای انتقال پیدا نشد. لطفاً عنوان دقیق وظیفه را در پیام بنویسید." };
+    if (!task || !canViewTask(currentUser, task)) return { created: false, type: "transfer_task_to_long_term", reply: "وظیفه‌ای برای انتقال پیدا نشد. لطفاً عنوان دقیق وظیفه را در پیام بنویسید." };
     if (currentUser.role !== "Admin" && task.creatorId !== currentUser.id) return { created: false, type: "transfer_task_to_long_term", reply: "فقط سازنده یا ادمین می‌تواند وظیفه را به بلندمدت منتقل کند." };
     task.longTerm = true;
     task.dueAt = "";
@@ -496,6 +527,10 @@ async function executeBaleIntent(data, currentUser, intent, text) {
     return { created: true, type: "ceo_request", id: request.id, reply: `درخواست از مدیرعامل ثبت شد: ${request.title}` };
   }
   if (intent.intent === "create_meeting") {
+    if (!hasExplicitMeetingTime(text) || !hasExplicitMeetingDay(text)) {
+      const ai = await askMessengerAI(data, currentUser, `برای این درخواست جلسه، با توجه به جلسات موجود و دسترسی کاربر، یک زمان مناسب پیشنهاد بده اما چیزی ثبت نکن. اگر زمان یا روز مبهم است، بگو نیاز به تایید مدیرعامل دارد: ${text}`);
+      return { created: false, type: "meeting_time_suggestion", ai: { provider: ai.provider, model: ai.model, configured: ai.configured }, reply: `${ai.reply}\n\nبرای ثبت جلسه، مدیرعامل باید زمان پیشنهادی را تایید کند.` };
+    }
     const startAt = nextDateFromText(text);
     const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
     const members = Array.from(new Set([currentUser.id, ...((intent.members && intent.members.length) ? intent.members : [])]));
@@ -506,7 +541,7 @@ async function executeBaleIntent(data, currentUser, intent, text) {
   }
   if (intent.intent === "query_tasks") {
     const tasks = data.tasks.filter((task) => canViewTask(currentUser, task)).slice(0, 8);
-    return { created: false, type: "query_tasks", reply: tasks.length ? tasks.map((task) => `- ${task.title}`).join("\n") : "وظیفهی برای شما ثبت نشده است." };
+    return { created: false, type: "query_tasks", reply: tasks.length ? tasks.map((task) => `- ${task.title}`).join("\n") : "وظیفه‌ای برای شما ثبت نشده است." };
   }
   return { created: false, type: "unknown", reply: intent.question || "پیام دریافت شد، اما دستور قابل ثبت تشخیص داده نشد." };
 }
@@ -549,6 +584,10 @@ function authPublicUser(user) {
     baleProfileUrl: user.baleProfileUrl || "",
     isCeo: Boolean(user.isCeo)
   };
+}
+
+function hashPassword(value) {
+  return crypto.createHash("sha256").update(String(value || "")).digest("hex");
 }
 
 async function sendBaleText(data, chatId, text) {
@@ -631,6 +670,9 @@ const routes = {
       ...before,
       mode: body.mode === "offline" ? "offline" : "online",
       onlineProvider: String(body.onlineProvider || before.onlineProvider || "not-configured"),
+      baseUrl: cleanPublicUrl(body.baseUrl || before.baseUrl || ""),
+      apiKey: body.apiKey === "********" ? before.apiKey : String(body.apiKey || before.apiKey || ""),
+      model: String(body.model || before.model || ""),
       offlineModelPath: String(body.offlineModelPath || ""),
       fallbackParserEnabled: body.fallbackParserEnabled !== false,
       updatedAt: nowIso()
@@ -710,16 +752,28 @@ const routes = {
     return { loggedIn: true, user: authPublicUser(target) };
   },
 
+  "POST /api/auth/login-password": async ({ data, body }) => {
+    const username = String(body.username || "").trim().toLowerCase();
+    const password = String(body.password || "");
+    const target = (data.users || []).find((user) => user.active && String(user.username || "").toLowerCase() === username);
+    if (!target || !target.passwordHash || target.passwordHash !== hashPassword(password)) return { status: 401, body: { error: "نام کاربری یا رمز عبور معتبر نیست." } };
+    log(data, target.id, "login_password", "user", target.id, null, { at: nowIso() });
+    return { loggedIn: true, user: authPublicUser(target) };
+  },
+
   "POST /api/auth/signup": async ({ data, body }) => {
     const fullName = String(body.fullName || "").trim();
     const jobTitle = String(body.jobTitle || "").trim();
     const baleUsername = normalizeBaleUsername(body.baleUsername || "");
     const baleProfileUrl = cleanPublicUrl(body.baleProfileUrl || (baleUsername ? `https://ble.ir/${baleUsername.replace(/^@/, "")}` : ""));
-    if (!fullName || !jobTitle || !baleUsername) return { status: 400, body: { error: "نام، جایگاه شغلی و آیدی بله الزامی است." } };
+    const username = String(body.username || "").trim().toLowerCase();
+    const password = String(body.password || "");
+    if (!fullName || !jobTitle || !baleUsername || !username || !password) return { status: 400, body: { error: "نام، جایگاه شغلی، آیدی بله، نام کاربری و رمز عبور الزامی است." } };
+    if ((data.users || []).some((user) => String(user.username || "").toLowerCase() === username)) return { status: 409, body: { error: "این نام کاربری قبلاً ثبت شده است." } };
     if ((data.users || []).some((user) => user.baleUsername === baleUsername)) return { status: 409, body: { error: "این آیدی بله قبلاً به یک حساب تاییدشده متصل شده است." } };
     const existing = (data.pendingUsers || []).find((item) => item.baleUsername === baleUsername && item.status === "pending");
     if (existing) return { saved: true, pending: existing, message: "درخواست شما قبلاً ثبت شده و در انتظار تایید ادمین است." };
-    const pending = { id: id("PU"), fullName, jobTitle, baleChatId: String(body.baleChatId || "").trim(), baleUsername, baleProfileUrl, status: "pending", createdAt: nowIso(), rawText: "signup-form" };
+    const pending = { id: id("PU"), fullName, jobTitle, username, passwordHash: hashPassword(password), baleChatId: String(body.baleChatId || "").trim(), baleUsername, baleProfileUrl, status: "pending", createdAt: nowIso(), rawText: "signup-form" };
     data.pendingUsers.unshift(pending);
     const admin = data.users.find((user) => user.role === "Admin");
     if (admin) createNotification(data, admin.id, "کاربر جدید در انتظار تایید", pending.fullName, { type: "pending_user", id: pending.id });
@@ -727,15 +781,17 @@ const routes = {
     return { saved: true, pending };
   },
 
-  "GET /api/users": async ({ data }) => data.users,
+  "GET /api/users": async ({ data }) => data.users.map(({ passwordHash, ...user }) => user),
   "POST /api/users": async ({ data, body, currentUser }) => {
     if (!isPrivileged(currentUser)) return { status: 403, body: { error: "فقط مدیر سیستم می‌تواند کاربر جدید بسازد." } };
     const user = {
       id: id("U"),
       fullName: String(body.fullName || "").trim(),
       jobTitle: String(body.jobTitle || "").trim(),
-      role: body.role || "Employee",
+      role: body.role || "User",
       groups: [body.groupId || "g2"],
+      username: String(body.username || "").trim().toLowerCase(),
+      passwordHash: body.password ? hashPassword(body.password) : "",
       telegramChatId: String(body.telegramChatId || "").trim(),
       baleChatId: String(body.baleChatId || "").trim(),
       baleUsername: normalizeBaleUsername(body.baleUsername || ""),
@@ -744,6 +800,7 @@ const routes = {
       isCeo: false
     };
     if (!user.fullName || !user.jobTitle) return { status: 400, body: { error: "نام و جایگاه شغلی الزامی است." } };
+    if (user.username && data.users.some((item) => String(item.username || "").toLowerCase() === user.username)) return { status: 409, body: { error: "این نام کاربری قبلاً ثبت شده است." } };
     data.users.push(user);
     log(data, currentUser.id, "create_user", "user", user.id, null, user);
     return { status: 201, body: user };
@@ -758,8 +815,12 @@ const routes = {
     if (!fullName || !jobTitle) return { status: 400, body: { error: "نام و جایگاه شغلی الزامی است." } };
     target.fullName = fullName;
     target.jobTitle = jobTitle;
-    if (!target.isCeo) target.role = body.role || target.role || "Employee";
+    if (!target.isCeo && target.role !== "Admin") target.role = body.role || target.role || "User";
     target.groups = [body.groupId || target.groups?.[0] || "g2"];
+    const username = String(body.username || "").trim().toLowerCase();
+    if (username && data.users.some((item) => item.id !== target.id && String(item.username || "").toLowerCase() === username)) return { status: 409, body: { error: "این نام کاربری قبلاً ثبت شده است." } };
+    target.username = username;
+    if (body.password) target.passwordHash = hashPassword(body.password);
     target.telegramChatId = String(body.telegramChatId || "").trim();
     target.baleChatId = String(body.baleChatId || "").trim();
     target.baleUsername = normalizeBaleUsername(body.baleUsername || "");
@@ -809,8 +870,10 @@ const routes = {
       id: id("U"),
       fullName: pending.fullName,
       jobTitle: pending.jobTitle,
-      role: body.role || "Employee",
+      role: body.role || "User",
       groups: [groupId],
+      username: pending.username || "",
+      passwordHash: pending.passwordHash || "",
       telegramChatId: "",
       baleChatId: pending.baleChatId,
       baleUsername: pending.baleUsername || "",
@@ -966,7 +1029,7 @@ const routes = {
     return { task };
   },
 
-  "GET /api/ceo-requests": async ({ data, currentUser }) => data.ceoRequests.filter((request) => currentUser.role === "CEO" || request.requesterId === currentUser.id),
+  "GET /api/ceo-requests": async ({ data, currentUser }) => data.ceoRequests.filter((request) => currentUser.role === "CEO" || currentUser.role === "Admin" || request.requesterId === currentUser.id),
 
   "POST /api/ceo-requests": async ({ data, body, currentUser }) => {
     const ceo = data.users.find((user) => user.isCeo) || data.users.find((user) => user.role === "Admin");
@@ -1035,6 +1098,36 @@ const routes = {
     meeting.members.forEach((userId) => createNotification(data, userId, "زمان جلسه تغییر کرد", meeting.title, { type: "meeting", id: meeting.id }));
     log(data, currentUser.id, "reschedule", "meeting", meeting.id, before, meeting);
     return { saved: true, meeting };
+  },
+
+  "POST /api/reminders/bale/run": async ({ data, currentUser }) => {
+    if (!isPrivileged(currentUser)) return { status: 403, body: { error: "اجرای یادآوری‌ها فقط برای ادمین یا مدیرعامل مجاز است." } };
+    const now = new Date();
+    const tomorrowStart = new Date(now);
+    tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+    tomorrowStart.setHours(0, 0, 0, 0);
+    const tomorrowEnd = new Date(tomorrowStart);
+    tomorrowEnd.setHours(23, 59, 59, 999);
+    const oneHourStart = new Date(now.getTime() + 55 * 60 * 1000);
+    const oneHourEnd = new Date(now.getTime() + 65 * 60 * 1000);
+    const sent = [];
+    for (const user of data.users.filter((item) => item.active && item.baleChatId)) {
+      const tomorrowMeetings = data.meetings.filter((meeting) => meeting.members.includes(user.id) && new Date(meeting.startAt) >= tomorrowStart && new Date(meeting.startAt) <= tomorrowEnd);
+      if (tomorrowMeetings.length) {
+        const text = `برنامه جلسات فردای شما:\n${tomorrowMeetings.map((meeting) => `- ${meeting.title} | ${new Date(meeting.startAt).toLocaleString("fa-IR")}`).join("\n")}`;
+        sent.push({ userId: user.id, type: "tomorrow_digest", result: await sendBaleText(data, user.baleChatId, text) });
+      }
+      const soonMeetings = data.meetings.filter((meeting) => meeting.members.includes(user.id) && new Date(meeting.startAt) >= oneHourStart && new Date(meeting.startAt) <= oneHourEnd);
+      for (const meeting of soonMeetings) {
+        const ai = await askMessengerAI(data, user, `برای کاربر ${user.fullName} یک یادآوری کوتاه، فارسی و عملیاتی برای جلسه زیر بنویس. فقط متن پیام را بده.\nعنوان: ${meeting.title}\nزمان شروع: ${new Date(meeting.startAt).toLocaleString("fa-IR")}\nمحل/لینک: ${meeting.location || "ثبت نشده"}`);
+        const text = ai.configured
+          ? ai.reply
+          : `یادآوری هوشمند جلسه:\n${meeting.title}\nشروع: ${new Date(meeting.startAt).toLocaleString("fa-IR")}\n${meeting.location ? `محل/لینک: ${meeting.location}` : ""}`;
+        sent.push({ userId: user.id, type: "one_hour_reminder", meetingId: meeting.id, result: await sendBaleText(data, user.baleChatId, text) });
+      }
+    }
+    log(data, currentUser.id, "run_bale_meeting_reminders", "meeting", "batch", null, { sent: sent.length });
+    return { sent };
   },
 
   "POST /api/messages/ask": async ({ data, body, currentUser }) => {
@@ -1204,10 +1297,10 @@ const routes = {
 
   "GET /api/offline/status": async ({ data }) => ({
     mode: data.settings.ai.mode,
-    offlineReady: Boolean(data.settings.ai.offlineModelPath),
+    offlineReady: Boolean(data.settings.ai.baseUrl && data.settings.ai.model),
     fallbackParserEnabled: data.settings.ai.fallbackParserEnabled,
     message: data.settings.ai.mode === "offline"
-      ? "حالت آفلاین فعال است، اما مدل محلی باید روی سرور داخلی نصب شود."
+      ? `حالت آفلاین فعال است. مدل پیشنهادی: ${data.settings.ai.model || "qwen3:3b"} روی Ollama.`
       : "حالت فعلی آنلاین/محلی است و parser fallback فعال است."
   })
 };
