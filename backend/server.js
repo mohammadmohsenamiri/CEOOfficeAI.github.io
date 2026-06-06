@@ -571,6 +571,29 @@ function normalizeBaleUsername(value) {
   return withoutUrl.startsWith("@") ? withoutUrl : `@${withoutUrl}`;
 }
 
+function findLinkedBaleUser(data, normalized) {
+  const senderId = String(normalized.senderMessengerId || "").trim();
+  const senderUsername = normalizeBaleUsername(normalized.senderUsername || "");
+  const senderUsernamePlain = senderUsername.replace(/^@/, "");
+  const linked = (data.users || []).find((user) => {
+    if (!user.active) return false;
+    const userBaleChatId = String(user.baleChatId || "").trim();
+    const userBaleUsername = normalizeBaleUsername(user.baleUsername || "");
+    const userBaleUsernamePlain = userBaleUsername.replace(/^@/, "");
+    return (
+      (senderId && userBaleChatId === senderId) ||
+      (senderUsername && userBaleUsername === senderUsername) ||
+      (senderId && userBaleUsernamePlain && userBaleUsernamePlain === senderId)
+    );
+  });
+  if (linked && senderId && !linked.baleChatId) linked.baleChatId = senderId;
+  if (linked && senderUsername && !linked.baleUsername) {
+    linked.baleUsername = senderUsername;
+    linked.baleProfileUrl = `https://ble.ir/${senderUsernamePlain}`;
+  }
+  return linked;
+}
+
 function findUserForLogin(data, identifier) {
   const raw = String(identifier || "").trim();
   const baleUsername = normalizeBaleUsername(raw);
@@ -707,7 +730,7 @@ const routes = {
   },
 
   "PUT /api/settings/bale": async ({ data, body, currentUser }) => {
-    if (!isPrivileged(currentUser)) return { status: 403, body: { error: "فقط مدیر سیستم می‌تواند تنظیمات بله را تغییر دهد." } };
+    if (!isPrivileged(currentUser)) return { status: 403, body: { error: "فقط مدیر سیستم می‌تواند تنظیمات پیام رسان را تغییر دهد." } };
     const before = data.settings.bale;
     data.settings.bale = {
       ...before,
@@ -1164,7 +1187,7 @@ const routes = {
     const configuredSecret = data.settings.bale.secret;
     if (configuredSecret && req.headers["x-bale-secret"] !== configuredSecret) return { status: 401, body: { error: "Bale secret is invalid." } };
     const normalized = normalizeBaleMessage(body);
-    const linkedUser = data.users.find((user) => user.baleChatId === normalized.senderMessengerId);
+    const linkedUser = findLinkedBaleUser(data, normalized);
     if (!linkedUser) {
       const existingPendingBeforeIntro = (data.pendingUsers || []).find((item) => item.baleChatId === normalized.senderMessengerId && item.status === "pending");
       if (existingPendingBeforeIntro && !parseBaleSelfIntroduction(normalized.text)) {

@@ -1212,6 +1212,10 @@
       margin-top: auto;
     }
 
+    .mode-hidden {
+      display: none !important;
+    }
+
     .bale-link {
       color: #67e8f9;
       text-decoration: none;
@@ -1449,7 +1453,7 @@
       ["analytics", "تحلیل و هشدارها", "پیشنهادهای هوشمند، KPI و کارهای عقب‌افتاده", "analytics"],
       ["offline", "تنظیمات AI", "مدل آنلاین، Ollama و Qwen3:3b", "offline"],
       ["users", "افراد", "کاربران، تایید بله و افزودن دستی", "users"],
-      ["bale", "تنظیمات بله", "اتصال بازوی بله، webhook و پیام تایید فارسی", "bale"]
+      ["bale", "تنظیمات پیام رسان", "اتصال بازوی بله، webhook و پیام تایید فارسی", "bale"]
     ];
 
     const seed = {
@@ -2506,6 +2510,7 @@
       const j = gregorianToJalali(calendarFocusDate);
       const prevLabel = calendarView === "month" ? "ماه قبل" : calendarView === "week" ? "هفته قبل" : "روز قبل";
       const nextLabel = calendarView === "month" ? "ماه بعد" : calendarView === "week" ? "هفته بعد" : "روز بعد";
+      const prefix = `calendar${capitalize(position)}`;
       return `
         <div class="calendar-controls" data-calendar-nav="${position}">
           <div class="segmented">
@@ -2513,13 +2518,15 @@
             <button type="button" data-calendar-today="1">امروز</button>
             <button type="button" data-calendar-shift="1">${nextLabel}</button>
           </div>
-          <div class="calendar-picker">
-            <button type="button" class="blue" data-calendar-picker-toggle="${position}">انتخاب تاریخ شمسی</button>
-            <div class="date-picker-popover calendar-picker-popover hidden" id="calendar${capitalize(position)}Popover">
-              <label>سال<input id="calendar${capitalize(position)}Year" inputmode="numeric" value="${fa(j.jy)}"></label>
-              <label>ماه<input id="calendar${capitalize(position)}Month" inputmode="numeric" value="${fa(j.jm)}"></label>
-              <label>روز<input id="calendar${capitalize(position)}Day" inputmode="numeric" value="${fa(j.jd)}"></label>
-              <button type="button" class="primary" data-calendar-apply="${position}">اعمال</button>
+          <div class="calendar-picker" data-calendar-picker="${position}" data-picker-year="${j.jy}" data-picker-month="${j.jm}">
+            <button type="button" class="blue" data-calendar-picker-toggle="${position}">انتخاب از تقویم شمسی</button>
+            <div class="date-picker-popover hidden" id="${prefix}PickerPopover">
+              <div class="date-picker-head">
+                <button type="button" data-calendar-picker-prev="${position}">ماه قبل</button>
+                <strong id="${prefix}PickerTitle">${new Intl.DateTimeFormat("fa-IR-u-ca-persian", { month: "long", year: "numeric" }).format(calendarFocusDate)}</strong>
+                <button type="button" data-calendar-picker-next="${position}">ماه بعد</button>
+              </div>
+              <div class="date-picker-grid" id="${prefix}PickerGrid">${persianDatePickerGrid(`calendar-${position}`, j.jy, j.jm, calendarFocusDate)}</div>
             </div>
           </div>
         </div>`;
@@ -2543,24 +2550,43 @@
           renderMeetings();
         };
       });
-      document.querySelectorAll("[data-calendar-apply]").forEach((btn) => {
-        btn.onclick = () => {
-          const key = btn.dataset.calendarApply;
-          const next = readJalaliFields(`calendar${capitalize(key)}`);
-          if (!next) return toast("تاریخ شمسی وارد شده معتبر نیست.");
-          calendarFocusDate = next;
-          $(`calendar${capitalize(key)}Popover`)?.classList.add("hidden");
-          renderMeetings();
-        };
-      });
       document.querySelectorAll("[data-calendar-picker-toggle]").forEach((btn) => {
         btn.onclick = (event) => {
           event.stopPropagation();
           const key = btn.dataset.calendarPickerToggle;
           document.querySelectorAll(".date-picker-popover:not(.hidden)").forEach((picker) => {
-            if (picker.id !== `calendar${capitalize(key)}Popover`) picker.classList.add("hidden");
+            if (picker.id !== `calendar${capitalize(key)}PickerPopover`) picker.classList.add("hidden");
           });
-          $(`calendar${capitalize(key)}Popover`)?.classList.toggle("hidden");
+          $(`calendar${capitalize(key)}PickerPopover`)?.classList.toggle("hidden");
+        };
+      });
+      document.querySelectorAll("[data-calendar-picker-prev]").forEach((btn) => btn.onclick = () => shiftCalendarPickerMonth(btn.dataset.calendarPickerPrev, -1));
+      document.querySelectorAll("[data-calendar-picker-next]").forEach((btn) => btn.onclick = () => shiftCalendarPickerMonth(btn.dataset.calendarPickerNext, 1));
+      bindCalendarPickerDays();
+    }
+
+    function shiftCalendarPickerMonth(position, delta) {
+      const picker = document.querySelector(`[data-calendar-picker="${position}"]`);
+      if (!picker) return;
+      let jy = Number(picker.dataset.pickerYear);
+      let jm = Number(picker.dataset.pickerMonth) + delta;
+      if (jm < 1) { jm = 12; jy--; }
+      if (jm > 12) { jm = 1; jy++; }
+      picker.dataset.pickerYear = jy;
+      picker.dataset.pickerMonth = jm;
+      const prefix = `calendar${capitalize(position)}`;
+      const g = jalaliToGregorian(jy, jm, 1);
+      $(`${prefix}PickerTitle`).textContent = new Intl.DateTimeFormat("fa-IR-u-ca-persian", { month: "long", year: "numeric" }).format(new Date(g.gy, g.gm - 1, g.gd));
+      $(`${prefix}PickerGrid`).innerHTML = persianDatePickerGrid(`calendar-${position}`, jy, jm, calendarFocusDate);
+      bindCalendarPickerDays();
+    }
+
+    function bindCalendarPickerDays() {
+      document.querySelectorAll("[data-picker-day^=\"calendar-\"]").forEach((btn) => {
+        btn.onclick = () => {
+          calendarFocusDate = dateFromLocalValue(btn.dataset.dateValue);
+          document.querySelectorAll(".date-picker-popover:not(.hidden)").forEach((picker) => picker.classList.add("hidden"));
+          renderMeetings();
         };
       });
     }
@@ -3156,7 +3182,7 @@
 
     async function renderBaleSettings() {
       if (!backendOnline && !MOCK_DATA_ENABLED) {
-        $("view-bale").innerHTML = backendRequired("بازوی بله", "بازوی بله واقعی فقط با backend عمومی HTTPS کار می‌کند. GitHub Pages نمی‌تواند webhook یا bot را اجرا کند.");
+        $("view-bale").innerHTML = backendRequired("تنظیمات پیام رسان", "بازوی بله واقعی فقط با backend عمومی HTTPS کار می‌کند. GitHub Pages نمی‌تواند webhook یا bot را اجرا کند.");
         bindBackendGate();
         return;
       }
@@ -3167,7 +3193,7 @@
               <div style="display:flex; gap:10px; align-items:center;">
                 <span class="card-icon">${icons.bale}</span>
                 <div>
-                  <h2>تنظیمات بازوی بله</h2>
+                  <h2>تنظیمات پیام رسان</h2>
                   <p class="muted small">Webhook، token، secret و قالب پاسخ فارسی</p>
                 </div>
               </div>
@@ -3250,7 +3276,7 @@
             })
           });
           showBaleResult("ذخیره تنظیمات", true, result);
-          toast("تنظیمات بله ذخیره شد.");
+          toast("تنظیمات پیام رسان ذخیره شد.");
         } catch (error) {
           showBaleResult("ذخیره تنظیمات", false, { error: error.message });
           toast(error.message);
@@ -3431,12 +3457,12 @@
             <div class="form-grid">
               <label>AI Mode<select name="mode"><option value="online">Online</option><option value="offline">Offline / Ollama</option></select></label>
               <label>Fallback Parser<select name="fallbackParserEnabled"><option value="true">فعال</option><option value="false">غیرفعال</option></select></label>
-              <label>Provider<select name="onlineProvider"><option value="openai-compatible">OpenAI Compatible</option><option value="openrouter">OpenRouter</option><option value="ollama">Ollama</option><option value="not-configured">Not configured</option></select></label>
-              <label>Model<input name="model" placeholder="qwen3:3b"></label>
-              <label class="full">Base URL<input name="baseUrl" placeholder="http://127.0.0.1:11434"></label>
-              <label class="full">API Key<input name="apiKey" placeholder="برای Ollama می‌تواند خالی باشد"></label>
-              <label class="full">Offline Model / Path<input name="offlineModelPath" placeholder="qwen3:3b"></label>
-              <div class="full item-actions">
+              <label data-ai-mode="both">Provider<select name="onlineProvider"><option value="openai-compatible">OpenAI Compatible</option><option value="openrouter">OpenRouter</option><option value="ollama">Ollama</option><option value="not-configured">Not configured</option></select></label>
+              <label data-ai-mode="both">Model<input name="model" placeholder="qwen3:3b"></label>
+              <label class="full" data-ai-mode="both">Base URL<input name="baseUrl" placeholder="http://127.0.0.1:11434"></label>
+              <label class="full" data-ai-mode="online">API Key<input name="apiKey" placeholder="کلید سرویس آنلاین"></label>
+              <label class="full" data-ai-mode="offline">Offline Model / Path<input name="offlineModelPath" placeholder="qwen3:3b"></label>
+              <div class="full item-actions" data-ai-mode="offline">
                 <button type="button" class="blue" id="useOllamaQwen">تنظیم خودکار Ollama + Qwen3:3b</button>
               </div>
             </div>
@@ -3460,6 +3486,7 @@
         form.apiKey.value = ai.apiKey ? "********" : "";
         form.model.value = ai.model || "";
         form.offlineModelPath.value = ai.offlineModelPath || "";
+        updateAiModeFields(form);
         $("offlineInfo").innerHTML = `
           <article class="item-card"><div class="item-top"><div style="display:flex;gap:10px;"><span class="card-icon">${icons.offline}</span><div><h3>${status.mode}</h3><p class="muted small">${status.message}</p></div></div></div></article>
           <article class="item-card"><div class="item-top"><div style="display:flex;gap:10px;"><span class="card-icon">${icons.bot}</span><div><h3>Ollama + Qwen 3B</h3><p class="muted small">Mode: offline | Provider: ollama | Base URL: http://127.0.0.1:11434 | Model: qwen3:3b | API Key: خالی</p></div></div></div></article>
@@ -3468,6 +3495,7 @@
         $("offlineStatus").textContent = "backend اجرا نیست";
         $("offlineStatus").className = "chip danger";
       }
+      $("offlineForm").elements.mode.onchange = () => updateAiModeFields($("offlineForm"));
       $("offlineForm").onsubmit = async (event) => {
         event.preventDefault();
         const form = new FormData(event.target);
@@ -3498,7 +3526,19 @@
         form.model.value = "qwen3:3b";
         form.offlineModelPath.value = "qwen3:3b";
         form.apiKey.value = "";
+        updateAiModeFields(form);
       };
+    }
+
+    function updateAiModeFields(form) {
+      if (!form) return;
+      const mode = form.elements.mode.value === "offline" ? "offline" : "online";
+      form.querySelectorAll("[data-ai-mode]").forEach((field) => {
+        const modes = field.dataset.aiMode.split(/\s+/);
+        field.classList.toggle("mode-hidden", !(modes.includes("both") || modes.includes(mode)));
+      });
+      if (mode === "offline" && form.onlineProvider.value !== "ollama") form.onlineProvider.value = "ollama";
+      if (mode === "online" && form.onlineProvider.value === "ollama") form.onlineProvider.value = "openrouter";
     }
 
     async function renderUsers() {
