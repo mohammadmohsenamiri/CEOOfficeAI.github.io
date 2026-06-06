@@ -16,6 +16,25 @@ export type User = {
   isCeo: boolean;
 };
 
+export type PendingUser = {
+  id: string;
+  fullName: string;
+  jobTitle: string;
+  username?: string;
+  baleChatId?: string;
+  baleUsername?: string;
+  baleProfileUrl?: string;
+  status: string;
+  rawText?: string;
+  createdAt?: string;
+  rejectReason?: string;
+};
+
+export type Group = {
+  id: string;
+  name: string;
+};
+
 export type TaskAssignment = {
   userId: string;
   status: string;
@@ -33,6 +52,7 @@ export type Task = {
   dueAt?: string;
   longTerm: boolean;
   status?: string;
+  priority?: string;
   assignments: TaskAssignment[];
 };
 
@@ -42,8 +62,11 @@ export type RecurringTask = {
   description?: string;
   creatorId?: string;
   assigneeIds: string[];
-  cycle: string;
+  cycle: "daily" | "weekly" | "monthly" | string;
   interval?: number;
+  daysOfWeek?: number[];
+  dayOfMonth?: number | null;
+  time?: string;
   nextRunAt?: string;
   active: boolean;
 };
@@ -89,8 +112,40 @@ export type BaleSettings = {
   defaultReplyMode: string;
 };
 
+export type AnalyticsOverview = {
+  totals: {
+    tasks: number;
+    doneTasks: number;
+    openTasks: number;
+    meetings: number;
+    ceoRequests: number;
+    notifications: number;
+  };
+  byUser: Array<{
+    userId: string;
+    fullName: string;
+    role: string;
+    assigned: number;
+    done: number;
+    rejected: number;
+    pending: number;
+    completionRate: number;
+  }>;
+};
+
+export type SmartSuggestion = {
+  id: string;
+  type: string;
+  severity: string;
+  title: string;
+  body: string;
+  relatedEntity?: { type: string; id: string };
+};
+
 export type AppData = {
   users: User[];
+  pendingUsers: PendingUser[];
+  groups: Group[];
   tasks: Task[];
   recurringTasks: RecurringTask[];
   meetings: Meeting[];
