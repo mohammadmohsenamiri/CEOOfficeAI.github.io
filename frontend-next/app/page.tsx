@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { api, backendBaseUrl, loadAppData } from "@/lib/api";
 import type { AiSettings, AnalyticsOverview, AppData, BaleSettings, Meeting, SmartSuggestion, Task, User } from "@/lib/types";
 
-type PageKey = "dashboard" | "tasks" | "longterm" | "recurring" | "requests" | "meetings" | "users" | "analytics" | "ai" | "messenger";
+type PageKey = "dashboard" | "tasks" | "longterm" | "recurring" | "requests" | "meetings" | "users" | "access" | "analytics" | "ai" | "messenger";
 type CalendarView = "month" | "week" | "day";
 type IconKey = "dashboard" | "tasks" | "requests" | "meetings" | "bale" | "analytics" | "offline" | "users" | "approveUser" | "clock" | "done" | "alert" | "user" | "lock" | "spark";
 
@@ -14,9 +14,10 @@ const navItems: Array<{ key: PageKey; title: string; icon: IconKey; adminOnly?: 
   { key: "tasks", title: "وظایف جاری", icon: "tasks" },
   { key: "longterm", title: "وظایف بلندمدت", icon: "tasks" },
   { key: "recurring", title: "وظایف تکرارشونده", icon: "clock" },
-  { key: "requests", title: "درخواست از مدیرعامل", icon: "requests" },
+  { key: "requests", title: "درخواست از مدیرعامل", icon: "requests", adminOnly: true },
   { key: "meetings", title: "جلسات", icon: "meetings" },
   { key: "users", title: "افراد", icon: "users", adminOnly: true },
+  { key: "access", title: "ورود و دسترسی ها", icon: "lock", adminOnly: true },
   { key: "analytics", title: "تحلیل و هشدارها", icon: "analytics", adminOnly: true },
   { key: "ai", title: "تنظیمات هوش مصنوعی", icon: "offline", adminOnly: true },
   { key: "messenger", title: "تنظیمات پیام رسان", icon: "bale", adminOnly: true }
@@ -294,6 +295,7 @@ export default function Home() {
         {page === "requests" && <RequestsPanel data={data} activeUser={activeUser} onAction={action} />}
         {page === "meetings" && <MeetingsPanel data={data} onAction={action} />}
         {page === "users" && <UsersPanel data={data} onAction={action} />}
+        {page === "access" && <AccessPanel data={data} />}
         {page === "analytics" && <AnalyticsPanel onAction={action} />}
         {page === "ai" && <AiSettingsPanel notify={notify} />}
         {page === "messenger" && <MessengerSettingsPanel notify={notify} />}
@@ -391,98 +393,135 @@ function Metric({ title, value, icon }: { title: string; value: number; icon?: I
   return <div className="card metric">{icon ? <span className="metric-icon"><Icon name={icon} /></span> : null}<span className="muted">{title}</span><b>{fa(value)}</b></div>;
 }
 
-function AssigneePicker({ users, name = "assigneeIds" }: { users: User[]; name?: string }) {
-  return (
-    <label className="full">مسئولان
-      <select name={name} multiple required>
-        {assignableUsers(users).map((user) => <option value={user.id} key={user.id}>{user.fullName} - {user.jobTitle}</option>)}
-      </select>
-    </label>
-  );
-}
-
 function selectedValues(form: FormData, name: string) {
   return form.getAll(name).map(String).filter(Boolean);
 }
 
-function TasksPanel({ tasks, users, longTerm, onAction }: { tasks: Task[]; users: User[]; longTerm: boolean; onAction: (work: () => Promise<void>, success?: string) => Promise<void> }) {
-  async function create(event: FormEvent<HTMLFormElement>) {
+function AssigneeTagPicker({ users, selectedIds, onChange }: { users: User[]; selectedIds: string[]; onChange: (ids: string[]) => void }) {
+  const [query, setQuery] = useState("");
+  const options = assignableUsers(users).filter((user) => !selectedIds.includes(user.id) && `${user.fullName} ${user.jobTitle}`.toLowerCase().includes(query.toLowerCase()));
+  return (
+    <div className="full tag-picker">
+      <span className="field-label">مسئولان</span>
+      <div className="tag-box">
+        {selectedIds.map((id) => {
+          const user = users.find((item) => item.id === id);
+          return <span className="tag-chip" key={id}>{user?.fullName || "کاربر"}<button type="button" onClick={() => onChange(selectedIds.filter((item) => item !== id))}>×</button></span>;
+        })}
+        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="جستجو و انتخاب مسئول..." />
+      </div>
+      {query ? <div className="tag-menu">{options.map((user) => <button type="button" key={user.id} onClick={() => { onChange([...selectedIds, user.id]); setQuery(""); }}>{user.fullName}<span>{user.jobTitle}</span></button>)}</div> : null}
+      {selectedIds.map((id) => <input type="hidden" name="assigneeIds" value={id} key={id} />)}
+    </div>
+  );
+}
+
+function TaskModal({ users, longTerm, task, onClose, onAction }: { users: User[]; longTerm: boolean; task: Task | null; onClose: () => void; onAction: (work: () => Promise<void>, success?: string) => Promise<void> }) {
+  const [assignees, setAssignees] = useState(task?.assignments?.map((item) => item.userId) || []);
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    await onAction(() => api.createTask({
+    const payload = {
+      taskId: task?.id,
       title: String(form.get("title")),
       description: String(form.get("description")),
       dueAt: longTerm ? "" : isoFromDateTime(String(form.get("date")), "09:00"),
       longTerm,
+      status: String(form.get("status") || task?.status || "open"),
       assigneeIds: selectedValues(form, "assigneeIds")
-    }).then(() => undefined), longTerm ? "وظیفه بلندمدت ساخته شد." : "وظیفه جاری ساخته شد.");
-    event.currentTarget.reset();
+    };
+    if (task) await onAction(() => api.updateTask(payload).then(() => undefined), "وظیفه ویرایش شد.");
+    else await onAction(() => api.createTask(payload).then(() => undefined), longTerm ? "وظیفه بلندمدت ساخته شد." : "وظیفه جاری ساخته شد.");
+    onClose();
   }
+  return (
+    <div className="modal-backdrop" onClick={(event) => { if (event.currentTarget === event.target) onClose(); }}>
+      <form className="modal-card" onSubmit={submit}>
+        <div className="panel-head"><h2>{task ? "ویرایش وظیفه" : "ایجاد وظیفه جدید"}</h2><button type="button" onClick={onClose}>بستن</button></div>
+        <div className="form-grid">
+          <label>عنوان<input name="title" defaultValue={task?.title || ""} required /></label>
+          <label>وضعیت<select name="status" defaultValue={task?.status || "open"}><option value="open">باز</option><option value="pending">در انتظار</option><option value="done">انجام شده</option><option value="rejected">رد شده</option></select></label>
+          {!longTerm ? <JalaliDatePicker name="date" defaultValue={task?.dueAt ? localDateValue(new Date(task.dueAt)) : todayInput()} /> : null}
+          <label className="full">توضیحات<textarea name="description" defaultValue={task?.description || ""} /></label>
+          <AssigneeTagPicker users={users} selectedIds={assignees} onChange={setAssignees} />
+        </div>
+        <button className="primary">ذخیره</button>
+      </form>
+    </div>
+  );
+}
 
+function TasksPanel({ tasks, users, longTerm, onAction }: { tasks: Task[]; users: User[]; longTerm: boolean; onAction: (work: () => Promise<void>, success?: string) => Promise<void> }) {
+  const [modalTask, setModalTask] = useState<Task | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
   return (
     <section className="panel">
-      <div className="panel-head"><h2>{longTerm ? "وظایف بلندمدت" : "وظایف جاری"}</h2><span className="chip">{fa(tasks.length)} مورد</span></div>
-      <form className="card form-grid" onSubmit={create}>
-        <label>عنوان<input name="title" required /></label>
-        {!longTerm ? <JalaliDatePicker name="date" defaultValue={todayInput()} /> : null}
-        <label className="full">توضیحات<textarea name="description" /></label>
-        <AssigneePicker users={users} />
-        <button className="primary full">ثبت</button>
-      </form>
-      <TaskList tasks={tasks} users={users} onDelete={(id) => onAction(() => api.deleteTask(id).then(() => undefined), "وظیفه حذف شد.")} onMove={longTerm ? undefined : (id) => onAction(() => api.moveTaskToLongTerm(id).then(() => undefined), "به بلندمدت منتقل شد.")} onAssignment={(id, status) => onAction(() => api.updateAssignment(id, status).then(() => undefined), "وضعیت ثبت شد.")} />
+      <div className="panel-head"><h2>{longTerm ? "وظایف بلندمدت" : "وظایف جاری"}</h2><div className="actions"><span className="chip">{fa(tasks.length)} مورد</span><button className="primary" onClick={() => { setModalTask(null); setModalOpen(true); }}>ایجاد وظیفه جدید</button></div></div>
+      <TaskTable tasks={tasks} users={users} longTerm={longTerm} onEdit={(task) => { setModalTask(task); setModalOpen(true); }} onDelete={(id) => onAction(() => api.deleteTask(id).then(() => undefined), "وظیفه حذف شد.")} onMove={longTerm ? undefined : (id) => onAction(() => api.moveTaskToLongTerm(id).then(() => undefined), "به بلندمدت منتقل شد.")} onAssignment={(id, status) => onAction(() => api.updateAssignment(id, status).then(() => undefined), "وضعیت ثبت شد.")} />
+      {modalOpen ? <TaskModal users={users} longTerm={longTerm} task={modalTask} onClose={() => setModalOpen(false)} onAction={onAction} /> : null}
     </section>
   );
 }
 
-function TaskList({ tasks, users, onDelete, onMove, onAssignment }: { tasks: Task[]; users: User[]; onDelete?: (id: string) => void; onMove?: (id: string) => void; onAssignment?: (id: string, status: string) => void }) {
+function TaskTable({ tasks, users, longTerm, onEdit, onDelete, onMove, onAssignment }: { tasks: Task[]; users: User[]; longTerm: boolean; onEdit: (task: Task) => void; onDelete: (id: string) => void; onMove?: (id: string) => void; onAssignment: (id: string, status: string) => void }) {
+  if (!tasks.length) return <div className="card muted">موردی برای نمایش وجود ندارد.</div>;
+  return (
+    <div className="table-wrap">
+      <table className="data-table">
+        <thead><tr><th>عنوان</th><th>توضیحات</th><th>مسئولان</th><th>وضعیت</th><th>{longTerm ? "نوع" : "تاریخ"}</th><th>عملیات</th></tr></thead>
+        <tbody>{tasks.map((task) => <tr key={task.id}><td><div className="icon-heading"><span className="card-icon"><Icon name={task.longTerm ? "clock" : "tasks"} /></span><strong>{task.title}</strong></div></td><td className="muted">{task.description || "بدون توضیح"}</td><td><div className="chips">{task.assignments?.map((assignment) => <span className="chip" key={assignment.userId}>{users.find((user) => user.id === assignment.userId)?.fullName || "کاربر"}</span>)}</div></td><td><span className="chip">{task.status || "open"}</span></td><td>{task.longTerm ? "بلندمدت" : dateFa(task.dueAt)}</td><td><div className="actions"><button className="blue" onClick={() => onAssignment(task.id, "done")}>انجام شد</button><button onClick={() => onEdit(task)}>ویرایش</button>{onMove ? <button onClick={() => onMove(task.id)}>انتقال</button> : null}<button className="danger" onClick={() => onDelete(task.id)}>حذف</button></div></td></tr>)}</tbody>
+      </table>
+    </div>
+  );
+}
+
+function TaskList({ tasks, users }: { tasks: Task[]; users: User[] }) {
   if (!tasks.length) return <div className="card muted">موردی برای نمایش وجود ندارد.</div>;
   return (
     <div className="list">
-      {tasks.map((task) => (
-        <article className="card" key={task.id}>
-          <div className="row"><div className="icon-heading"><span className="card-icon"><Icon name={task.longTerm ? "clock" : "tasks"} /></span><div><h3>{task.title}</h3><p className="muted">{task.description || "بدون توضیح"}</p></div></div><span className="chip">{task.longTerm ? "بلندمدت" : dateFa(task.dueAt)}</span></div>
-          <div className="chips">{task.assignments?.map((assignment) => <span className="chip" key={assignment.userId}>{users.find((user) => user.id === assignment.userId)?.fullName || "کاربر"}: {assignment.status}</span>)}</div>
-          <div className="actions">
-            {onAssignment ? <><button className="blue" onClick={() => onAssignment(task.id, "done")}>انجام شد</button><button onClick={() => onAssignment(task.id, "rejected")}>رد</button></> : null}
-            {onMove ? <button className="blue" onClick={() => onMove(task.id)}>انتقال به بلندمدت</button> : null}
-            {onDelete ? <button className="danger" onClick={() => onDelete(task.id)}>حذف</button> : null}
-          </div>
-        </article>
-      ))}
+      {tasks.map((task) => <article className="card" key={task.id}><div className="row"><div className="icon-heading"><span className="card-icon"><Icon name={task.longTerm ? "clock" : "tasks"} /></span><div><h3>{task.title}</h3><p className="muted">{task.description || "بدون توضیح"}</p></div></div><span className="chip">{task.longTerm ? "بلندمدت" : dateFa(task.dueAt)}</span></div><div className="chips">{task.assignments?.map((assignment) => <span className="chip" key={assignment.userId}>{users.find((user) => user.id === assignment.userId)?.fullName || "کاربر"}</span>)}</div></article>)}
+    </div>
+  );
+}
+
+function RecurringModal({ users, item, onClose, onAction }: { users: User[]; item: AppData["recurringTasks"][number] | null; onClose: () => void; onAction: (work: () => Promise<void>, success?: string) => Promise<void> }) {
+  const [assignees, setAssignees] = useState(item?.assigneeIds || []);
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const payload = { recurringTaskId: item?.id, title: String(form.get("title")), description: String(form.get("description")), assigneeIds: selectedValues(form, "assigneeIds"), cycle: String(form.get("cycle")), interval: Number(form.get("interval")) || 1, time: String(form.get("time") || "09:00"), active: form.get("active") !== "false", startAt: isoFromDateTime(String(form.get("date")), String(form.get("time") || "09:00")) };
+    if (item) await onAction(() => api.updateRecurringTask(payload).then(() => undefined), "چرخه تکرار ویرایش شد.");
+    else await onAction(() => api.createRecurringTask(payload).then(() => undefined), "چرخه تکرار ساخته شد.");
+    onClose();
+  }
+  return (
+    <div className="modal-backdrop" onClick={(event) => { if (event.currentTarget === event.target) onClose(); }}>
+      <form className="modal-card" onSubmit={submit}>
+        <div className="panel-head"><h2>{item ? "ویرایش وظیفه تکرارشونده" : "ایجاد وظیفه تکرارشونده"}</h2><button type="button" onClick={onClose}>بستن</button></div>
+        <div className="form-grid">
+          <label>عنوان<input name="title" defaultValue={item?.title || ""} required /></label>
+          <label>چرخه<select name="cycle" defaultValue={item?.cycle || "daily"}><option value="daily">روزانه</option><option value="weekly">هفتگی</option><option value="monthly">ماهانه</option></select></label>
+          <label>فاصله<input name="interval" type="number" min="1" defaultValue={item?.interval || 1} /></label>
+          <JalaliDatePicker name="date" defaultValue={item?.nextRunAt ? localDateValue(new Date(item.nextRunAt)) : todayInput()} />
+          <label>ساعت<input name="time" type="time" defaultValue={item?.time || "09:00"} /></label>
+          <label>وضعیت<select name="active" defaultValue={String(item?.active !== false)}><option value="true">فعال</option><option value="false">غیرفعال</option></select></label>
+          <label className="full">توضیحات<textarea name="description" defaultValue={item?.description || ""} /></label>
+          <AssigneeTagPicker users={users} selectedIds={assignees} onChange={setAssignees} />
+        </div>
+        <button className="primary">ذخیره</button>
+      </form>
     </div>
   );
 }
 
 function RecurringPanel({ data, onAction }: { data: AppData; onAction: (work: () => Promise<void>, success?: string) => Promise<void> }) {
-  async function create(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    await onAction(() => api.createRecurringTask({
-      title: String(form.get("title")),
-      description: String(form.get("description")),
-      assigneeIds: selectedValues(form, "assigneeIds"),
-      cycle: String(form.get("cycle")),
-      interval: Number(form.get("interval")) || 1,
-      time: String(form.get("time") || "09:00"),
-      startAt: isoFromDateTime(String(form.get("date")), String(form.get("time") || "09:00"))
-    }).then(() => undefined), "چرخه تکرار ساخته شد.");
-    event.currentTarget.reset();
-  }
-
+  const [modalItem, setModalItem] = useState<AppData["recurringTasks"][number] | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
   return (
     <section className="panel">
-      <div className="panel-head"><h2>وظایف تکرارشونده</h2><span className="chip">{fa(data.recurringTasks.length)} چرخه</span></div>
-      <form className="card form-grid" onSubmit={create}>
-        <label>عنوان<input name="title" required /></label>
-        <label>چرخه<select name="cycle" defaultValue="daily"><option value="daily">روزانه</option><option value="weekly">هفتگی</option><option value="monthly">ماهانه</option></select></label>
-        <label>فاصله<input name="interval" type="number" min="1" defaultValue="1" /></label>
-        <JalaliDatePicker name="date" defaultValue={todayInput()} />
-        <label>ساعت<input name="time" type="time" defaultValue="09:00" /></label>
-        <label className="full">توضیحات<textarea name="description" /></label>
-        <AssigneePicker users={data.users} />
-        <button className="primary full">ثبت چرخه</button>
-      </form>
-      <div className="list">{data.recurringTasks.map((item) => <article className="card" key={item.id}><div className="row"><h3>{item.title}</h3><span className={item.active ? "chip ok" : "chip warn"}>{item.active ? "فعال" : "غیرفعال"}</span></div><p className="muted">{item.description || "بدون توضیح"}</p><div className="chips"><span className="chip">{item.cycle}</span><span className="chip">{dateFa(item.nextRunAt, true)}</span></div><div className="actions"><button className="blue" onClick={() => onAction(() => api.generateRecurringTask(item.id).then(() => undefined), "نمونه بعدی ساخته شد.")}>ساخت نمونه بعدی</button><button className="danger" onClick={() => onAction(() => api.deleteRecurringTask(item.id).then(() => undefined), "چرخه حذف شد.")}>حذف</button></div></article>)}</div>
+      <div className="panel-head"><h2>وظایف تکرارشونده</h2><div className="actions"><span className="chip">{fa(data.recurringTasks.length)} چرخه</span><button className="primary" onClick={() => { setModalItem(null); setModalOpen(true); }}>ایجاد وظیفه جدید</button></div></div>
+      <div className="table-wrap"><table className="data-table"><thead><tr><th>عنوان</th><th>توضیحات</th><th>مسئولان</th><th>چرخه</th><th>وضعیت</th><th>اجرای بعدی</th><th>عملیات</th></tr></thead><tbody>{data.recurringTasks.map((item) => <tr key={item.id}><td><strong>{item.title}</strong></td><td className="muted">{item.description || "بدون توضیح"}</td><td><div className="chips">{item.assigneeIds.map((id) => <span className="chip" key={id}>{data.users.find((user) => user.id === id)?.fullName || "کاربر"}</span>)}</div></td><td>{item.cycle}</td><td><span className={item.active ? "chip ok" : "chip warn"}>{item.active ? "فعال" : "غیرفعال"}</span></td><td>{dateFa(item.nextRunAt, true)}</td><td><div className="actions"><button className="blue" onClick={() => onAction(() => api.generateRecurringTask(item.id).then(() => undefined), "نمونه بعدی ساخته شد.")}>ساخت نمونه</button><button onClick={() => { setModalItem(item); setModalOpen(true); }}>ویرایش</button><button className="danger" onClick={() => onAction(() => api.deleteRecurringTask(item.id).then(() => undefined), "چرخه حذف شد.")}>حذف</button></div></td></tr>)}</tbody></table></div>
+      {modalOpen ? <RecurringModal users={data.users} item={modalItem} onClose={() => setModalOpen(false)} onAction={onAction} /> : null}
     </section>
   );
 }
@@ -738,6 +777,28 @@ function UsersPanel({ data, onAction }: { data: AppData; onAction: (work: () => 
       <form className="card form-grid" onSubmit={create}><label>نام<input name="fullName" required /></label><label>جایگاه<input name="jobTitle" required /></label><label>نقش<select name="role"><option value="User">کاربر</option><option value="Admin">Admin</option></select></label><label>نام کاربری<input name="username" /></label><label>رمز عبور<input name="password" type="password" /></label><label>آیدی بله<input name="baleUsername" /></label><label>شناسه فنی بله<input name="baleChatId" /></label><button className="primary full">افزودن کاربر</button></form>
       {data.pendingUsers.filter((user) => user.status === "pending").length ? <div className="panel"><h2>در انتظار تایید</h2>{data.pendingUsers.filter((user) => user.status === "pending").map((user) => <article className="card" key={user.id}><div className="row"><div><h3>{user.fullName}</h3><p className="muted">{user.jobTitle}</p></div><span className="chip warn">در انتظار</span></div><div className="chips"><span className="chip ltr">{user.baleChatId || "-"}</span><span className="chip ltr">{user.baleUsername || "-"}</span>{user.baleProfileUrl ? <a className="chip ltr" href={user.baleProfileUrl} target="_blank">پروفایل بله</a> : null}</div><div className="actions"><button className="blue" onClick={() => onAction(() => api.approvePendingUser(user.id).then(() => undefined), "کاربر تایید شد.")}>تایید</button><button className="danger" onClick={() => onAction(() => api.rejectPendingUser(user.id).then(() => undefined), "درخواست رد شد.")}>رد</button></div></article>)}</div> : null}
       <div className="grid">{data.users.map((user) => <article className="card" key={user.id}><div className="row"><div><h3>{user.fullName}</h3><p className="muted">{user.jobTitle}</p></div><span className={user.active ? "chip ok" : "chip warn"}>{user.active ? "فعال" : "معلق"}</span></div><div className="chips"><span className="chip">{user.role}</span><span className="chip ltr">{user.baleUsername || user.baleChatId || "بدون بله"}</span>{user.baleProfileUrl ? <a className="chip ltr" href={user.baleProfileUrl} target="_blank">پروفایل</a> : null}</div><div className="actions">{!user.isCeo ? <><button onClick={() => onAction(() => api.setUserStatus(user.id, !user.active).then(() => undefined), user.active ? "کاربر معلق شد." : "کاربر فعال شد.")}>{user.active ? "تعلیق" : "فعال سازی"}</button><button className="danger" onClick={() => onAction(() => api.deleteUser(user.id).then(() => undefined), "کاربر حذف شد.")}>حذف</button></> : <span className="chip">مدیرعامل قابل حذف نیست</span>}</div></article>)}</div>
+    </section>
+  );
+}
+
+function AccessPanel({ data }: { data: AppData }) {
+  const privileged = data.users.filter((user) => user.role === "Admin" || user.role === "CEO");
+  const ordinary = data.users.filter((user) => user.role !== "Admin" && user.role !== "CEO");
+  return (
+    <section className="panel">
+      <div className="panel-head"><h2>ورود و دسترسی ها</h2><span className="chip">{fa(data.users.length)} حساب</span></div>
+      <section className="grid">
+        <article className="card"><div className="icon-heading"><span className="card-icon"><Icon name="lock" /></span><div><h3>روش های ورود</h3><p className="muted">ورود با نام کاربری و رمز عبور، ورود با کد بله، و ثبت نام با تایید مدیر فعال است.</p></div></div></article>
+        <article className="card"><div className="icon-heading"><span className="card-icon"><Icon name="requests" /></span><div><h3>درخواست های مدیرعامل</h3><p className="muted">منوی درخواست ها فقط برای Admin و CEO نمایش داده می شود و تصمیم گیری فقط برای CEO انجام می شود.</p></div></div></article>
+      </section>
+      <div className="table-wrap">
+        <table className="data-table">
+          <thead><tr><th>نام</th><th>سمت</th><th>نقش</th><th>وضعیت</th><th>دسترسی حساس</th></tr></thead>
+          <tbody>
+            {[...privileged, ...ordinary].map((user) => <tr key={user.id}><td>{user.fullName}</td><td className="muted">{user.jobTitle}</td><td><span className="chip">{user.role}</span></td><td><span className={user.active ? "chip ok" : "chip warn"}>{user.active ? "فعال" : "معلق"}</span></td><td>{user.role === "CEO" ? "تصمیم درباره درخواست ها" : user.role === "Admin" ? "مدیریت سیستم و مشاهده صفحات حساس" : "دسترسی عادی"}</td></tr>)}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }

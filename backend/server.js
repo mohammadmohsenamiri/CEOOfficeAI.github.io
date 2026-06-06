@@ -1039,6 +1039,29 @@ const routes = {
     return { saved: true };
   },
 
+  "PATCH /api/tasks": async ({ data, body, currentUser }) => {
+    const task = data.tasks.find((item) => item.id === body.taskId);
+    if (!task || !canViewTask(currentUser, task)) return { status: 404, body: { error: "وظیفه پیدا نشد." } };
+    if (currentUser.role !== "Admin" && task.creatorId !== currentUser.id) return { status: 403, body: { error: "فقط سازنده یا مدیر سیستم می‌تواند وظیفه را ویرایش کند." } };
+    const assigneeIds = Array.isArray(body.assigneeIds) ? body.assigneeIds : task.assignments.map((item) => item.userId);
+    if (!assigneeIds.length) return { status: 400, body: { error: "حداقل یک مسئول انتخاب کنید." } };
+    if (!canAssignTo(data, currentUser, assigneeIds)) return { status: 403, body: { error: "تعریف مستقیم وظیفه برای مدیرعامل مجاز نیست." } };
+    const before = JSON.parse(JSON.stringify(task));
+    task.title = String(body.title || task.title || "").trim();
+    task.description = String(body.description || "").trim();
+    task.longTerm = Boolean(body.longTerm);
+    task.dueAt = task.longTerm ? "" : (body.dueAt || task.dueAt || nowIso());
+    task.priority = body.priority || task.priority || "medium";
+    task.status = body.status || task.status || "open";
+    task.assignments = assigneeIds.map((userId) => {
+      const existing = task.assignments.find((item) => item.userId === userId);
+      return existing || { userId, status: "pending", rejectReason: "", doneAt: "" };
+    });
+    task.updatedAt = nowIso();
+    log(data, currentUser.id, "update", "task", task.id, before, task);
+    return { saved: true, task };
+  },
+
   "PATCH /api/tasks/long-term": async ({ data, body, currentUser }) => {
     const task = data.tasks.find((item) => item.id === body.taskId);
     if (!task || !canViewTask(currentUser, task)) return { status: 404, body: { error: "وظیفه پیدا نشد." } };
@@ -1088,6 +1111,27 @@ const routes = {
     data.recurringTasks = data.recurringTasks.filter((task) => task.id !== item.id);
     log(data, currentUser.id, "delete", "recurring_task", item.id, item, null);
     return { saved: true };
+  },
+
+  "PATCH /api/recurring-tasks": async ({ data, body, currentUser }) => {
+    const item = data.recurringTasks.find((task) => task.id === body.recurringTaskId);
+    if (!item || !canViewRecurringTask(currentUser, item)) return { status: 404, body: { error: "وظیفه تکرارشونده پیدا نشد." } };
+    if (currentUser.role !== "Admin" && item.creatorId !== currentUser.id) return { status: 403, body: { error: "فقط سازنده یا مدیر سیستم می‌تواند این چرخه را ویرایش کند." } };
+    const assigneeIds = Array.isArray(body.assigneeIds) ? body.assigneeIds : item.assigneeIds;
+    if (!assigneeIds.length) return { status: 400, body: { error: "حداقل یک مسئول انتخاب کنید." } };
+    if (!canAssignTo(data, currentUser, assigneeIds)) return { status: 403, body: { error: "تعریف مستقیم وظیفه برای مدیرعامل مجاز نیست." } };
+    const before = JSON.parse(JSON.stringify(item));
+    item.title = String(body.title || item.title || "").trim();
+    item.description = String(body.description || "").trim();
+    item.assigneeIds = assigneeIds;
+    item.cycle = ["daily", "weekly", "monthly"].includes(body.cycle) ? body.cycle : item.cycle || "daily";
+    item.interval = Math.max(1, Number(body.interval) || item.interval || 1);
+    item.time = String(body.time || item.time || "09:00");
+    item.active = body.active !== false;
+    item.nextRunAt = nextRecurringRun(body.startAt || item.nextRunAt || nowIso(), item.cycle, item.interval, item.daysOfWeek || [], item.dayOfMonth, item.time);
+    item.updatedAt = nowIso();
+    log(data, currentUser.id, "update", "recurring_task", item.id, before, item);
+    return { saved: true, recurringTask: item };
   },
 
   "POST /api/recurring-tasks/generate-next": async ({ data, body, currentUser }) => {

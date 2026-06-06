@@ -74,6 +74,8 @@ export const api = {
     }),
   createTask: (payload: unknown) =>
     apiFetch<Task>("/api/tasks", { method: "POST", body: JSON.stringify(payload) }),
+  updateTask: (payload: unknown) =>
+    apiFetch<{ saved: true; task: Task }>("/api/tasks", { method: "PATCH", body: JSON.stringify(payload) }),
   deleteTask: (taskId: string) =>
     apiFetch<{ saved: true }>("/api/tasks", { method: "DELETE", body: JSON.stringify({ taskId }) }),
   moveTaskToLongTerm: (taskId: string) =>
@@ -82,6 +84,8 @@ export const api = {
     apiFetch<{ task: Task }>("/api/tasks/assignment", { method: "PATCH", body: JSON.stringify({ taskId, status, rejectReason }) }),
   createRecurringTask: (payload: unknown) =>
     apiFetch<RecurringTask>("/api/recurring-tasks", { method: "POST", body: JSON.stringify(payload) }),
+  updateRecurringTask: (payload: unknown) =>
+    apiFetch<{ saved: true; recurringTask: RecurringTask }>("/api/recurring-tasks", { method: "PATCH", body: JSON.stringify(payload) }),
   deleteRecurringTask: (recurringTaskId: string) =>
     apiFetch<{ saved: true }>("/api/recurring-tasks", { method: "DELETE", body: JSON.stringify({ recurringTaskId }) }),
   generateRecurringTask: (recurringTaskId: string) =>
