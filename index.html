@@ -852,10 +852,7 @@
       gap: 8px;
       align-items: end;
       flex-wrap: wrap;
-      padding: 10px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: rgba(255, 255, 255, .035);
+      position: relative;
     }
 
     .calendar-picker label {
@@ -870,6 +867,7 @@
 
     .persian-date-picker {
       position: relative;
+      min-width: min(320px, 100%);
     }
 
     .date-picker-popover {
@@ -878,13 +876,23 @@
       padding: 10px;
       border: 1px solid var(--line);
       border-radius: 8px;
-      background: rgba(255, 255, 255, .035);
+      background: rgba(15, 23, 42, .98);
       margin-top: 8px;
-      box-shadow: 0 18px 42px rgba(0, 0, 0, .22);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, .42);
+      position: absolute;
+      inset-inline-start: 0;
+      top: calc(100% + 8px);
+      width: min(360px, calc(100vw - 40px));
+      z-index: 90;
     }
 
     .date-picker-popover.hidden {
       display: none;
+    }
+
+    .calendar-picker-popover {
+      grid-template-columns: repeat(3, minmax(72px, 1fr)) auto;
+      align-items: end;
     }
 
     .date-picker-head {
@@ -2506,10 +2514,13 @@
             <button type="button" data-calendar-shift="1">${nextLabel}</button>
           </div>
           <div class="calendar-picker">
-            <label>سال<input id="calendar${capitalize(position)}Year" inputmode="numeric" value="${fa(j.jy)}"></label>
-            <label>ماه<input id="calendar${capitalize(position)}Month" inputmode="numeric" value="${fa(j.jm)}"></label>
-            <label>روز<input id="calendar${capitalize(position)}Day" inputmode="numeric" value="${fa(j.jd)}"></label>
-            <button type="button" class="blue" data-calendar-apply="${position}">انتخاب تاریخ</button>
+            <button type="button" class="blue" data-calendar-picker-toggle="${position}">انتخاب تاریخ شمسی</button>
+            <div class="date-picker-popover calendar-picker-popover hidden" id="calendar${capitalize(position)}Popover">
+              <label>سال<input id="calendar${capitalize(position)}Year" inputmode="numeric" value="${fa(j.jy)}"></label>
+              <label>ماه<input id="calendar${capitalize(position)}Month" inputmode="numeric" value="${fa(j.jm)}"></label>
+              <label>روز<input id="calendar${capitalize(position)}Day" inputmode="numeric" value="${fa(j.jd)}"></label>
+              <button type="button" class="primary" data-calendar-apply="${position}">اعمال</button>
+            </div>
           </div>
         </div>`;
     }
@@ -2538,7 +2549,18 @@
           const next = readJalaliFields(`calendar${capitalize(key)}`);
           if (!next) return toast("تاریخ شمسی وارد شده معتبر نیست.");
           calendarFocusDate = next;
+          $(`calendar${capitalize(key)}Popover`)?.classList.add("hidden");
           renderMeetings();
+        };
+      });
+      document.querySelectorAll("[data-calendar-picker-toggle]").forEach((btn) => {
+        btn.onclick = (event) => {
+          event.stopPropagation();
+          const key = btn.dataset.calendarPickerToggle;
+          document.querySelectorAll(".date-picker-popover:not(.hidden)").forEach((picker) => {
+            if (picker.id !== `calendar${capitalize(key)}Popover`) picker.classList.add("hidden");
+          });
+          $(`calendar${capitalize(key)}Popover`)?.classList.toggle("hidden");
         };
       });
     }
@@ -2754,7 +2776,13 @@
       document.querySelectorAll(`[data-picker-prev="${prefix}"]`).forEach((btn) => btn.onclick = () => shiftMonth(-1));
       document.querySelectorAll(`[data-picker-next="${prefix}"]`).forEach((btn) => btn.onclick = () => shiftMonth(1));
       document.querySelectorAll(`[data-picker-toggle="${prefix}"]`).forEach((btn) => {
-        btn.onclick = () => $(`${prefix}PickerPopover`)?.classList.toggle("hidden");
+        btn.onclick = (event) => {
+          event.stopPropagation();
+          document.querySelectorAll(".date-picker-popover:not(.hidden)").forEach((popover) => {
+            if (popover.id !== `${prefix}PickerPopover`) popover.classList.add("hidden");
+          });
+          $(`${prefix}PickerPopover`)?.classList.toggle("hidden");
+        };
       });
       bindPickerDays();
     }
@@ -3781,6 +3809,11 @@
     document.addEventListener("keydown", (event) => {
       if (event.key !== "Escape") return;
       document.querySelectorAll(".modal-backdrop:not(.hidden)").forEach((modal) => modal.classList.add("hidden"));
+      document.querySelectorAll(".date-picker-popover:not(.hidden)").forEach((picker) => picker.classList.add("hidden"));
+    });
+
+    document.addEventListener("click", (event) => {
+      if (event.target.closest(".persian-date-picker, .calendar-picker")) return;
       document.querySelectorAll(".date-picker-popover:not(.hidden)").forEach((picker) => picker.classList.add("hidden"));
     });
 
