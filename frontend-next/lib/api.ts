@@ -46,7 +46,7 @@ export async function loadAppData() {
     apiFetch<Task[]>("/api/tasks"),
     apiFetch<RecurringTask[]>("/api/recurring-tasks"),
     apiFetch<Meeting[]>("/api/meetings"),
-    apiFetch<CeoRequest[]>("/api/ceo-requests")
+    apiFetch<CeoRequest[]>("/api/ceo-requests").catch(() => [])
   ]);
   return { users, pendingUsers, groups, tasks, recurringTasks, meetings, requests };
 }

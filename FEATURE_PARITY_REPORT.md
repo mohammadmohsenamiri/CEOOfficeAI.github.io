@@ -13,6 +13,8 @@ Baseline: `index.html`, `backend/server.js`, and the Excel feature audit
 - Added People page user edit popup.
 - Added `ورود و دسترسی ها` page for Admin/CEO users.
 - Hid CEO Requests navigation from ordinary users.
+- Restricted CEO Requests API access to Admin/CEO and allowed Admin/CEO decisions.
+- Expanded People cards to show both Bale username and Bale chat ID.
 - Hardened AI/Bale settings access and masked secrets in API responses.
 - Confirmed Jalali picker remains in place and no native English date input exists in `frontend-next/app/page.tsx`.
 
@@ -25,8 +27,8 @@ Baseline: `index.html`, `backend/server.js`, and the Excel feature audit
 | F008-F011 | Implemented. AI/Messenger pages are distinct admin pages; Jalali date display and popup picker are used. |
 | F012-F019 | Implemented/strongly improved. Meetings now have month/week/day views, navigation, modal creation, and drag/drop reschedule. Browser QA is still needed. |
 | F020-F028 | Implemented. Current, long-term, and recurring task workflows now have create/edit/delete/status/assignee tables and backend persistence. |
-| F029-F031 | Implemented in UI/backend for Admin/CEO visibility and CEO decisions. |
-| F032-F043 | Implemented/mostly implemented. CEO is excluded from direct assignment, people approval and user management are present, and user edit exists. Role model still includes ordinary `User` because backend needs an ordinary access level. |
+| F029-F031 | Implemented in UI/backend for Admin/CEO visibility and Admin/CEO decisions. Ordinary users no longer see or directly access CEO request records. |
+| F032-F043 | Implemented/mostly implemented. CEO is excluded from direct assignment, people approval and user management are present, user edit exists, and People cards show Bale username/chat ID/profile. Role model still includes ordinary `User` because backend needs an ordinary access level. |
 | F044-F048 | Implemented. Login/password, Bale code login, signup pending approval, page persistence, and modal Escape behavior exist. |
 | F049-F057 | Implemented/backend implemented. Bale settings, webhook/test feedback, user identity mapping, reminders, and AI-assisted replies are present. Messenger command parsing remains rule-based with AI fallback. |
 | F058-F064 | Implemented/configuration dependent. Online/OpenRouter/OpenAI-compatible/Ollama settings are present; actual Qwen/Ollama runtime requires target environment setup. Missing meeting time/day AI suggestion remains backend-partial. |

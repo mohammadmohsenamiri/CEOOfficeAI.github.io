@@ -1165,9 +1165,13 @@ const routes = {
     return { task };
   },
 
-  "GET /api/ceo-requests": async ({ data, currentUser }) => data.ceoRequests.filter((request) => currentUser.role === "CEO" || currentUser.role === "Admin" || request.requesterId === currentUser.id),
+  "GET /api/ceo-requests": async ({ data, currentUser }) => {
+    if (!isPrivileged(currentUser)) return { status: 403, body: { error: "دسترسی به درخواست‌های مدیرعامل فقط برای مدیرعامل و ادمین مجاز است." } };
+    return data.ceoRequests;
+  },
 
   "POST /api/ceo-requests": async ({ data, body, currentUser }) => {
+    if (!isPrivileged(currentUser)) return { status: 403, body: { error: "ثبت درخواست از این صفحه فقط برای مدیرعامل و ادمین مجاز است." } };
     const ceo = data.users.find((user) => user.isCeo) || data.users.find((user) => user.role === "Admin");
     const request = { id: id("R"), title: String(body.title || ""), description: String(body.description || ""), requesterId: currentUser.id, ceoId: ceo?.id || currentUser.id, status: "pending", decisionReason: "", delegatedTaskId: "", createdAt: nowIso() };
     data.ceoRequests.unshift(request);
@@ -1177,7 +1181,7 @@ const routes = {
   },
 
   "PATCH /api/ceo-requests/decision": async ({ data, body, currentUser }) => {
-    if (currentUser.role !== "CEO") return { status: 403, body: { error: "فقط مدیرعامل می‌تواند درباره درخواست تصمیم بگیرد." } };
+    if (!isPrivileged(currentUser)) return { status: 403, body: { error: "فقط مدیرعامل یا ادمین می‌تواند درباره درخواست تصمیم بگیرد." } };
     const request = data.ceoRequests.find((item) => item.id === body.requestId);
     if (!request) return { status: 404, body: { error: "درخواست پیدا نشد." } };
     const before = { ...request };
