@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { api, backendBaseUrl, loadAppData } from "@/lib/api";
 import type { AiSettings, AnalyticsOverview, AppData, BaleSettings, Meeting, SmartSuggestion, Task, User } from "@/lib/types";
 
@@ -198,6 +198,10 @@ function isPrivileged(user?: User | null) {
   return user?.role === "Admin" || user?.role === "CEO";
 }
 
+function needsPrivileged(page: PageKey) {
+  return navItems.some((item) => item.key === page && item.adminOnly);
+}
+
 function assignableUsers(users: User[]) {
   return users.filter((user) => user.active && !user.isCeo && user.role !== "CEO");
 }
@@ -210,15 +214,14 @@ export default function Home() {
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
 
-  const visibleNav = useMemo(() => navItems.filter((item) => !item.adminOnly || isPrivileged(currentUser)), [currentUser]);
-  const activeUser = currentUser || data.users[0] || null;
+  const activeUser = currentUser;
 
   async function refresh() {
     setError("");
     const result = await loadAppData();
     setData(result);
     const savedId = localStorage.getItem("ceo-office-auth-user-id");
-    setCurrentUser((existing) => result.users.find((user) => user.id === existing?.id) || result.users.find((user) => user.id === savedId) || existing || null);
+    setCurrentUser((existing) => result.users.find((user) => user.id === existing?.id) || result.users.find((user) => user.id === savedId) || null);
   }
 
   useEffect(() => {
@@ -226,10 +229,6 @@ export default function Home() {
     if (savedPage) setPage(savedPage);
     refresh().catch((err) => setError(err.message)).finally(() => setLoading(false));
   }, []);
-
-  useEffect(() => {
-    if (!visibleNav.some((item) => item.key === page)) go("dashboard");
-  }, [visibleNav, page]);
 
   function go(next: PageKey) {
     setPage(next);
@@ -256,6 +255,8 @@ export default function Home() {
     return <LoginScreen onLogin={(user) => { localStorage.setItem("ceo-office-auth-user-id", user.id); setCurrentUser(user); refresh().catch((err) => setError(err.message)); }} />;
   }
 
+  const lockedAdminPage = needsPrivileged(page) && !isPrivileged(activeUser);
+
   return (
     <div className="app" dir="rtl">
       <aside className="sidebar">
@@ -264,10 +265,10 @@ export default function Home() {
           <span>نسخه Next.js هم تراز با نسخه HTML، متصل به backend واقعی و مناسب کار فارسی راست چین.</span>
         </div>
         <nav className="nav">
-          {visibleNav.map((item) => (
+          {navItems.map((item) => (
             <button key={item.key} className={page === item.key ? "active" : ""} onClick={() => go(item.key)}>
               <span className="nav-title"><b><Icon name={item.icon} /></b>{item.title}</span>
-              <span>‹</span>
+              <span>{item.adminOnly && !isPrivileged(activeUser) ? "قفل" : "‹"}</span>
             </button>
           ))}
         </nav>
@@ -288,20 +289,35 @@ export default function Home() {
           <span className={loading ? "chip warn" : "chip ok"}>{loading ? "در حال دریافت" : "متصل"}</span>
         </header>
         {error ? <div className="card error">{error}</div> : null}
-        {page === "dashboard" && <Dashboard data={data} go={go} />}
-        {page === "tasks" && <TasksPanel tasks={data.tasks.filter((task) => !task.longTerm)} users={data.users} longTerm={false} onAction={action} />}
-        {page === "longterm" && <TasksPanel tasks={data.tasks.filter((task) => task.longTerm)} users={data.users} longTerm onAction={action} />}
-        {page === "recurring" && <RecurringPanel data={data} onAction={action} />}
-        {page === "requests" && <RequestsPanel data={data} activeUser={activeUser} onAction={action} />}
-        {page === "meetings" && <MeetingsPanel data={data} onAction={action} />}
-        {page === "users" && <UsersPanel data={data} onAction={action} />}
-        {page === "access" && <AccessPanel data={data} />}
-        {page === "analytics" && <AnalyticsPanel onAction={action} />}
-        {page === "ai" && <AiSettingsPanel notify={notify} />}
-        {page === "messenger" && <MessengerSettingsPanel notify={notify} />}
+        {lockedAdminPage ? <AccessRequiredPanel activeUser={activeUser} /> : null}
+        {!lockedAdminPage && page === "dashboard" && <Dashboard data={data} go={go} />}
+        {!lockedAdminPage && page === "tasks" && <TasksPanel tasks={data.tasks.filter((task) => !task.longTerm)} users={data.users} longTerm={false} onAction={action} />}
+        {!lockedAdminPage && page === "longterm" && <TasksPanel tasks={data.tasks.filter((task) => task.longTerm)} users={data.users} longTerm onAction={action} />}
+        {!lockedAdminPage && page === "recurring" && <RecurringPanel data={data} onAction={action} />}
+        {!lockedAdminPage && page === "requests" && <RequestsPanel data={data} activeUser={activeUser} onAction={action} />}
+        {!lockedAdminPage && page === "meetings" && <MeetingsPanel data={data} onAction={action} />}
+        {!lockedAdminPage && page === "users" && <UsersPanel data={data} onAction={action} />}
+        {!lockedAdminPage && page === "access" && <AccessPanel data={data} />}
+        {!lockedAdminPage && page === "analytics" && <AnalyticsPanel onAction={action} />}
+        {!lockedAdminPage && page === "ai" && <AiSettingsPanel notify={notify} />}
+        {!lockedAdminPage && page === "messenger" && <MessengerSettingsPanel notify={notify} />}
       </main>
       {toast ? <div className="card toast">{toast}</div> : null}
     </div>
+  );
+}
+
+function AccessRequiredPanel({ activeUser }: { activeUser: User | null }) {
+  return (
+    <section className="panel">
+      <div className="icon-heading">
+        <span className="card-icon"><Icon name="lock" /></span>
+        <div>
+          <h2>این بخش فقط برای مدیر سیستم یا مدیرعامل است</h2>
+          <p className="muted">شما اکنون با نقش {activeUser?.role || "نامشخص"} وارد شده اید. برای دیدن صفحه افراد، ورود و دسترسی ها، تنظیمات هوش مصنوعی و تنظیمات پیام رسان باید با حساب Admin یا CEO وارد شوید.</p>
+        </div>
+      </div>
+    </section>
   );
 }
 

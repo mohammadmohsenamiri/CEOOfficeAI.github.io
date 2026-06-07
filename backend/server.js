@@ -122,6 +122,8 @@ function applyEnvironmentSettings(data) {
   const adminFullName = process.env.ADMIN_FULL_NAME || "مدیر سیستم";
   const adminJobTitle = process.env.ADMIN_JOB_TITLE || "ادمین";
   const adminUsername = String(process.env.ADMIN_USERNAME || "admin").trim().toLowerCase();
+  const adminPassword = process.env.ADMIN_PASSWORD || process.env.BOOTSTRAP_ADMIN_PASSWORD || "admin";
+  const ceoPassword = process.env.CEO_PASSWORD || process.env.BOOTSTRAP_CEO_PASSWORD || "ceo";
   const existingAdmin = (data.users || []).find((user) => user.role === "Admin");
   const existingCeo = (data.users || []).find((user) => user.role === "CEO" || user.isCeo);
   if (!existingAdmin) {
@@ -132,7 +134,7 @@ function applyEnvironmentSettings(data) {
       role: "Admin",
       groups: ["g2"],
       username: adminUsername,
-      passwordHash: process.env.ADMIN_PASSWORD ? hashPassword(process.env.ADMIN_PASSWORD) : "",
+      passwordHash: hashPassword(adminPassword),
       telegramChatId: "",
       baleChatId: adminBaleChatId,
       baleUsername: adminBaleUsername,
@@ -144,7 +146,7 @@ function applyEnvironmentSettings(data) {
     if (process.env.ADMIN_FULL_NAME) existingAdmin.fullName = adminFullName;
     if (process.env.ADMIN_JOB_TITLE) existingAdmin.jobTitle = adminJobTitle;
     if (adminUsername) existingAdmin.username = adminUsername;
-    if (process.env.ADMIN_PASSWORD) existingAdmin.passwordHash = hashPassword(process.env.ADMIN_PASSWORD);
+    if (process.env.ADMIN_PASSWORD || !existingAdmin.passwordHash) existingAdmin.passwordHash = hashPassword(adminPassword);
     if (adminBaleChatId) existingAdmin.baleChatId = adminBaleChatId;
     if (adminBaleUsername) {
       existingAdmin.baleUsername = adminBaleUsername;
@@ -160,7 +162,7 @@ function applyEnvironmentSettings(data) {
       role: "CEO",
       groups: ["g1"],
       username: process.env.CEO_USERNAME || "ceo",
-      passwordHash: process.env.CEO_PASSWORD ? hashPassword(process.env.CEO_PASSWORD) : "",
+      passwordHash: hashPassword(ceoPassword),
       telegramChatId: "",
       baleChatId: process.env.CEO_BALE_CHAT_ID || "",
       baleUsername: ceoBaleUsername,
@@ -170,7 +172,7 @@ function applyEnvironmentSettings(data) {
     });
   } else {
     if (process.env.CEO_USERNAME) existingCeo.username = String(process.env.CEO_USERNAME).trim().toLowerCase();
-    if (process.env.CEO_PASSWORD) existingCeo.passwordHash = hashPassword(process.env.CEO_PASSWORD);
+    if (process.env.CEO_PASSWORD || !existingCeo.passwordHash) existingCeo.passwordHash = hashPassword(ceoPassword);
   }
   return data;
 }
